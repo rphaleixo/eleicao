@@ -3,6 +3,7 @@ import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { ordenarCandidatos } from "./ranking.js";
 import { UFS } from "./config.js";
+import { urlFoto } from "./tse.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TEXTO = { n: "Não iniciada", p: "Em andamento", f: "Finalizada" };
@@ -26,30 +27,29 @@ function situacao(d) {
  * @param {string} uf sigla (ou ZZ)
  * @param {object|null|undefined} d resultado normalizado do cargo no estado (undefined = carregando)
  * @param {object|undefined} u andamento do estado (acompanhamento)
+ * @param {string} cargo cargo mostrado (define a pasta das fotos): "governador" ou "presidente"
  */
-export function cardEstado(uf, d, u) {
+export function cardEstado(uf, d, u, cargo = "governador") {
   const apurado = u?.pct ?? d?.pctSecoes ?? 0;
   const abst = abstencaoDe(u);
   const top = d ? ordenarCandidatos(d.candidatos).slice(0, 2) : [];
-  const lider = top[0] && top[0].votos > 0 ? top[0] : null;
-  const cor = lider ? corPartido(lider.partido) : "var(--abst)";
   const and = u?.andamento ?? d?.andamento ?? "n";
-  const linha = (c) => `<li style="--cor:${corPartido(c.partido)}"><span class="cu-marca"></span>
-      <span class="cu-quem"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span></span>
-      <span class="cu-num"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)} votos</small></span></li>`;
-  const duelo = top.length && d.votosValidos > 0
-    ? `<span class="cu-duelo" role="img" aria-label="${esc(top.map((c) => `${c.nome} ${pct(c.pct)}`).join(", "))}">${top.map((c) => `<i style="width:${Math.min(100, c.pct)}%;background:${corPartido(c.partido)}"></i>`).join("")}</span>`
-    : `<span class="cu-duelo vazio"></span>`;
+  const linha = (c) => {
+    const cor = corPartido(c.partido);
+    return `<li style="--cor:${cor}"><img class="foto cu-foto" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+      <span class="cu-corpo"><span class="cu-linha1"><span class="cu-quem"><b title="${esc(c.nome)}">${esc(c.nome)}</b><i class="cu-num-cand">${esc(c.numero)}</i></span><span class="chip" style="--cor:${cor}">${esc(c.partido)}</span></span>
+        <span class="cu-trilho"><i style="width:${Math.min(100, c.pct)}%"></i></span>
+        <span class="cu-linha2"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)} votos</small></span></span></li>`;
+  };
   const corpo = d === undefined ? `<p class="muted cu-aviso">Carregando…</p>`
     : !top.length ? `<p class="muted cu-aviso">${d ? "Sem candidatos" : "Resultado indisponível"}</p>`
-    : `<ul class="cu-cands">${top.map(linha).join("")}</ul>${duelo}`;
-  return `<li><button type="button" class="card-uf" data-uf="${uf}" style="--cor:${cor}" aria-label="${esc(nomeLocal(uf))}: ver detalhes">
+    : `<ul class="cu-cands">${top.map(linha).join("")}</ul>`;
+  const metricas = [abst == null ? "" : `Abstenção ${pct(abst)}`, u?.eleitores ? `${fmt(u.eleitores)} eleitores` : ""].filter(Boolean).join(" · ");
+  return `<li><button type="button" class="card-uf" data-uf="${uf}" aria-label="${esc(nomeLocal(uf))}: ver apuração completa">
     <span class="cu-topo"><span class="sigla">${uf === "ZZ" ? "EX" : uf}</span><span class="cu-nome-uf"><b>${esc(nomeLocal(uf))}</b>${situacao(d)}</span>
-      <span class="cu-apurado"><strong>${pct(apurado)}</strong><small><i class="ponto ${and === "f" ? "f" : and === "p" ? "p" : "n"}" title="${TEXTO[and] ?? TEXTO.n}"></i>apurado</small></span></span>
-    <i class="cu-barra"><i style="width:${Math.min(100, apurado)}%"></i></i>
+      <span class="cu-pilula ${and}" title="${TEXTO[and] ?? TEXTO.n}"><i class="ponto ${and === "f" ? "f" : and === "p" ? "p" : "n"}"></i>${pct(apurado)}</span></span>
     ${corpo}
-    <span class="cu-rodape"><span><small>Abstenção</small><b>${abst == null ? "–" : pct(abst)}</b></span>
-      <span><small>Votos válidos</small><b>${d ? fmt(d.votosValidos) : "–"}</b></span><span><small>Eleitores</small><b>${u?.eleitores ? fmt(u.eleitores) : "–"}</b></span></span></button></li>`;
+    <span class="cu-rodape"><small>${metricas}</small><span class="cu-ver">Ver apuração completa <i aria-hidden="true">→</i></span></span></button></li>`;
 }
 
 export const gradeCards = (cards) => `<ul class="cards-estados">${cards.join("")}</ul>`;

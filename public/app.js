@@ -373,7 +373,7 @@ function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
   if (uf !== "BR") return "";
   if (!v.lista) return carregandoEstados("Resultado por estado");
   const ufs = estado.regiao === "exterior" ? ["ZZ"] : ufsRegiao ?? [...Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR")), "ZZ"];
-  const cards = ufs.map((u) => cardEstado(u, v.lista.find((x) => x.uf === u)?.d ?? null, v.ac.ufs[u.toLowerCase()]));
+  const cards = ufs.map((u) => cardEstado(u, v.lista.find((x) => x.uf === u)?.d ?? null, v.ac.ufs[u.toLowerCase()], "presidente"));
   return `<section class="card"><h2>Resultado por estado</h2>${gradeCards(cards)}
     <p class="muted nota">Toque em um estado para ver o resultado dele. O resultado final da eleição presidencial é nacional.</p></section>`;
 }
