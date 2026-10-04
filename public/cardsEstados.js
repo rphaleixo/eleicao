@@ -34,14 +34,22 @@ export function cardEstado(uf, d, u) {
   const lider = top[0] && top[0].votos > 0 ? top[0] : null;
   const cor = lider ? corPartido(lider.partido) : "var(--abst)";
   const and = u?.andamento ?? d?.andamento ?? "n";
-  const itens = d === undefined ? `<li class="muted">Carregando…</li>`
-    : !top.length ? `<li class="muted">${d ? "Sem candidatos" : "Resultado indisponível"}</li>`
-    : top.map((c) => `<li><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span><span class="cu-nome">${esc(c.nome)}</span><strong>${pct(c.pct)}</strong></li>`).join("");
+  const linha = (c) => `<li style="--cor:${corPartido(c.partido)}"><span class="cu-marca"></span>
+      <span class="cu-quem"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span></span>
+      <span class="cu-num"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)} votos</small></span></li>`;
+  const duelo = top.length && d.votosValidos > 0
+    ? `<span class="cu-duelo" role="img" aria-label="${esc(top.map((c) => `${c.nome} ${pct(c.pct)}`).join(", "))}">${top.map((c) => `<i style="width:${Math.min(100, c.pct)}%;background:${corPartido(c.partido)}"></i>`).join("")}</span>`
+    : `<span class="cu-duelo vazio"></span>`;
+  const corpo = d === undefined ? `<p class="muted cu-aviso">Carregando…</p>`
+    : !top.length ? `<p class="muted cu-aviso">${d ? "Sem candidatos" : "Resultado indisponível"}</p>`
+    : `<ul class="cu-cands">${top.map(linha).join("")}</ul>${duelo}`;
   return `<li><button type="button" class="card-uf" data-uf="${uf}" style="--cor:${cor}" aria-label="${esc(nomeLocal(uf))}: ver detalhes">
-    <span class="cu-topo"><span class="sigla">${uf === "ZZ" ? "EX" : uf}</span><b>${esc(nomeLocal(uf))}</b>${situacao(d)}<i class="ponto ${and === "f" ? "f" : and === "p" ? "p" : "n"}" title="${TEXTO[and] ?? TEXTO.n}"></i></span>
-    <ul class="cu-cands">${itens}</ul>
-    <span class="cu-metricas"><span class="cu-metrica"><small>Apurado</small><b>${pct(apurado)}</b><i class="cu-barra"><i style="width:${Math.min(100, apurado)}%"></i></i></span>
-      <span class="cu-metrica"><small>Abstenção</small><b>${abst == null ? "–" : pct(abst)}</b>${u?.eleitores ? `<small class="cu-eleit">${fmt(u.eleitores)} eleitores</small>` : ""}</span></span></button></li>`;
+    <span class="cu-topo"><span class="sigla">${uf === "ZZ" ? "EX" : uf}</span><span class="cu-nome-uf"><b>${esc(nomeLocal(uf))}</b>${situacao(d)}</span>
+      <span class="cu-apurado"><strong>${pct(apurado)}</strong><small><i class="ponto ${and === "f" ? "f" : and === "p" ? "p" : "n"}" title="${TEXTO[and] ?? TEXTO.n}"></i>apurado</small></span></span>
+    <i class="cu-barra"><i style="width:${Math.min(100, apurado)}%"></i></i>
+    ${corpo}
+    <span class="cu-rodape"><span><small>Abstenção</small><b>${abst == null ? "–" : pct(abst)}</b></span>
+      <span><small>Votos válidos</small><b>${d ? fmt(d.votosValidos) : "–"}</b></span><span><small>Eleitores</small><b>${u?.eleitores ? fmt(u.eleitores) : "–"}</b></span></span></button></li>`;
 }
 
 export const gradeCards = (cards) => `<ul class="cards-estados">${cards.join("")}</ul>`;

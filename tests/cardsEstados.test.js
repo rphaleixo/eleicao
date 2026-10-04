@@ -4,7 +4,7 @@ const assert = (await import("node:assert/strict")).default;
 const { cardEstado, abstencaoDe, gradeCards } = await import("../public/cardsEstados.js");
 
 const c = (nome, partido, votos, pct) => ({ id: nome, nome, partido, votos, pct, numero: "1" });
-const d = { candidatos: [c("Bia", "PT", 100, 40), c("Ana", "PL", 300, 60), c("Cid", "PSD", 50, 20)], definido: "", andamento: "p", pctSecoes: 50 };
+const d = { candidatos: [c("Bia", "PT", 100, 40), c("Ana", "PL", 300, 60), c("Cid", "PSD", 50, 20)], definido: "", andamento: "p", pctSecoes: 50, votosValidos: 450 };
 const u = { pct: 12.5, andamento: "p", eleitores: 1000, comparecimento: 800, abstencao: 200 };
 
 test("abstenção sobre as seções já apuradas", () => {
@@ -17,7 +17,7 @@ test("card: dois primeiros, % apurado e abstenção, tudo com 2 casas", () => {
   const h = cardEstado("RJ", d, u);
   assert.ok(h.includes("Rio de Janeiro") && h.includes('data-uf="RJ"'));
   assert.ok(h.indexOf("Ana") < h.indexOf("Bia") && !h.includes("Cid"));
-  for (const t of ["60,00%", "40,00%", "12,50%", "20,00%", "1.000 eleitores"]) assert.ok(h.includes(t), t);
+  for (const t of ["60,00%", "40,00%", "12,50%", "20,00%", "300 votos", "100 votos", ">450<", ">1.000<", "cu-duelo"]) assert.ok(h.includes(t), t);
 });
 
 test("card sem votos usa ordem alfabética; sem presença mostra traço; exterior vira EX", () => {
