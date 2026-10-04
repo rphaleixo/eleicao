@@ -35,7 +35,7 @@ export const ABAS = [
   { id: "presidente", nome: "Presidente" },
   { id: "governadores", nome: "Governadores" },
   { id: "senadores", nome: "Senadores" },
-  { id: "camara", nome: "Câmara (513)" },
+  { id: "camara", nome: "Deputados" },
   { id: "estados", nome: "Estados" },
 ];
 

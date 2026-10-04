@@ -660,10 +660,10 @@ function renderNavegacao(v) {
   for (const sel of ["#nav .tira [aria-pressed=true]", "#sub [aria-selected=true]"]) document.querySelector(sel)?.scrollIntoView({ inline: "center", block: "nearest" });
 }
 
-function render() {
+function render(forcar = false) {
   const v = estado.view;
   if (!v) return;
-  if (document.activeElement?.tagName === "SELECT" && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
+  if (!forcar && document.activeElement?.tagName === "SELECT" && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
   const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
@@ -761,16 +761,16 @@ function apuracaoDe(sq) {
 iniciarGraficos($("conteudo"));
 $("conteudo").addEventListener("change", (e) => {
   const os = e.target.closest?.("[data-ordem-sel]");
-  if (os) { estado.ordem = os.value; render(); return; }
+  if (os) { estado.ordem = os.value; render(true); return; }
   const fr = e.target.closest?.("[data-f-regiao]"), fs = e.target.closest?.("[data-f-status]");
   if (fr || fs) {
     const alvo = estado[(fr ?? fs).dataset.fEscopo];
     if (fr) { alvo.regiao = fr.value; if (alvo.uf && alvo.regiao && regiaoDe(alvo.uf) !== alvo.regiao) alvo.uf = ""; }
     if (fs) alvo.status = fs.value;
-    render(); return;
+    render(true); return;
   }
   const sel = e.target.closest?.("[data-f-uf]");
-  if (sel) { const alvo = estado[sel.dataset.fEscopo]; alvo.uf = sel.value; if (sel.value) alvo.regiao = regiaoDe(sel.value); render(); }
+  if (sel) { const alvo = estado[sel.dataset.fEscopo]; alvo.uf = sel.value; if (sel.value) alvo.regiao = regiaoDe(sel.value); render(true); }
 });
 $("conteudo").addEventListener("keydown", (e) => {
   const mm = e.target.closest?.("[data-mun-ibge]");
