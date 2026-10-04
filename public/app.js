@@ -527,9 +527,8 @@ function lideresPorUf(lista, porPartido, maioria = false) {
 function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = false, maioria = false, extra = () => "", nota = "", comRegioes = false, exterior = false }) {
   const visao = estado.visaoEstados;
   const seg = (attr, valor, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === valor}">${n}</button>`).join("")}</div>`;
-  const chips = barraFiltros(estado.filtros, { comSegundo: cargo !== "senador", exterior });
-  const controles = `<div class="estados-topo"><h2>${esc(titulo)}</h2>${seg("data-visao-estados", visao, [["cards", "Cards"], ["mapa", "Mapa"]])}</div>
-    ${visao === "cards" ? `<div class="controles-estados">${seg("data-ordem", estado.ordem, [["az", "A–Z"], ["pct", "% apurado"]])}</div>` : ""}${chips}`;
+  const chips = barraFiltros(estado.filtros, { comSegundo: cargo !== "senador", exterior, ordem: visao === "cards" ? estado.ordem : null });
+  const controles = `<div class="estados-topo"><h2>${esc(titulo)}</h2>${seg("data-visao-estados", visao, [["cards", "Cards"], ["mapa", "Mapa"]])}</div>${chips}`;
   if (!lista) return `<section class="card">${controles}<p class="muted">Carregando os estados…</p></section>`;
   const dDe = (u) => lista.find((x) => x.uf === u)?.d ?? null;
   const apurado = (u) => ac.ufs[u.toLowerCase()]?.pct ?? 0;
@@ -606,11 +605,10 @@ function telaNacionalProp(v) {
   const statusDe = (uf) => (n.ufs.find((u) => u.uf === uf)?.oficial ? "definida" : "aberta");
   let ufs = filtrarUfs(ordenadas, f, statusDe);
   if (agrup === "estado" && estado.ordem === "pct") ufs = ufs.slice().sort((a, b) => (n.ufs.find((u) => u.uf === b)?.pct ?? 0) - (n.ufs.find((u) => u.uf === a)?.pct ?? 0));
-  const filtros = barraFiltros(f, { comSegundo: false });
+  const filtros = barraFiltros(f, { comSegundo: false, ordem: agrup === "estado" ? (estado.ordem === "pct" ? "pct" : "az") : null });
   let corpo;
   if (agrup === "estado") {
-    const ordem = `<div class="controles-estados"><div class="seg mini" role="group" aria-label="Ordenar">${[["az", "A–Z"], ["pct", "% apurado"]].map(([k, nome]) => `<button type="button" data-ordem="${k}" aria-pressed="${k === (estado.ordem === "pct" ? "pct" : "az")}">${nome}</button>`).join("")}</div></div>`;
-    corpo = `${filtros}${ordem}${ufs.length ? cardsEstadosCamara(n, ufs) : `<p class="muted">Nenhum estado com esses filtros.</p>`}`;
+    corpo = `${filtros}${ufs.length ? cardsEstadosCamara(n, ufs) : `<p class="muted">Nenhum estado com esses filtros.</p>`}`;
   } else if (agrup === "mapa") {
     const lideres = lideresCamara(n), dentro = new Set(ufs);
     const sel = estado.mapaUf && dentro.has(estado.mapaUf) ? estado.mapaUf : "";
@@ -759,6 +757,15 @@ function apuracaoDe(sq) {
   return c ? { votos: c.votos, pct: c.pct, situacao: c.sit ? TEXTO_SIT[c.sit] : c.eleito ? c.situacao || "Eleito" : !c.elegivel ? c.situacaoVoto : null } : null;
 }
 $("conteudo").addEventListener("change", (e) => {
+  const os = e.target.closest?.("[data-ordem-sel]");
+  if (os) { estado.ordem = os.value; render(); return; }
+  const fr = e.target.closest?.("[data-f-regiao]"), fs = e.target.closest?.("[data-f-status]");
+  if (fr || fs) {
+    const alvo = estado[(fr ?? fs).dataset.fEscopo];
+    if (fr) { alvo.regiao = fr.value; if (alvo.uf && alvo.regiao && regiaoDe(alvo.uf) !== alvo.regiao) alvo.uf = ""; }
+    if (fs) alvo.status = fs.value;
+    render(); return;
+  }
   const sel = e.target.closest?.("[data-f-uf]");
   if (sel) { const alvo = estado[sel.dataset.fEscopo]; alvo.uf = sel.value; if (sel.value) alvo.regiao = regiaoDe(sel.value); render(); }
 });
@@ -776,13 +783,8 @@ $("conteudo").addEventListener("click", (e) => {
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   if (e.target.closest("[data-tentar]")) { atualizar(); return; }
-  const fr = e.target.closest("[data-f-regiao]"), fs = e.target.closest("[data-f-status]");
-  if (fr || fs) {
-    const alvo = estado[(fr ?? fs).dataset.fEscopo];
-    if (fr) { alvo.regiao = fr.dataset.fRegiao; if (alvo.uf && alvo.regiao && regiaoDe(alvo.uf) !== alvo.regiao) alvo.uf = ""; }
-    if (fs) alvo.status = fs.dataset.fStatus;
-    render(); return;
-  }
+  const lim = e.target.closest("[data-f-limpar]");
+  if (lim) { Object.assign(estado[lim.dataset.fEscopo], filtrosVazios()); render(); return; }
   const mc = e.target.closest("[data-mapa-cargo]");
   if (mc) { estado.mapaCargo = mc.dataset.mapaCargo; estado.munSel = ""; navegar({}); return; }
   const munSel = e.target.closest("[data-mun-ibge]");

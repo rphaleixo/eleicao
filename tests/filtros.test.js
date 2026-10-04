@@ -30,11 +30,13 @@ test("filtra por região, estado e situação, combinando os três", () => {
 
 test("barra de filtros: 2º turno só onde existe, estados limitados à região", () => {
   const com = barraFiltros(filtrosVazios(), { escopo: "x" });
-  assert.ok(com.includes('data-f-status="segundo"') && com.includes('data-f-escopo="x"') && com.includes("Todos os estados"));
-  assert.ok(!barraFiltros(filtrosVazios(), { comSegundo: false }).includes('data-f-status="segundo"'));
+  assert.ok(com.includes('value="segundo"') && com.includes('data-f-escopo="x"') && com.includes(">Todos<"));
+  assert.ok(!barraFiltros(filtrosVazios(), { comSegundo: false }).includes('value="segundo"'));
   const sul = barraFiltros({ regiao: "sul", uf: "RS", status: "" }, {});
   assert.equal((sul.match(/<option value="[A-Z]{2}"/g) || []).length, 3);
-  assert.ok(sul.includes('value="RS" selected') && sul.includes('data-f-regiao="sul" data-f-escopo="filtros" aria-pressed="true"'));
+  assert.ok(sul.includes('value="RS" selected') && sul.includes('value="sul" selected') && sul.includes("data-f-limpar"));
+  assert.ok(!com.includes("data-f-limpar"));
   assert.equal(STATUS.definida, "Eleição definida");
-  assert.ok(barraFiltros(filtrosVazios(), { exterior: true }).includes('data-f-regiao="exterior"'));
+  assert.ok(barraFiltros(filtrosVazios(), { exterior: true }).includes('value="exterior"'));
+  assert.ok(barraFiltros(filtrosVazios(), { ordem: "pct" }).includes('data-ordem-sel') && !com.includes("data-ordem-sel"));
 });

@@ -521,3 +521,13 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .status-proj { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 8px 0 4px; } .status-txt { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .hero .status-txt { color: rgba(255,255,255,.8); }
 .link-cand { cursor: pointer; border-bottom: 2px solid var(--cor, currentColor); }
+
+/* Filtros compactos: listas lado a lado */
+.filtros-estados { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin: 10px 0; }
+.f-sel { display: flex; flex-direction: column; gap: 2px; flex: 1 1 7rem; min-width: 0; font-size: .7rem; color: var(--muted); }
+.f-sel select { width: 100%; min-height: 36px; font-size: .85rem; }
+.f-limpar { flex: none; border: 0; background: none; color: var(--acento); font: inherit; font-size: .8rem; font-weight: 600; min-height: 36px; cursor: pointer; }
+.filtros-estados { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.f-sel select { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.f-limpar { grid-column: 1 / -1; justify-self: end; min-height: 28px; }
+@media (min-width: 640px) { .filtros-estados { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
