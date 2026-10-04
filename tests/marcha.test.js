@@ -100,3 +100,13 @@ test("o painel acompanha a região escolhida", () => {
   const ext = telaMarcha(v, est({ regiao: "exterior" }));
   assert.ok(ext.includes("<h2>Exterior</h2>") && ext.includes("<strong>1</strong> de 5 seções") && !ext.includes("data-nav-uf"));
 });
+
+test("painel da Marcha alterna entre o resumo geral e as barras por região", () => {
+  const geral = telaMarcha(v, est({}));
+  assert.ok(geral.includes('data-painel="geral" aria-pressed="true"') && geral.includes("anel") && !geral.includes("barras-regiao"));
+  const reg = telaMarcha(v, est({ painel: "regioes" }));
+  assert.ok(reg.includes('data-painel="regioes" aria-pressed="true"') && reg.includes("barras-regiao") && !reg.includes("anel-valor"));
+  for (const t of ["% da apuração por região", "Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul", "Exterior", "50,00%"]) assert.ok(reg.includes(t), t);
+  const sul = telaMarcha(v, est({ painel: "regioes", regiao: "sul" }));
+  assert.ok(sul.includes("% da apuração por estado") && sul.includes("Santa Catarina") && !sul.includes("Acre"));
+});

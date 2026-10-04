@@ -416,3 +416,11 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .cc-lista li.sit-eleito, .cc-lista li.sit-segundo { box-shadow: inset 3px 0 0 var(--borda-sit); }
 .cc-nome .selo-sit { margin-left: 4px; }
 .cu-linha2 small { white-space: nowrap; }
+
+/* painel alternável e barras por região */
+.painel-seg { margin-bottom: 14px; } .painel-seg button { min-height: 36px; padding: 6px; font-size: .88rem; }
+.barras-regiao { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.barras-regiao li { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "nome pct" "trilho trilho" "det det"; gap: 4px 10px; align-items: baseline; }
+.br-nome { grid-area: nome; font-weight: 600; } .barras-regiao b { grid-area: pct; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+.br-trilho { grid-area: trilho; display: block; height: 14px; border-radius: 7px; background: rgba(255, 255, 255, .18); overflow: hidden; } .br-trilho i { display: block; height: 100%; background: var(--vivo); border-radius: 7px; transition: width .5s; }
+.barras-regiao small { grid-area: det; color: rgba(255, 255, 255, .72); font-size: .76rem; }

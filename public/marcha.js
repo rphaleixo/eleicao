@@ -11,11 +11,11 @@ import { fmt, pct } from "./formato.js";
 export const mi = (n) => (n >= 1e6 ? `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : fmt(n));
 
 export const REGIOES = {
-  norte: { nome: "Norte", ufs: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"] },
-  nordeste: { nome: "Nordeste", ufs: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"] },
-  centroeste: { nome: "Centro-Oeste", ufs: ["DF", "GO", "MT", "MS"] },
-  sudeste: { nome: "Sudeste", ufs: ["ES", "MG", "RJ", "SP"] },
-  sul: { nome: "Sul", ufs: ["PR", "RS", "SC"] },
+  norte: { sigla: "N", nome: "Norte", ufs: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"] },
+  nordeste: { sigla: "NE", nome: "Nordeste", ufs: ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"] },
+  centroeste: { sigla: "CO", nome: "Centro-Oeste", ufs: ["DF", "GO", "MT", "MS"] },
+  sudeste: { sigla: "SE", nome: "Sudeste", ufs: ["ES", "MG", "RJ", "SP"] },
+  sul: { sigla: "S", nome: "Sul", ufs: ["PR", "RS", "SC"] },
 };
 export const nomeEstado = (uf) => (uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 const TEXTO_SITUACAO = { n: "Não iniciada", p: "Em andamento", f: "Finalizada" };
@@ -67,8 +67,8 @@ export function barraPresenca(a) {
 }
 
 /** Painel de destaque: anel de progresso, situação e gráfico de presença, tudo num cartão só. */
-export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave, grafico = true }) {
-  return `<section class="card hero">
+export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave, grafico = true, topo = "" }) {
+  return `<section class="card hero">${topo}
     <div class="hero-topo">${anel(a.pct)}<div class="hero-info"><h2>${esc(titulo)}</h2>${subtitulo ? `<p class="hero-sub">${esc(subtitulo)}</p>` : ""}${selo(andamento)}
       <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${extra}${quando ? `<p class="hero-sub">TSE: ${esc(quando)}</p>` : ""}</div></div>
     ${grafico === null ? "" : `<div class="hero-grafico">${grafico ? graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` }) : barraPresenca(a)}</div>`}</section>`;
@@ -180,7 +180,7 @@ function listaOrdenada(v, estado) {
 }
 
 // ---------- tela ----------
-function situacaoGeral(lista) {
+export function situacaoGeral(lista) {
   const us = lista.filter(Boolean);
   if (us.length && us.every((u) => u.andamento === "f")) return "f";
   return us.some((u) => u.andamento === "p" || u.andamento === "f" || u.st > 0) ? "p" : "n";
@@ -208,9 +208,28 @@ export function escopoDoPainel(v, regiao, uf = "BR") {
     extra: e ? `<p class="hero-sub">Eleições estaduais: ${pct(e.pct)} das seções</p>` : "" };
 }
 
+/** Alterna o painel entre o resumo geral (anel e gráfico) e as barras de % apurado por região. */
+function controlePainel(painel) {
+  return `<div class="seg painel-seg" role="group" aria-label="Visão do painel"><button type="button" data-painel="geral" aria-pressed="${painel !== "regioes"}">Geral</button><button type="button" data-painel="regioes" aria-pressed="${painel === "regioes"}">Por região</button></div>`;
+}
+
+function heroRegioes(v, estado, topo, p) {
+  const ac = v.f, r = REGIOES[estado.regiao];
+  const itens = r
+    ? r.ufs.map((u) => ({ nome: UFS[u], a: doEstado(ac.ufs[u.toLowerCase()]) }))
+    : [...Object.values(REGIOES).map((g) => ({ nome: g.nome, a: agregar(g.ufs.map((u) => ac.ufs[u.toLowerCase()])) })), ...(ac.ufs.zz ? [{ nome: "Exterior", a: doEstado(ac.ufs.zz) }] : [])];
+  itens.sort((x, y) => (y.a?.pct ?? 0) - (x.a?.pct ?? 0));
+  const barras = itens.map(({ nome, a }) => `<li><span class="br-nome">${esc(nome)}</span><span class="br-trilho"><i style="width:${Math.min(100, a?.pct ?? 0)}%"></i></span><b>${pct(a?.pct ?? 0)}</b><small>${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções` : "–"}</small></li>`).join("");
+  return `<section class="card hero">${topo}<h2>% da apuração por ${r ? "estado" : "região"}</h2>
+    <p class="hero-sub">${esc(p.titulo)}: <strong>${pct(p.a.pct)}</strong> · ${fmt(p.a.st)} de ${fmt(p.a.ts)} seções</p>
+    <ul class="barras-regiao">${barras}</ul></section>`;
+}
+
 export function telaMarcha(v, estado, comNav = true) {
   const p = escopoDoPainel(v, estado.regiao);
-  const hero = heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave });
+  const topo = controlePainel(estado.painel);
+  const hero = estado.painel === "regioes" ? heroRegioes(v, estado, topo, p)
+    : heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave, topo });
   return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${hero}
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>

@@ -5,7 +5,7 @@ export function agregarResultados(lista) {
   if (!ds.length) return null;
   const mapa = new Map();
   for (const d of ds) for (const c of d.candidatos) {
-    const m = mapa.get(c.numero) ?? { ...c, votos: 0, pct: 0, eleito: false, situacao: "" };
+    const m = mapa.get(c.numero) ?? { ...c, votos: 0, pct: 0, eleito: false, situacao: "", sit: "" }; // a situação de cada estado não vale para a região
     m.votos += c.votos; mapa.set(c.numero, m);
   }
   const soma = (campo) => ds.reduce((s, d) => s + (d[campo] || 0), 0);

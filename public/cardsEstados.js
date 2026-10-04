@@ -25,6 +25,15 @@ export function abstencaoDe(u) {
  * @param {number} total quantos candidatos mostrar (os 2 primeiros em destaque, os demais em linhas compactas)
  */
 export function cardEstado(uf, d, u, cargo = "governador", total = 5) {
+  return cardBase({ chave: `data-uf="${uf}"`, sigla: uf === "ZZ" ? "EX" : uf, nome: nomeLocal(uf), uf, d, u, cargo, total });
+}
+
+/** Mesmo card, para uma região (Norte, Nordeste...): clicar filtra a tela pela região. */
+export function cardRegiao(id, nome, sigla, d, u, cargo = "presidente", total = 3) {
+  return cardBase({ chave: `data-regiao="${id}"`, sigla, nome, uf: "BR", d, u, cargo, total });
+}
+
+function cardBase({ chave, sigla, nome, uf, d, u, cargo, total }) {
   const apurado = u?.pct ?? d?.pctSecoes ?? 0;
   const abst = abstencaoDe(u);
   const todos = d ? ordenarCandidatos(d.candidatos) : [];
@@ -45,8 +54,8 @@ export function cardEstado(uf, d, u, cargo = "governador", total = 5) {
     : `<ul class="cu-cands">${top.slice(0, 2).map(destaque).join("")}</ul>
        ${top.length > 2 ? `<ol class="cu-resto" start="3">${cargo === "senador" ? `<li class="cu-corte" role="presentation">${vagas} vagas</li>` : ""}${top.slice(2).map((c, i) => menor(c, i + 2)).join("")}</ol>` : ""}`;
   const metricas = [abst == null ? "" : `Abstenção ${pct(abst)}`, u?.eleitores ? `${fmt(u.eleitores)} eleitores` : ""].filter(Boolean).join(" · ");
-  return `<li><button type="button" class="card-uf${sit ? ` eleicao-${sit}` : ""}" data-uf="${uf}" aria-label="${esc(nomeLocal(uf))}: ver apuração completa">
-    <span class="cu-topo"><span class="sigla">${uf === "ZZ" ? "EX" : uf}</span><span class="cu-nome-uf"><b>${esc(nomeLocal(uf))}</b>${seloEleicao(d)}</span>
+  return `<li><button type="button" class="card-uf${sit ? ` eleicao-${sit}` : ""}" ${chave} aria-label="${esc(nome)}: ver apuração completa">
+    <span class="cu-topo"><span class="sigla">${esc(sigla)}</span><span class="cu-nome-uf"><b>${esc(nome)}</b>${seloEleicao(d)}</span>
       <span class="cu-pilula ${and}" title="${TEXTO[and] ?? TEXTO.n}"><i class="ponto ${and === "f" ? "f" : and === "p" ? "p" : "n"}"></i>${pct(apurado)}</span></span>
     ${corpo}
     <span class="cu-rodape"><small>${metricas}</small><span class="cu-ver">Ver apuração completa <i aria-hidden="true">→</i></span></span></button></li>`;

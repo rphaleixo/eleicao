@@ -1,8 +1,8 @@
-import { telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, REGIOES } from "./marcha.js";
+import { telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
-import { cardEstado, gradeCards } from "./cardsEstados.js";
+import { cardEstado, cardRegiao, gradeCards } from "./cardsEstados.js";
 import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao } from "./situacao.js";
 import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
@@ -22,7 +22,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -369,7 +369,21 @@ function telaPresidente(v) {
     : `<p class="muted">${carregando ? "Carregando…" : "Resultado indisponível no momento."}</p>`;
   const grafico = mun ? "" : blocoResultadoEvolucao(v.rpLocais === locaisGrafico.join(",") ? v.rp : undefined, locaisGrafico, d?.totalizacaoFinal);
   return `${hero}
-    <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${d ? cartoesVotacao(d) : ""}${grafico}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
+    <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${d ? cartoesVotacao(d) : ""}${grafico}${quadroPorRegiao(v, uf)}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
+}
+
+/** Resultado da eleição presidencial em cada região (soma dos estados) e no exterior. */
+function quadroPorRegiao(v, uf) {
+  if (uf !== "BR") return "";
+  if (!v.lista) return carregandoEstados("Resultado por região");
+  const dDe = (u) => v.lista.find((x) => x.uf === u)?.d;
+  const cards = Object.entries(REGIOES).map(([id, r]) => {
+    const us = r.ufs.map((u) => v.ac.ufs[u.toLowerCase()]);
+    return cardRegiao(id, r.nome, r.sigla, agregarResultados(r.ufs.map(dDe)), { ...agregar(us), andamento: situacaoGeral(us) });
+  });
+  if (v.ac.ufs.zz) cards.push(cardRegiao("exterior", "Exterior", "EX", dDe("ZZ") ?? null, { ...agregar([v.ac.ufs.zz]), andamento: v.ac.ufs.zz.andamento }));
+  return `<section class="card"><h2>Resultado por região</h2>${gradeCards(cards)}
+    <p class="muted nota">Soma dos estados de cada região. Toque em uma região para ver o resultado dela.</p></section>`;
 }
 
 function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
@@ -494,7 +508,7 @@ async function carregarMunicipios() {
 }
 
 // ---------- eventos ----------
-$("abas").addEventListener("click", (e) => { const b = e.target.closest("[data-aba]"); if (b) navegar({ aba: b.dataset.aba, mun: "" }); });
+$("abas").addEventListener("click", (e) => { const b = e.target.closest("[data-aba]"); if (b) { estado.regiao = ""; navegar({ aba: b.dataset.aba, uf: "BR", cargo: "resumo", mun: "" }); window.scrollTo({ top: 0 }); } }); // trocar de aba recomeça do Brasil, sem carregar o estado da aba anterior
 $("mun").addEventListener("change", () => navegar({ mun: $("mun").value }));
 $("nav").addEventListener("click", (e) => {
   const reg = e.target.closest("[data-regiao]");
@@ -554,6 +568,10 @@ $("conteudo").addEventListener("click", (e) => {
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   if (e.target.closest("[data-tentar]")) { atualizar(); return; }
+  const painel = e.target.closest("[data-painel]");
+  if (painel) { estado.painel = painel.dataset.painel; render(); return; }
+  const regCard = e.target.closest("[data-regiao]");
+  if (regCard) { estado.regiao = regCard.dataset.regiao; navegar({ uf: "BR", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   const pag = e.target.closest("[data-pag-eleitos]");
   if (pag) { estado.pagEleitos = Math.max(0, estado.pagEleitos + Number(pag.dataset.pagEleitos)); render(); return; }
   const abrir = e.target.closest("[data-abrir-estado]");

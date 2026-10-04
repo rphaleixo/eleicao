@@ -20,3 +20,10 @@ test("sem dados devolve nulo; todos finalizados = finalizada", () => {
   assert.equal(agregarResultados([null]), null);
   assert.equal(agregarResultados([d([["13", "A", 1]], { andamento: "f" }), d([["13", "A", 1]], { andamento: "f" })]).andamento, "f");
 });
+
+test("a situação de eleito ou 2º turno de um estado não passa para a região", () => {
+  const com = d([["13", "A", 600], ["22", "B", 400]]);
+  com.candidatos[0].sit = "segundo";
+  const r = agregarResultados([com, d([["13", "A", 100], ["22", "B", 300]])]);
+  assert.ok(r.candidatos.every((c) => c.sit === ""));
+});
