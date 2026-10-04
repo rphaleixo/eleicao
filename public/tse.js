@@ -128,6 +128,11 @@ export function normalizar(json) {
     brancos: num(v.vb),
     nulos: num(v.tvn ?? v.vn),
     atualizadoEm: [json.dt, json.ht].filter(Boolean).join(" "),
+    votos: {
+      total: num(v.tv), nominais: num(v.vvc), validos: num(v.vv), nominaisValidos: num(v.vnom), legenda: num(v.vl),
+      anulados: num(v.van), anuladosSubJudice: num(v.vansj), brancos: num(v.vb), nulos: num(v.tvn ?? v.vn),
+    },
+    eleitorado: { apto: num(json.e?.te), apuradas: num(json.e?.est), comparecimento: num(json.e?.c), abstencao: num(json.e?.a) },
     comparecimento: num(json.e?.c), pctComparecimento: num(json.e?.pc),
     abstencao: num(json.e?.a), pctAbstencao: num(json.e?.pa),
     // Estado da apuração (EA20): n não iniciada, p em andamento, f finalizada.

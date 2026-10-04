@@ -1,5 +1,7 @@
-import { telaMarcha, regiaoDe, navegacaoRegional, heroApuracao, escopoDoPainel, blocoVotos, cardCargo, cardBancada, REGIOES } from "./marcha.js";
+import { telaMarcha, regiaoDe, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
+import { rankingMajoritario } from "./ranking.js";
+import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
 import { tiraEstados, barraEstado, folhaEstados, filtrarEstados } from "./seletor.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
@@ -165,20 +167,11 @@ function blocoProgresso(titulo, d, ac) {
   const apur = d ? d.secoesApuradas : p.st ?? 0, total = d ? d.secoesTotal : p.ts ?? 0;
   const and = d ? d.andamento : p.andamento;
   const quando = d?.atualizadoEm || [p.dt, p.ht].filter(Boolean).join(" ");
-  const estat = d
-    ? `<div class="estat">
-        <div><span>Votos válidos</span><strong>${fmt(d.votosValidos)}</strong></div>
-        <div><span>Brancos</span><strong>${fmt(d.brancos)}</strong></div>
-        <div><span>Nulos</span><strong>${fmt(d.nulos)}</strong></div>
-        <div><span>Comparecimento</span><strong>${fmt(d.comparecimento)} <small class="muted">${pct(d.pctComparecimento)}</small></strong></div>
-        <div><span>Abstenção</span><strong>${fmt(d.abstencao)} <small class="muted">${pct(d.pctAbstencao)}</small></strong></div>
-      </div>`
-    : "";
   return `<section class="card">
     <div class="prog-topo"><div><h2>${esc(titulo)}</h2>${selo(and)}</div><div class="prog-pct">${pct(pc)} <small>das seções</small></div></div>
     <div class="barra-prog"><i style="width:${Math.min(100, pc)}%"></i></div>
     <p class="muted">${total ? `${fmt(apur)} de ${fmt(total)} seções apuradas` : ""}${quando ? ` · totalização do TSE: ${esc(quando)}` : ""}</p>
-    ${estat}${d ? avisosApuracao(d) : ""}</section>`;
+    ${d ? avisosApuracao(d) : ""}</section>`;
 }
 
 function blocoResultadoEvolucao(rp, local) {
@@ -202,23 +195,6 @@ function itemCandidato({ pos, nome, sub, partido, votos, pctVotos, max, badge = 
     <div><div class="cand-nome">${esc(nome)}${badge}</div><div class="cand-sub"><span class="chip">${esc(partido)}</span>${esc(sub)}</div></div>
     <div class="cand-votos"><strong>${fmt(votos)}</strong><span class="muted">${pctVotos == null ? "" : pct(pctVotos)}</span></div>
     <div class="cand-barra"><i style="width:${max ? (votos / max) * 100 : 0}%"></i></div></div>`;
-}
-
-function listaMajoritaria(d, aba, uf, { limite = 40 } = {}) {
-  const max = Math.max(1, ...d.candidatos.map((c) => c.votos));
-  const vagas = d.vagas || 1;
-  let html = "";
-  d.candidatos.slice(0, limite).forEach((c, i) => {
-    const badge = c.eleito ? `<span class="badge">${esc(c.situacao || "Eleito")}</span>`
-      : c.situacao === "2º turno" ? `<span class="badge">2º turno</span>`
-      : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
-    const foto = `<img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" style="--cor:${corPartido(c.partido)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">`;
-    html += itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: c.pct, max, badge, foto, eleito: c.eleito, sq: c.id });
-    if (aba === "senador" && vagas > 1 && i === vagas - 1 && d.candidatos.length > vagas) {
-      html += `<div class="linha-corte">posição de eleito (${vagas} vagas)</div>`;
-    }
-  });
-  return html || `<p class="muted">Sem candidatos neste arquivo.</p>`;
 }
 
 function blocoCadeiras({ titulo, subtitulo, partidos, totalVagas, rotuloTotal }) {
@@ -280,7 +256,7 @@ function telaMajoritaria(v) {
   const local = mun ? `${nomeUF(uf)}, município ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : nomeUF(uf);
   const titulo = aba === "senador" ? `Senador (${d.vagas || 2} vagas): ${local}` : `${CARGOS[aba].nome}: ${local}`;
   const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, chaveUF(uf)) : "";
-  return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${listaMajoritaria(d, aba, uf)}</section>${evolucao}`;
+  return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${rankingMajoritario(d, { aba, uf })}</section>${cartoesVotacao(d)}${evolucao}`;
 }
 
 function resumoEstado(v) {
@@ -327,11 +303,11 @@ function telaPresidente(v) {
   const hero = heroApuracao({ ...painel, titulo: nome, hist: v.h, grafico: mun ? null : false });
   const chaveGrafico = uf !== "BR" ? chaveUF(uf) : regiao === "exterior" ? "zz" : emRegiao ? ufsRegiao.map((u) => u.toLowerCase()) : "br";
   const listaCand = d
-    ? `${avisosApuracao(d)}${listaMajoritaria(d, "presidente", "BR")}${blocoVotos(d)}`
+    ? `${avisosApuracao(d)}${rankingMajoritario(d, { aba: "presidente", uf: "BR" })}`
     : `<p class="muted">${carregando ? "Carregando…" : "Resultado indisponível no momento."}</p>`;
   const grafico = mun ? "" : blocoResultadoEvolucao(v.rp, chaveGrafico);
   return `${hero}
-    <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${grafico}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
+    <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${d ? cartoesVotacao(d) : ""}${grafico}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
 }
 
 function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
@@ -364,6 +340,7 @@ function telaProporcionalUF(v) {
     ${cadeiras}
     ${dist.art111 ? aviso("Nenhum partido ou federação alcançou o quociente eleitoral. Pelo art. 111 do Código Eleitoral, as vagas ficam com os candidatos mais votados.") : ""}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
+    ${cartoesVotacao(d, { proporcional: true })}
     <section class="card"><h2>${el.titulo}</h2>${el.itens}</section>
     ${maisVotados(d)}`;
 }
