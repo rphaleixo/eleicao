@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { detectarEventos, acrescentarEventos, escolherAlvos, ALVOS, caminhoAlvo } from "../worker/eventos.js";
-import { blocoEventos, textoEvento, ordenarEventos } from "../public/eventos.js";
+import { blocoEventos, textoEvento, ordenarEventos, itensFaixa } from "../public/eventos.js";
 
 const c = (id, nome, partido, sit = "") => ({ id, nome, partido, sit });
 
@@ -41,4 +41,11 @@ test("log: mais recentes primeiro, textos das definições", () => {
   assert.match(textoEvento(itens[0]), /é eleito/);
   assert.match(blocoEventos({ itens: [] }), /Nenhuma definição ainda/);
   assert.match(blocoEventos(null), /Carregando/);
+});
+
+test("faixa do topo: 5 mais recentes, sem o 'até'", () => {
+  const itens = Array.from({ length: 8 }, (_, i) => ({ k: "k" + i, t: 100 + i, a: 1, cargo: "governador", uf: "RJ", tipo: "eleito", c: [{ n: "X" + i, p: "PT", id: String(i) }] }));
+  const f = itensFaixa({ itens });
+  assert.equal(f.length, 5); assert.ok(f[0].texto.includes("X7"));
+  assert.ok(!blocoEventos({ itens }).includes("até "));
 });

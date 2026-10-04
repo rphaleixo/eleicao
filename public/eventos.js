@@ -21,9 +21,40 @@ export const ordenarEventos = (itens) => [...(itens ?? [])].sort((a, b) => b.t -
 export function blocoEventos(dados) {
   if (!dados) return `<section class="card"><h2>Definições da eleição</h2><p class="muted">Carregando…</p></section>`;
   const itens = ordenarEventos(dados.itens);
-  const linhas = itens.map((e) => `<li class="ev ${e.tipo}"><span class="ev-hora">${e.a ? "até " : ""}${hhmm(e.t)}</span>
+  const linhas = itens.map((e) => `<li class="ev ${e.tipo}"><span class="ev-hora">${hhmm(e.t)}</span>
     <span class="ev-corpo"><span class="ev-onde">${CARGO[e.cargo] ?? esc(e.cargo)}${e.cargo === "presidente" ? "" : ` · ${esc(e.uf)}`}</span> ${textoEvento(e)}</span></li>`).join("");
   return `<section class="card"><div class="titulo-cadeiras"><h2>Definições da eleição</h2><span class="muted">${itens.length}</span></div>
     ${itens.length ? `<ul class="log-eventos">${linhas}</ul>` : `<p class="muted">Nenhuma definição ainda. Aqui aparecem, da mais recente para a mais antiga, os candidatos eleitos e os 2º turnos confirmados desde o início da apuração.</p>`}
-    <p class="muted nota">A hora é a em que o site registrou a definição (verificação a cada poucos minutos). Itens com "até" já estavam definidos quando o registro começou.${dados.acompanhados ? ` Cargos acompanhados: ${dados.acompanhados}; já definidos: ${dados.fechados}.` : ""}</p></section>`;
+    <p class="muted nota">A hora é a em que o site registrou a definição (verificação a cada poucos minutos). Definições que já existiam quando o registro começou mostram a hora em que foram detectadas.${dados.acompanhados ? ` Cargos acompanhados: ${dados.acompanhados}; já definidos: ${dados.fechados}.` : ""}</p></section>`;
+}
+
+const tira = (html) => String(html).replace(/<[^>]+>/g, "");
+
+/** As 5 definições mais recentes, para a faixa do topo: [{hora, texto}]. */
+export function itensFaixa(dados, n = 5) {
+  return ordenarEventos(dados?.itens).slice(0, n).map((e) => ({
+    hora: hhmm(e.t),
+    onde: CARGO[e.cargo] + (e.cargo === "presidente" ? "" : ` · ${e.uf}`),
+    texto: tira(textoEvento(e)),
+    tipo: e.tipo,
+  }));
+}
+
+let timer = null, indice = 0, atuais = "";
+/** Faixa "Últimas atualizações": mostra uma definição por vez e passa à seguinte a cada 5 segundos. */
+export function atualizarFaixa(el, dados) {
+  const itens = itensFaixa(dados);
+  const chave = JSON.stringify(itens);
+  if (chave === atuais) return;
+  atuais = chave;
+  clearInterval(timer);
+  if (!itens.length) { el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  const mostrar = () => {
+    const i = itens[indice % itens.length];
+    el.className = `faixa-eventos ${i.tipo}`;
+    el.innerHTML = `<span class="fe-rotulo">Últimas atualizações</span><span class="fe-item" key="${indice}"><b>${i.hora}</b> ${esc(i.onde)} · ${esc(i.texto)}</span><span class="fe-pos">${(indice % itens.length) + 1}/${itens.length}</span>`;
+  };
+  indice = 0; mostrar();
+  if (itens.length > 1) timer = setInterval(() => { indice++; mostrar(); }, 5000);
 }

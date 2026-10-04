@@ -28,15 +28,14 @@ test("filtra por região, estado e situação, combinando os três", () => {
   assert.deepEqual(filtrarUfs(todas, { regiao: "sul", uf: "AC" }, statusDe), []);
 });
 
-test("barra de filtros: 2º turno só onde existe, estados limitados à região", () => {
-  const com = barraFiltros(filtrosVazios(), { escopo: "x" });
-  assert.ok(com.includes('value="segundo"') && com.includes('data-f-escopo="x"') && com.includes(">Todos<"));
+test("barra de filtros: situação e estado (a região é dos botões do topo), 2º turno só onde existe", () => {
+  const com = barraFiltros(filtrosVazios(), {});
+  assert.ok(com.includes('value="segundo"') && com.includes("data-f-status") && com.includes(">Todos<"));
+  assert.ok(!com.includes("data-f-regiao") && !com.includes("data-f-limpar"));
   assert.ok(!barraFiltros(filtrosVazios(), { comSegundo: false }).includes('value="segundo"'));
-  const sul = barraFiltros({ regiao: "sul", uf: "RS", status: "" }, {});
+  const sul = barraFiltros({ regiao: "sul", uf: "RS", status: "" }, {}); // a região só limita a lista de estados
   assert.equal((sul.match(/<option value="[A-Z]{2}"/g) || []).length, 3);
-  assert.ok(sul.includes('value="RS" selected') && sul.includes('value="sul" selected') && sul.includes("data-f-limpar"));
-  assert.ok(!com.includes("data-f-limpar"));
+  assert.ok(sul.includes('value="RS" selected') && sul.includes("data-f-limpar"));
   assert.equal(STATUS.definida, "Eleição definida");
-  assert.ok(barraFiltros(filtrosVazios(), { exterior: true }).includes('value="exterior"'));
-  assert.ok(barraFiltros(filtrosVazios(), { ordem: "pct" }).includes('data-ordem-sel') && !com.includes("data-ordem-sel"));
+  assert.ok(barraFiltros(filtrosVazios(), { ordem: "pct" }).includes("data-ordem-sel") && !com.includes("data-ordem-sel"));
 });

@@ -545,3 +545,13 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 .ev { display: grid; grid-template-columns: 4.2rem 1fr; gap: 8px; padding: 9px 0 9px 10px; border-top: 1px solid var(--line); border-left: 3px solid var(--line); }
 .ev.eleito { border-left-color: #1a8f4e; } .ev.segundo { border-left-color: #c77700; }
 .ev-hora { font-variant-numeric: tabular-nums; font-weight: 700; } .ev-onde { font-weight: 700; color: var(--muted); }
+
+/* Faixa de últimas atualizações */
+.faixa-eventos { display: flex; align-items: center; gap: 10px; padding: 7px 16px; font-size: .85rem; text-decoration: none; color: var(--txt); background: var(--barra); border-bottom: 1px solid var(--line); border-left: 4px solid #1a8f4e; overflow: hidden; white-space: nowrap; }
+.faixa-eventos[hidden] { display: none; } .faixa-eventos.segundo { border-left-color: #c77700; }
+.fe-rotulo { flex: none; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.fe-item { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; animation: fe-entra .4s ease; }
+.fe-pos { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .75rem; }
+@keyframes fe-entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .fe-item { animation: none; } }
+@media (max-width: 520px) { .fe-rotulo { display: none; } }
