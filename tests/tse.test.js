@@ -63,3 +63,16 @@ test("município sempre com 5 dígitos, sem endereços alternativos", () => {
     ["/api/ele2026/6259/dados/ac/ac01120-c0003-e006259-u.json"]);
   assert.equal(urlsResultado("senador", "SP").length, 1);
 });
+
+test("estado da apuração, matematicamente definido e divulgação (EA20)", () => {
+  const base = { carg: [{ nv: "1", agr: [] }] };
+  const a = normalizar({ ...base, and: "p", tf: "n", dv: "n", md: "s" });
+  assert.equal(a.andamento, "p");
+  assert.equal(a.divulgaVotos, false);
+  assert.equal(a.definido, "s");
+  const b = normalizar({ ...base, and: "f", tf: "s", dv: "s", md: "n", esae: "s", mnae: [{ ds: "Pendência judicial" }] });
+  assert.equal(b.totalizacaoFinal, true);
+  assert.equal(b.definido, "");
+  assert.equal(b.semEleito, true);
+  assert.deepEqual(b.motivosSemEleito, ["Pendência judicial"]);
+});

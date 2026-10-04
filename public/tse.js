@@ -107,6 +107,16 @@ export function normalizar(json) {
     brancos: num(v.vb),
     nulos: num(v.tvn ?? v.vn),
     atualizadoEm: [json.dt, json.ht].filter(Boolean).join(" "),
+    // Estado da apuração (EA20): n não iniciada, p em andamento, f finalizada.
+    andamento: json.and ?? "n",
+    totalizacaoFinal: json.tf === "s",
+    // Quando "n", o TSE manda os votos zerados de propósito (regra de divulgação).
+    divulgaVotos: json.dv !== "n",
+    // Matematicamente definido (Presidente, Governador): "e" eleito, "s" segundo turno.
+    definido: json.md === "e" || json.md === "s" ? json.md : "",
+    semEleito: json.esae === "s",
+    motivosSemEleito: (Array.isArray(json.mnae) ? json.mnae : [])
+      .map((m) => (typeof m === "object" ? Object.values(m).join(" ") : String(m))),
     candidatos,
     partidos,
   };

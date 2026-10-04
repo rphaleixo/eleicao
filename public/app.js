@@ -49,6 +49,17 @@ function montarControles() {
 }
 
 // ---------- telas ----------
+const TEXTO_ANDAMENTO = { n: "Apuração ainda não iniciada", p: "Apuração em andamento", f: "Totalização finalizada" };
+
+function avisosApuracao(d) {
+  const a = [];
+  if (!d.divulgaVotos) a.push("O TSE ainda não liberou a divulgação da votação deste cargo. Os votos aparecem zerados por regra do TSE.");
+  if (d.definido === "e") a.push("Eleição matematicamente definida: o candidato mais votado está eleito.");
+  if (d.definido === "s") a.push("Matematicamente definido: a disputa vai para o 2º turno.");
+  if (d.semEleito) a.push("O TSE não atribuiu eleitos neste cargo." + (d.motivosSemEleito.length ? " Motivo: " + d.motivosSemEleito.join("; ") : ""));
+  return a.map((t) => `<p class="aviso">${esc(t)}</p>`).join("");
+}
+
 function cabecalhoApuracao(d) {
   return `<div class="card"><div class="resumo">
     <div><span class="muted">Seções apuradas</span><strong>${pct(d.pctSecoes)}</strong></div>
@@ -56,7 +67,8 @@ function cabecalhoApuracao(d) {
     <div><span class="muted">Brancos</span><strong>${fmt(d.brancos)}</strong></div>
     <div><span class="muted">Nulos</span><strong>${fmt(d.nulos)}</strong></div>
   </div><div class="progresso"><i style="width:${Math.min(100, d.pctSecoes)}%"></i></div>
-  ${d.atualizadoEm ? `<p class="muted">Arquivo do TSE gerado em ${esc(d.atualizadoEm)}</p>` : ""}</div>`;
+  <p class="muted">${TEXTO_ANDAMENTO[d.andamento] ?? ""}${d.atualizadoEm ? " · totalização de " + esc(d.atualizadoEm) : ""}</p>
+  ${avisosApuracao(d)}</div>`;
 }
 
 function listaCandidatos(cands, limite = 30) {
