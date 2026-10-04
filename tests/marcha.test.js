@@ -38,7 +38,7 @@ test("tela do Brasil: painel único e lista de estados, sem seletor de eleição
   const h = telaMarcha(v, est({}));
   for (const t of ["Brasil", "Norte", "Acre", "Tocantins", "Exterior", 'data-uf="ZZ"', "anel", "Presentes", "Ausentes", "A apurar"]) assert.ok(h.includes(t), t);
   assert.ok(!h.includes("data-serie"));
-  assert.equal((h.match(/class="card/g) || []).length, 2);
+  assert.equal((h.match(/class="card/g) || []).length, 3); // painel, estados e definições
   assert.ok(!h.includes("expandido"));
   const sul = telaMarcha(v, est({ regiao: "sul" }));
   assert.ok(sul.includes("Santa Catarina") && !sul.includes("Acre") && !sul.includes('data-uf="ZZ"'));

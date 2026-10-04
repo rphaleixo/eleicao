@@ -17,7 +17,7 @@ import { barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js
 import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS, INICIO_APURACAO } from "./config.js";
 import {
-  urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlResultadosPresidente, urlFoto,
+  urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlEventos, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
 } from "./tse.js";
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
@@ -117,6 +117,12 @@ async function obterResultadosPresidente(locais) {
   memoRP.set(chave, { t: Date.now(), dados });
   return dados;
 }
+let memoEventos = { t: 0, dados: null };
+async function obterEventos() {
+  if (Date.now() - memoEventos.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return memoEventos.dados;
+  try { memoEventos = { t: Date.now(), dados: await buscarJson(urlEventos()) }; } catch { memoEventos.t = Date.now(); }
+  return memoEventos.dados;
+}
 async function obterHistorico() {
   if (Date.now() - memo.historico.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return memo.historico.dados;
   try { memo.historico = { t: Date.now(), dados: (await buscarJson(urlHistorico())).pontos ?? [] }; } catch { memo.historico.t = Date.now(); }
@@ -159,10 +165,10 @@ async function carregarView(rota) {
   const { aba, uf, mun } = rota;
   const hist = obterHistorico();
   if (aba === "andamento") {
-    const [f, e, h] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist]);
+    const [f, e, h, eventos] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist, obterEventos()]);
     // Resumo do estado aberto na lista: busca em segundo plano, sem travar o painel principal.
     const detalhe = uf === "BR" ? {} : emSegundoPlano("det-" + uf, 9000, () => detalhesEstado(uf)) ?? {};
-    return { tipo: "andamento", f, e, h, detalhe };
+    return { tipo: "andamento", f, e, h, detalhe, eventos };
   }
   if (aba === "estados") {
     const { cargo } = rota;

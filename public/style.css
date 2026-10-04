@@ -539,3 +539,9 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 .g-info { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px; background: var(--barra); font-size: .85rem; }
 .g-info[hidden] { display: none; }
 .g-info > b:first-child { flex: 1 0 100%; }
+
+/* Log de definições */
+.log-eventos { list-style: none; margin: 8px 0 0; padding: 0; }
+.ev { display: grid; grid-template-columns: 4.2rem 1fr; gap: 8px; padding: 9px 0 9px 10px; border-top: 1px solid var(--line); border-left: 3px solid var(--line); }
+.ev.eleito { border-left-color: #1a8f4e; } .ev.segundo { border-left-color: #c77700; }
+.ev-hora { font-variant-numeric: tabular-nums; font-weight: 700; } .ev-onde { font-weight: 700; color: var(--muted); }

@@ -2,7 +2,7 @@
 // Em 2026 são DOIS códigos por turno: um só para Presidente e outro para
 // Governador, Senador e Deputados.
 // Para testar com outro ciclo: ?ano=2024&fed=619&est=619
-const p = new URLSearchParams(location.search);
+const p = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 const turno = p.get("turno") === "2" ? 2 : 1;
 
 const PADRAO_2026 = turno === 2

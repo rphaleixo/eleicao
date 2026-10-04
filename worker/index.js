@@ -6,6 +6,7 @@
 import { fichaDoCandidato } from "./candidato.js";
 import { carregarSeed } from "./carga.js";
 import { URL_SENADO, senadoresEleitosEm2022 } from "./senado.js";
+import { ALVOS, acrescentarEventos, caminhoAlvo, detectarEventos, escolherAlvos, normalizar } from "./eventos.js";
 import { acrescentarResultado, lerResultado, UFS_MINUSCULAS } from "./resultados.js";
 import { acrescentar, pontoDeAcompanhamento, presencaDeAcompanhamento } from "./historico.js";
 
@@ -49,6 +50,8 @@ export default {
     if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] });
     if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] }, url.searchParams.get("local"));
 
+    if (url.pathname === "/api/eventos") return lerEventos(request, env, ctx);
+
     const mCand = /^\/api\/candidato\/(\d{1,15})$/.exec(url.pathname);
     if (mCand) return candidato(env, Number(mCand[1]));
 
@@ -78,6 +81,7 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(registrarHistorico(env));
     ctx.waitUntil(registrarResultados(env).catch((e) => console.error("resultados da presidência:", e.message)));
+    ctx.waitUntil(registrarEventos(env).catch((e) => console.error("definições:", e.message)));
     ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
   },
 };
@@ -130,6 +134,40 @@ export async function registrarResultados(env) {
   const atual = await env.HIST.get("presidente", "json");
   const { historico, mudou } = acrescentarResultado(atual, v, nomes);
   if (mudou) await env.HIST.put("presidente", JSON.stringify(historico));
+}
+
+// Definições (eleito / 2º turno) com a hora em que apareceram. Revezamos os arquivos para não passar do limite de consultas por minuto.
+export async function registrarEventos(env) {
+  if (!env.HIST) return;
+  const estado = (await env.HIST.get("eventos", "json")) ?? { itens: [], visto: {}, fechado: {} };
+  const agora = Date.now(), alvos = escolherAlvos(estado);
+  const resp = await Promise.all(alvos.map(async (a) => {
+    try {
+      const r = await fetch(ORIGEM_TSE + caminhoAlvo(a, ANO, ELEICAO_FEDERAL, ELEICAO_ESTADUAL));
+      return r.ok ? [a, normalizar(await r.json())] : [a, null];
+    } catch { return [a, null]; }
+  }));
+  let itens = estado.itens;
+  for (const [a, d] of resp) {
+    const primeira = !estado.visto[a.id];
+    if (!d) continue;
+    estado.visto[a.id] = Math.floor(agora / 1000);
+    const { eventos, fechado } = detectarEventos(a.cargo, a.uf.toUpperCase(), d);
+    itens = acrescentarEventos({ itens }, eventos, agora, primeira).itens;
+    if (fechado) estado.fechado[a.id] = 1;
+  }
+  await env.HIST.put("eventos", JSON.stringify({ itens, visto: estado.visto, fechado: estado.fechado }));
+}
+
+async function lerEventos(request, env, ctx) {
+  const cache = caches.default, chave = new Request(new URL(request.url).origin + "/api/eventos");
+  const guardado = await cache.match(chave);
+  if (guardado) return guardado;
+  const bruto = (env.HIST && (await env.HIST.get("eventos", "json"))) || { itens: [] };
+  const itens = (bruto.itens ?? []).filter((e) => e.t >= INICIO_APURACAO).sort((a, b) => b.t - a.t);
+  const resposta = new Response(JSON.stringify({ itens, acompanhados: ALVOS.length, fechados: Object.keys(bruto.fechado ?? {}).length }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=10", "Access-Control-Allow-Origin": "*" } });
+  ctx.waitUntil(cache.put(chave, resposta.clone()));
+  return resposta;
 }
 
 export async function registrarHistorico(env) {

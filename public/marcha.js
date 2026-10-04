@@ -5,6 +5,7 @@ import { areaPresenca } from "./graficos.js";
 import { urlFoto } from "./tse.js";
 import { seloSit, classeSit, seloEleicao } from "./situacao.js";
 import { corPartido } from "./cores.js";
+import { blocoEventos } from "./eventos.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 import { fmt, pct } from "./formato.js";
@@ -235,5 +236,6 @@ export function telaMarcha(v, estado, comNav = true) {
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
       <ul class="lista-estados">${listaOrdenada(v, estado)}</ul>
-      <p class="muted nota">Toque em um estado para ver o resumo da situação e das eleições para Presidente, Governador e Senador. Porcentagens de candidatos: votos no candidato ÷ votos válidos.</p></section>`;
+      <p class="muted nota">Toque em um estado para ver o resumo da situação e das eleições para Presidente, Governador e Senador. Porcentagens de candidatos: votos no candidato ÷ votos válidos.</p></section>
+    ${blocoEventos(v.eventos ?? null)}`;
 }
