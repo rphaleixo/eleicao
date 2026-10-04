@@ -7,9 +7,15 @@ const ORIGEM_TSE = "https://resultados.tse.jus.br/oficial/";
 // O TSE publica cada arquivo com max-age de ~57s; consultar mais rápido não traz dado novo.
 const CACHE_SEGUNDOS = 30;
 
-// Só aceita caminhos de arquivos JSON de apuração (não é um proxy aberto).
-const CAMINHO_VALIDO =
-  /^ele(2022|2024|2026)\/\d{3,6}\/(config|dados|dados-simplificados)\/[a-z0-9_\-/]+\.json$/;
+// Só aceita endereços de arquivos que existem no padrão do TSE. O TSE bloqueia por 10
+// minutos IPs com muitos erros 404 e com mais de 100 requisições por segundo.
+// Município: sempre 5 dígitos. Resultado: sufixo -u. Configuração: mun-e<código>-cm.
+const CAMINHO_VALIDO = new RegExp(
+  "^ele(2022|2024|2026)/\\d{3,6}/(" +
+    "config/mun-e\\d{6}-cm" +
+    "|dados/(br/br|[a-z]{2}/[a-z]{2}(\\d{5})?)-c\\d{4}-e\\d{6}-u" +
+    ")\\.json$"
+);
 
 export default {
   async fetch(request, env) {
@@ -33,7 +39,7 @@ export default {
         cacheEverything: true,
         cacheTtlByStatus: {
           "200-299": CACHE_SEGUNDOS,
-          "404": 15,
+          "404": 30,
           "500-599": 0,
         },
       },

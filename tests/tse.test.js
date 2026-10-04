@@ -49,8 +49,17 @@ test("arquivo real de vereador 2024: federação e partido isolado", () => {
   assert.ok(eleito && /^Eleito/.test(eleito.situacao));
 });
 
-test("candidato sub judice não é elegível", () => {
-  const d = normalizar({ carg: [{ agr: [{ n: "1", nm: "X", tp: "i", par: [{ sg: "X", tvtn: "10", cand: [
-    { sqcand: "1", nmu: "A", vap: "10", dvt: "Anulado sub judice" }] }] }] }] });
-  assert.equal(d.candidatos[0].elegivel, false);
+test("só candidato com destinação 'Válido' pode ser eleito", () => {
+  const dv = (dvt) => normalizar({ carg: [{ agr: [{ n: "1", nm: "X", tp: "i", par: [{ sg: "X", tvtn: "10", cand: [
+    { sqcand: "1", nmu: "A", vap: "10", dvt }] }] }] }] }).candidatos[0].elegivel;
+  assert.equal(dv("Válido"), true);
+  assert.equal(dv("Anulado sub judice"), false);
+  assert.equal(dv("Anulado"), false);
+  assert.equal(dv("Válido (legenda)"), false);
+});
+
+test("município sempre com 5 dígitos, sem endereços alternativos", () => {
+  assert.deepEqual(urlsResultado("governador", "AC", "1120"),
+    ["/api/ele2026/6259/dados/ac/ac01120-c0003-e006259-u.json"]);
+  assert.equal(urlsResultado("senador", "SP").length, 1);
 });

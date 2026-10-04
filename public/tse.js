@@ -9,20 +9,18 @@ const codEleicao = (cargo) =>
   CARGOS[cargo].federal ? CONFIG.eleicaoFederal : CONFIG.eleicaoEstadual;
 
 /**
- * Endereços candidatos, em ordem de preferência. O de município (-u) foi
- * confirmado em arquivos reais; os de Brasil e estado seguem o mesmo padrão
- * e há alternativas caso o TSE use outro nome. Todos passam pelo /api (cache).
+ * Endereço do arquivo de resultado (EA20, sufixo -u). O TSE bloqueia IPs que
+ * geram muitos erros 404, então só montamos endereços que sabemos que existem:
+ * Brasil, estado e município (código de município sempre com 5 dígitos).
  */
 export function urlsResultado(cargo, uf, municipio) {
   const e = codEleicao(cargo);
   const base = `/api/ele${CONFIG.ano}/${e}`;
   const arq = (sigla) => `${sigla}-c${c4(cargo)}-e${pad6(e)}`;
-  if (uf === "BR") {
-    return [`${base}/dados/br/${arq("br")}-u.json`, `${base}/dados-simplificados/br/${arq("br")}-r.json`];
-  }
+  if (uf === "BR") return [`${base}/dados/br/${arq("br")}-u.json`];
   const u = uf.toLowerCase();
-  if (municipio) return [`${base}/dados/${u}/${arq(u + municipio)}-u.json`];
-  return [`${base}/dados/${u}/${arq(u)}-u.json`, `${base}/dados-simplificados/${u}/${arq(u)}-r.json`];
+  if (municipio) return [`${base}/dados/${u}/${arq(u + String(municipio).padStart(5, "0"))}-u.json`];
+  return [`${base}/dados/${u}/${arq(u)}-u.json`];
 }
 
 export const urlMunicipios = (cargo = "governador") =>
@@ -61,8 +59,9 @@ function lerCandidato(c, par) {
     pct: num(c.pvap),
     eleito: c.e === "s",
     situacao: c.st ?? "",
-    // Votos de candidato anulado ou sub judice contam para o partido, mas ele não pode ser eleito.
-    elegivel: /^V/i.test(c.dvt ?? "V"),
+    // Só "Válido" pode ser eleito. "Anulado", "Anulado sub judice" e "Válido (legenda)"
+    // (voto que vai para o partido) não ocupam vaga.
+    elegivel: c.dvt == null || /^válido$/i.test(String(c.dvt).trim()),
     situacaoVoto: c.dvt ?? "",
   };
 }
