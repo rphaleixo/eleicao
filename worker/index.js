@@ -5,6 +5,7 @@
 
 import { fichaDoCandidato } from "./candidato.js";
 import { carregarSeed } from "./carga.js";
+import { URL_SENADO, senadoresEleitosEm2022 } from "./senado.js";
 import { acrescentarResultado, lerResultado, UFS_MINUSCULAS } from "./resultados.js";
 import { acrescentar, pontoDeAcompanhamento, presencaDeAcompanhamento } from "./historico.js";
 
@@ -40,6 +41,7 @@ export default {
       const uf = request.cf?.country === "BR" ? String(request.cf.regionCode || "").toUpperCase() : "";
       return new Response(JSON.stringify({ uf: /^[A-Z]{2}$/.test(uf) ? uf : null }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-store" } });
     }
+    if (url.pathname === "/api/senadores-mandato") return senadoresMandato();
     if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] });
     if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] }, url.searchParams.get("local"));
 
@@ -75,6 +77,14 @@ export default {
     ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
   },
 };
+
+// Os 27 senadores com mandato até 2031. A lista do Senado muda pouco: guardamos por 1 hora.
+async function senadoresMandato() {
+  const r = await fetch(URL_SENADO, { headers: { Accept: "application/json" }, cf: { cacheEverything: true, cacheTtl: 3600 } });
+  if (!r.ok) return new Response(JSON.stringify({ erro: "Lista do Senado indisponível" }), { status: 502, headers: { "Content-Type": "application/json; charset=utf-8" } });
+  const dados = senadoresEleitosEm2022(await r.json());
+  return new Response(JSON.stringify(dados), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+}
 
 async function candidato(env, sq) {
   if (!env.DB) return new Response("Banco indisponível", { status: 503 });

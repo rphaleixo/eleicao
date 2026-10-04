@@ -38,5 +38,5 @@ export function faixaDefinicao(d) {
   return `<div class="faixa-def segundo" role="status"><i aria-hidden="true">2º</i><span><b>Vai ao 2º turno</b>${nomes.length ? ` · ${nomes.join(" × ")}` : ""}</span></div>`;
 }
 
-/** Legenda para as telas com vários estados. */
-export const legendaSituacao = `<p class="legenda-sit"><span class="selo-sit eleito"><i aria-hidden="true">✓</i>Eleito</span><span class="selo-sit segundo"><i aria-hidden="true">2º</i>2º turno</span><span class="muted">Eleição definida ou em andamento</span></p>`;
+/** Legenda para as telas com vários estados. O Senado não tem 2º turno. */
+export const legendaSituacao = (comSegundoTurno = true) => `<p class="legenda-sit"><span class="selo-sit eleito"><i aria-hidden="true">✓</i>Eleito</span>${comSegundoTurno ? `<span class="selo-sit segundo"><i aria-hidden="true">2º</i>2º turno</span>` : ""}<span class="muted">Eleição definida ou em andamento</span></p>`;

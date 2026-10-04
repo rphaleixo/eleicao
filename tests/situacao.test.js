@@ -40,5 +40,14 @@ test("selos e faixa", () => {
   assert.match(faixaDefinicao(normalizar(base("e"))), /Eleição definida[\s\S]*ANA eleito/);
   assert.equal(faixaDefinicao(normalizar(base(""))), "");
   assert.match(seloEleicao(normalizar(base("e"))), /Definida/);
-  assert.ok(legendaSituacao.includes("Eleito") && legendaSituacao.includes("2º turno"));
+  assert.ok(legendaSituacao().includes("Eleito") && legendaSituacao().includes("2º turno"));
+  assert.ok(legendaSituacao(false).includes("Eleito") && !legendaSituacao(false).includes("2º turno"));
+});
+
+test("o Senado não tem 2º turno: nem pelo TSE nem pela definição matemática", () => {
+  const senado = (md, st) => normalizar({ md, v: { vv: "1000" }, carg: [{ cd: "5", nv: "2", agr: [{ n: "1", par: [{ sg: "PT", cand: [
+    { n: "13", sqcand: "1", nm: "ANA", vap: "600", e: st ? "s" : "n", st: st ?? "" }, { n: "22", sqcand: "2", nm: "BIA", vap: "300" }] }] }] }] });
+  assert.deepEqual(senado("s").candidatos.map((c) => c.sit), ["", ""]);
+  assert.deepEqual(senado("", "2º turno").candidatos.map((c) => c.sit), ["", ""]);
+  assert.deepEqual(senado("", "Eleito").candidatos.map((c) => c.sit), ["eleito", ""]);
 });

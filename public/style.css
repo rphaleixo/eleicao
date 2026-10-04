@@ -424,3 +424,15 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .br-nome { grid-area: nome; font-weight: 600; } .barras-regiao b { grid-area: pct; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
 .br-trilho { grid-area: trilho; display: block; height: 14px; border-radius: 7px; background: rgba(255, 255, 255, .18); overflow: hidden; } .br-trilho i { display: block; height: 100%; background: var(--vivo); border-radius: 7px; transition: width .5s; }
 .barras-regiao small { grid-area: det; color: rgba(255, 255, 255, .72); font-size: .76rem; }
+
+/* bancada do Senado */
+.visao-senado { margin-top: 14px; }
+.plenario { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; margin: 12px 0 8px; }
+.plenario i { aspect-ratio: 1; border-radius: 6px; background: var(--cor, var(--abst)); }
+.plenario i.pl-mantem { background: transparent; box-shadow: inset 0 0 0 3px var(--cor, var(--abst)); }
+.plenario i.pl-vaga { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); border: 1px dashed var(--muted); opacity: .6; }
+.legenda-plenario { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 10px; font-size: .8rem; color: var(--muted); }
+.legenda-plenario i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--acento); }
+.legenda-plenario i.pl-mantem { background: transparent; box-shadow: inset 0 0 0 2.5px var(--acento); } .legenda-plenario i.pl-vaga { background: transparent; border: 1px dashed var(--muted); }
+.resumo-lista { cursor: pointer; list-style: none; } .resumo-lista h2 { display: inline; margin: 0; } .resumo-lista::after { content: " ▾"; color: var(--muted); }
+.mantem-grupo { margin-top: 14px; } .mantem-grupo h4 { margin: 0 0 6px; } .mantem-grupo ul { list-style: none; margin: 0; padding: 0; } .mantem-grupo li { padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; }

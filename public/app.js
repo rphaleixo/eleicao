@@ -3,6 +3,7 @@ import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
 import { cardEstado, cardRegiao, gradeCards } from "./cardsEstados.js";
+import { montarBancada, telaBancada } from "./bancada.js";
 import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao } from "./situacao.js";
 import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
@@ -22,7 +23,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -48,7 +49,7 @@ function montarControles() {
   $("mun").value = estado.mun;
 }
 
-const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "presidente" ? "/" + estado.regiao : ""}`; // na aba Presidente a região também muda a carga
+const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "presidente" ? "/" + estado.regiao : ""}${estado.aba === "senadores" ? "/" + estado.visaoSenado : ""}`; // na aba Presidente a região também muda a carga
 const cacheViews = new Map(); // última resposta de cada tela: aparece na hora, e é atualizada em seguida
 
 function mostrarCarregando() {
@@ -80,6 +81,13 @@ async function obter(cargo, uf, mun) {
   return normalizar(json);
 }
 const obterAcompanhamento = async (cargo) => lerAcompanhamento(await buscarJson(urlAcompanhamento(cargo)));
+
+const memoMandatos = { t: 0, dados: null };
+async function obterMandatos() {
+  if (memoMandatos.dados && Date.now() - memoMandatos.t < 3600_000) return memoMandatos.dados;
+  try { memoMandatos.dados = await buscarJson("/api/senadores-mandato"); memoMandatos.t = Date.now(); } catch { memoMandatos.t = Date.now() - 3000_000; } // nova tentativa em ~10 min
+  return memoMandatos.dados ?? { senadores: null }; // null = ainda não pedido; { senadores: null } = falhou
+}
 
 const memoRP = new Map();
 async function obterResultadosPresidente(locais) {
@@ -150,8 +158,8 @@ async function carregarView(rota) {
   if (aba === "governadores" || aba === "senadores") {
     const cargo = aba === "governadores" ? "governador" : "senador";
     const lista = emSegundoPlano("pan-" + cargo, CONFIG.atualizarACadaSegundos * 900, () => panorama(cargo));
-    const e = await obterAcompanhamento("governador");
-    return { tipo: "cargo-por-estado", cargo, e, lista };
+    const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" && rota.visaoSenado === "bancada" ? obterMandatos() : null]);
+    return { tipo: "cargo-por-estado", cargo, e, lista, mandatos, visao: rota.visaoSenado };
   }
   const acomp = obterAcompanhamento(aba === "camara" ? "dep-federal" : aba);
   if (aba === "presidente") {
@@ -324,7 +332,19 @@ function telaEstados(v) {
   return telaMajoritaria(v);
 }
 
+function seletorSenado(visao) {
+  return `<div class="seg visao-senado" role="group" aria-label="Visão do Senado"><button type="button" data-visao-senado="estados" aria-pressed="${visao !== "bancada"}">Por estado</button><button type="button" data-visao-senado="bancada" aria-pressed="${visao === "bancada"}">Bancada em 2027</button></div>`;
+}
+
+function telaBancadaSenado(v) {
+  if (!v.lista || (v.mandatos === null)) return `${seletorSenado("bancada")}${telaBancada(null, { carregando: true })}`;
+  if (!v.mandatos?.senadores) return `${seletorSenado("bancada")}<section class="card">${aviso("Não foi possível carregar a lista de senadores em exercício. Tentaremos de novo automaticamente.")}</section>`;
+  const b = montarBancada({ mandatos: v.mandatos.senadores, resultados: v.lista });
+  return `${seletorSenado("bancada")}${telaBancada(b, { versao: v.mandatos.versao })}`;
+}
+
 function telaCargoPorEstado(v) {
+  if (v.cargo === "senador" && estado.visaoSenado === "bancada") return telaBancadaSenado(v);
   const { regiao } = estado, cargo = v.cargo, governador = cargo === "governador";
   const plural = governador ? "Governadores" : "Senadores", singular = governador ? "governador" : "senador";
   const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, regiao === "exterior" ? "" : regiao, "BR");
@@ -337,9 +357,9 @@ function telaCargoPorEstado(v) {
   const apurado = (u) => v.e.ufs[u.toLowerCase()]?.pct ?? 0;
   ufs.sort(estado.ordem === "pct" ? (a, b) => apurado(b) - apurado(a) : (a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
   const cards = v.lista ? ufs.map((u) => cardEstado(u, v.lista.find((x) => x.uf === u)?.d ?? null, v.e.ufs[u.toLowerCase()], cargo)) : null;
-  return `${hero}<section class="card"><div class="estados-topo"><h2>${plural.slice(0, -2)}${governador ? "or" : "or"} por estado</h2>
+  return `${governador ? "" : seletorSenado("estados")}${hero}<section class="card"><div class="estados-topo"><h2>${plural.slice(0, -2)}or por estado</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
-    ${legendaSituacao}
+    ${legendaSituacao(governador)}
     ${cards ? gradeCards(cards) : `<p class="muted">Carregando os 27 estados…</p>`}
     <p class="muted nota">Toque em um estado para ver a disputa completa de ${singular}. Abstenção sobre as seções já apuradas.</p></section>`;
 }
@@ -445,7 +465,7 @@ let navAnterior = "", subAnterior = "";
 let ultimoAc = null; // andamento por estado mais recente, para a navegação aparecer enquanto a tela carrega
 function renderNavegacao(v) {
   ultimoAc = v?.f ?? v?.ac ?? v?.e ?? ultimoAc;
-  const nav = (estado.aba === "andamento" || estado.aba === "presidente" || estado.aba === "governadores" || estado.aba === "senadores") && ultimoAc
+  const nav = (estado.aba === "andamento" || estado.aba === "presidente" || estado.aba === "governadores" || (estado.aba === "senadores" && estado.visaoSenado !== "bancada")) && ultimoAc
     ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf, comExterior: estado.aba === "andamento" || estado.aba === "presidente", comEstados: estado.aba === "andamento" || estado.aba === "presidente" }) : "";
   const sub = estado.aba === "estados" ? barraEstado(estado.uf, estado.cargo) : "";
   const preserva = (el, html, anterior) => {
@@ -568,6 +588,8 @@ $("conteudo").addEventListener("click", (e) => {
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   if (e.target.closest("[data-tentar]")) { atualizar(); return; }
+  const visao = e.target.closest("[data-visao-senado]");
+  if (visao) { estado.visaoSenado = visao.dataset.visaoSenado; navegar({}); return; }
   const painel = e.target.closest("[data-painel]");
   if (painel) { estado.painel = painel.dataset.painel; render(); return; }
   const regCard = e.target.closest("[data-regiao]");
