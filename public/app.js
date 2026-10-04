@@ -6,6 +6,7 @@ import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { statusProjecao } from "./status.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
+import { blocoClausula, calcularClausula } from "./clausula.js";
 import { barraBusca, buscaVazia, filtrando as buscando, passaBusca } from "./buscaCandidatos.js";
 import { blocoTop10, cardsMaisVotados } from "./deputadosVotados.js";
 import { seletorAgrupCamara, plenarioCamara, porPartidoCamara, cardsEstadosCamara, tabelaEstadosCamara, lideresCamara, MAIORIA_CAMARA } from "./camara.js";
@@ -33,7 +34,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia() };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -637,6 +638,9 @@ function telaNacionalProp(v) {
       ${sel ? `<div class="cartao-mapa">${cardsEstadosCamara(n, [sel])}</div>` : `<p class="muted dica-mapa">Toque em um estado para ver a bancada dele.</p>`}`;
   } else if (agrup === "tabela") {
     corpo = `${filtros}${tabelaEstadosCamara(n, ufs)}`;
+  } else if (agrup === "clausula") {
+    const seg = seletorVisao("data-clausula", estado.clausula, [["todos", "Todos"], ["atingiu", "Atingiram"], ["nao", "Não atingiram"]]);
+    corpo = blocoClausula(calcularClausula(v.estados), estado.clausula, seg, statusAcompanhamento(v.ac));
   } else if (agrup === "top10") {
     corpo = blocoTop10(v.estados, statusAcompanhamento(v.ac));
   } else if (agrup === "votados") {
@@ -667,7 +671,7 @@ function usaRegiao() {
   const { aba } = estado;
   if (aba === "andamento" || aba === "presidente" || aba === "governadores") return true;
   if (aba === "senadores") return !(estado.visaoSenado === "bancada" && estado.agrupBancada === "partido");
-  if (aba === "camara") return !["partido", "top10"].includes(estado.agrupCamara);
+  if (aba === "camara") return !["partido", "top10", "clausula"].includes(estado.agrupCamara);
   return false;
 }
 let navAnterior = "", subAnterior = "";
@@ -842,6 +846,8 @@ $("conteudo").addEventListener("click", (e) => {
   if (filtro) { estado.regiao = filtro.dataset.filtroRegiao; navegar({ uf: "BR", mun: "" }); return; }
   const mapaUf = e.target.closest("[data-mapa-uf]");
   if (mapaUf) { estado.mapaUf = estado.mapaUf === mapaUf.dataset.mapaUf ? "" : mapaUf.dataset.mapaUf; render(); return; }
+  const cl = e.target.closest("[data-clausula]");
+  if (cl) { estado.clausula = cl.dataset.clausula; render(); return; }
   const agrupC = e.target.closest("[data-agrup-camara]");
   if (agrupC) { estado.agrupCamara = agrupC.dataset.agrupCamara; render(); return; }
   const agrup = e.target.closest("[data-agrup-bancada]");
