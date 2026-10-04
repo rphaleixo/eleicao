@@ -23,6 +23,7 @@ import {
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
 import { corPartido } from "./cores.js";
 import { linhaEvolucao, linhasResultado } from "./graficos.js";
+import { iniciarGraficos, reaplicarGraficos } from "./graficoInterativo.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -229,7 +230,7 @@ function blocoResultadoEvolucao(rp, local, final = false) {
   const grafico = rp === undefined ? `<p class="muted vazio-grafico">Carregando o histórico…</p>`
     : linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO, ate: final ? 0 : Date.now() });
   return `<section class="card"><h2>Evolução do resultado</h2>${grafico}
-    <p class="muted">% dos votos válidos de cada candidato, desde as 17h, minuto a minuto.</p></section>`;
+    <p class="muted">% dos votos válidos de cada candidato, desde o início da apuração, minuto a minuto. Toque no gráfico para ver um momento.</p></section>`;
 }
 
 function blocoEvolucao(titulo, hist, serie, chave) {
@@ -666,6 +667,7 @@ function render() {
   const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
+  reaplicarGraficos($("conteudo"));
   if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
 }
 
@@ -756,6 +758,7 @@ function apuracaoDe(sq) {
   const c = fontes.flatMap((f) => f.candidatos).find((x) => x.id === String(sq));
   return c ? { votos: c.votos, pct: c.pct, situacao: c.sit ? TEXTO_SIT[c.sit] : c.eleito ? c.situacao || "Eleito" : !c.elegivel ? c.situacaoVoto : null } : null;
 }
+iniciarGraficos($("conteudo"));
 $("conteudo").addEventListener("change", (e) => {
   const os = e.target.closest?.("[data-ordem-sel]");
   if (os) { estado.ordem = os.value; render(); return; }

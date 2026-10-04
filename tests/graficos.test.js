@@ -9,7 +9,7 @@ test("presença: ignora o que veio antes do início e parte de zero no início",
   const antes = [pt(T0 - 600, 5, 5, 1), pt(T0 - 60, 6, 6, 2)];
   assert.match(areaPresenca(antes, "br", 100, { inicio: T0 * 1000 }), /começa quando a apuração iniciar/);
   const mistos = [...antes, pt(T0 + 600, 30, 10, 40)];
-  const svg = areaPresenca(mistos, "br", 100, { inicio: T0 * 1000 });
+  const svg = areaPresenca(mistos, "br", 100, { inicio: T0 * 1000, ate: (T0 + 1200) * 1000 });
   assert.match(svg, /<svg/);
   assert.match(svg, /30,00% presentes/);
 });
@@ -31,4 +31,18 @@ test("o eixo do tempo cresce até 'agora' e o valor se mantém", () => {
   const x = (svg) => Number(/<circle cx="([\d.]+)"/.exec(svg)[1]);
   assert.ok(x(longo) > x(curto) || x(longo) === x(curto)); // o último ponto fica na ponta direita
   assert.ok(/<path class="g-cand" d="M[\d.,]+ L/.test(longo)); // a linha se estende até agora
+});
+
+test("gráficos começam na primeira apuração e são consultáveis", async () => {
+  const { indiceEm, instanteEm } = await import("../public/graficoInterativo.js");
+  const pts = [{ t: T0 + 60, f: { br: 0 } }, { t: T0 + 600, f: { br: 10 } }, { t: T0 + 1200, f: { br: 20 } }];
+  const svg = linhaEvolucao(pts, (p) => p.f.br, { inicio: T0 * 1000, ate: (T0 + 1500) * 1000 });
+  const g = JSON.parse(svg.match(/data-g="([^"]*)"/)[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<"));
+  assert.equal(g.t0, (T0 + 600) * 1000); // zero não conta: começa quando a apuração começou
+  assert.deepEqual(g.series[0].v.slice(0, 2), [10, 20]);
+  assert.ok(svg.includes("g-info"));
+  assert.equal(indiceEm(g.ts, g.t0 - 1), 0);
+  assert.equal(indiceEm(g.ts, (T0 + 1300) * 1000), 1);
+  assert.equal(instanteEm(g, g.e), g.t0);
+  assert.equal(instanteEm(g, g.l - g.d), g.t1);
 });

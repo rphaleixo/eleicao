@@ -531,3 +531,11 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .f-sel select { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .f-limpar { grid-column: 1 / -1; justify-self: end; min-height: 28px; }
 @media (min-width: 640px) { .filtros-estados { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Gráficos consultáveis */
+svg.interativo { touch-action: pan-y; cursor: crosshair; }
+.g-cursor line { stroke: var(--txt); stroke-width: 1; stroke-dasharray: 3 3; opacity: .6; }
+.g-cursor circle { fill: var(--acento); stroke: var(--card); stroke-width: 1.5; }
+.g-info { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px; background: var(--barra); font-size: .85rem; }
+.g-info[hidden] { display: none; }
+.g-info > b:first-child { flex: 1 0 100%; }

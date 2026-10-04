@@ -1,6 +1,9 @@
 // Gráficos simples em SVG, sem bibliotecas.
 import { pct } from "./formato.js";
-const hhmm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const escAttr = (o) => JSON.stringify(o).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+/** Dados que tornam o gráfico consultável (ver graficoInterativo.js): geometria, instantes e séries. */
+const dadosG = (largura, altura, m, t0, t1, ts, series, extra = {}) => escAttr({ l: largura, h: altura, e: m.e, d: m.d, c: m.c, b: m.b, t0, t1, ts, series, ...extra });
+const hhmm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
 /**
  * Linha da evolução do % de seções apuradas ao longo do tempo.
@@ -8,8 +11,7 @@ const hhmm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit",
  * @param {(p:object)=>number|undefined} valor extrai o % de cada foto
  */
 export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotulo = "Evolução da apuração", inicio = 0, ate = 0 } = {}) {
-  const pts = pontos.map((p) => ({ t: p.t * 1000, v: valor(p) })).filter((p) => p.v != null && p.t >= inicio);
-  if (inicio && pts.length) pts.unshift({ t: inicio, v: 0 });
+  const pts = pontos.map((p) => ({ t: p.t * 1000, v: valor(p) })).filter((p) => p.v != null && p.v > 0 && p.t >= inicio); // começa quando a apuração começou de fato
   if (ate && pts.length && ate > pts[pts.length - 1].t) pts.push({ ...pts[pts.length - 1], t: ate }); // o valor se mantém até agora
   if (pts.length < 2) {
     return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
@@ -29,9 +31,10 @@ export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotu
     .map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; })
     .join("");
   const ult = pts[pts.length - 1];
-  return `<svg class="grafico" viewBox="0 0 ${largura} ${altura}" role="img" aria-label="${rotulo}: ${pct(ult.v)} das seções apuradas">
+  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [{ n: "Seções apuradas", v: pts.map((p) => p.v), y: [0, 100] }]);
+  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.v)} das seções apuradas">
     ${grade}${ticks}<path class="g-area" d="${area}"/><path class="g-linha" d="${d}"/>
-    <circle class="g-ponto" cx="${x(ult.t)}" cy="${y(ult.v)}" r="4"/></svg>`;
+    <circle class="g-ponto" cx="${x(ult.t)}" cy="${y(ult.v)}" r="4"/></svg><div class="g-info" hidden></div>`;
 }
 
 /** Mini gráfico para listas. */
@@ -57,8 +60,7 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
     const chaves = [].concat(chave), partes = chaves.map((k) => p.p?.[k]);
     const par = partes.every(Boolean) ? [partes.reduce((s, x) => s + x[0], 0), partes.reduce((s, x) => s + x[1], 0)] : p.f?.[chaves[0]] === 0 ? [0, 0] : null; // antes da apuração começar, tudo é zero
     return par ? { t: p.t * 1000, c: (par[0] / eleitorado) * 100, a: (par[1] / eleitorado) * 100 } : null;
-  }).filter((p) => p && p.t >= inicio);
-  if (inicio && pts.length) pts.unshift({ t: inicio, c: 0, a: 0 });
+  }).filter((p) => p && p.c + p.a > 0 && p.t >= inicio);
   if (ate && pts.length && ate > pts[pts.length - 1].t) pts.push({ ...pts[pts.length - 1], t: ate });
   if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
   const m = { e: 56, d: 12, c: 10, b: 24 };
@@ -75,9 +77,10 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
   const ult = pts[pts.length - 1], fim = base(ult.t), ini = base(t0);
   const grade = [0, 25, 50, 75, 100].map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`).join("");
   const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; }).join("");
-  return `<svg class="grafico" viewBox="0 0 ${largura} ${altura}" role="img" aria-label="${rotulo}: ${pct(ult.c)} presentes e ${pct(ult.a)} ausentes do eleitorado">
+  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [{ n: "Presentes", v: pts.map((p) => p.c), y: [0, 100] }, { n: "Ausentes", v: pts.map((p) => p.a), y: [0, 100] }]);
+  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.c)} presentes e ${pct(ult.a)} ausentes do eleitorado">
     ${grade}${ticks}<polygon class="g-aus" points="${topo} ${fim} ${ini}"/><polygon class="g-pres" points="${meio} ${fim} ${ini}"/>
-    <polyline class="g-borda" points="${topo}"/></svg>`;
+    <polyline class="g-borda" points="${topo}"/></svg><div class="g-info" hidden></div>`;
 }
 
 /**
@@ -103,7 +106,7 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
   const pc = (r, id) => ((r.c[id] ?? 0) / r.vv) * 100;
   const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => ids.map((id) => pc(p.r, id)))) / 10) * 10);
   const m = { e: 56, d: 12, c: 10, b: 24 };
-  const t0 = inicio || pts[0].t, t1 = Math.max(pts[pts.length - 1].t, ate, t0 + 60000);
+  const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, ate, t0 + 60000);
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
   const y = (v) => m.c + (1 - v / topo) * (altura - m.c - m.b);
   const passo = topo <= 20 ? 5 : 10, linhasGrade = [];
@@ -116,5 +119,6 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
     return `<path class="g-cand" d="${d}" style="stroke:${cor(partido(id))}"/><circle cx="${x(pts[pts.length - 1].t).toFixed(1)}" cy="${y(pc(ult, id)).toFixed(1)}" r="3.5" style="fill:${cor(partido(id))}"/>`;
   }).join("");
   const legenda = ids.map((id) => `<span><i class="pt" style="background:${cor(partido(id))}"></i>${nome(id)} <b>${pct(pc(ult, id))}</b></span>`).join("");
-  return `<svg class="grafico" viewBox="0 0 ${largura} ${altura}" role="img" aria-label="Evolução do resultado dos candidatos">${grade}${ticks}${linhas}</svg><div class="legenda-cand">${legenda}</div>`;
+  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })));
+  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos">${grade}${ticks}${linhas}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
 }
