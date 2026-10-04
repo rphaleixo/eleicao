@@ -3,9 +3,9 @@ import { agregarResultados } from "./agregado.js";
 import { rankingMajoritario } from "./ranking.js";
 import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
-import { tiraEstados, barraEstado, folhaEstados, filtrarEstados } from "./seletor.js";
+import { barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
-import { CONFIG, CARGOS, ABAS, UFS } from "./config.js";
+import { CONFIG, CARGOS, ABAS, UFS, INICIO_APURACAO } from "./config.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
@@ -21,7 +21,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, view: null, serie: "f", regiao: "", ordem: "az" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "", carregando: false, pendente: false };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -54,7 +54,7 @@ function navegar(mudanca) {
   if (estado.uf === "ZZ" && estado.aba !== "presidente" && estado.aba !== "andamento") estado.uf = "BR";
   if (mudanca.aba || mudanca.uf || mudanca.cargo) estado.mun = mudanca.mun ?? "";
   if (estado.aba === "estados") { guardarUf(estado.uf); estado.ufPadrao = estado.uf; }
-  estado.mostrar = 50;
+  estado.mostrar = 50; estado.pagEleitos = 0;
   if (estado.view?.tipo === "presidente" && estado.aba === "presidente") render(); // tudo o que o painel precisa já está carregado
   if (estado.aba === "andamento" && estado.view?.tipo === "andamento") { estado.view = { ...estado.view, detalhe: {} }; render(); } // o painel já tem os dados: mostra na hora, os líderes chegam depois
   if (estado.aba === "estados" && estado.view?.tipo === "estados") { renderNavegacao(estado.view); $("conteudo").innerHTML = `<section class="card"><p class="muted">Carregando ${esc(UFS[estado.uf])}…</p></section>`; }
@@ -176,12 +176,12 @@ function blocoProgresso(titulo, d, ac) {
 
 function blocoResultadoEvolucao(rp, local) {
   const largura = Math.max(300, Math.min(640, document.documentElement.clientWidth - 64));
-  return `<section class="card"><h2>Evolução do resultado</h2>${linhasResultado(rp, local, corPartido, { largura })}
+  return `<section class="card"><h2>Evolução do resultado</h2>${linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO })}
     <p class="muted">% dos votos válidos de cada candidato, apurado minuto a minuto.</p></section>`;
 }
 
 function blocoEvolucao(titulo, hist, serie, chave) {
-  return `<section class="card"><h2>${esc(titulo)}</h2>${linhaEvolucao(hist, (p) => p[serie]?.[chave], { rotulo: titulo })}
+  return `<section class="card"><h2>${esc(titulo)}</h2>${linhaEvolucao(hist, (p) => p[serie]?.[chave], { rotulo: titulo, inicio: INICIO_APURACAO })}
     <p class="muted">% de seções apuradas ao longo do tempo (registro a cada minuto).</p></section>`;
 }
 
@@ -197,14 +197,14 @@ function itemCandidato({ pos, nome, sub, partido, votos, pctVotos, max, badge = 
     <div class="cand-barra"><i style="width:${max ? (votos / max) * 100 : 0}%"></i></div></div>`;
 }
 
-function blocoCadeiras({ titulo, subtitulo, partidos, totalVagas, rotuloTotal }) {
+function blocoCadeiras({ titulo, subtitulo, partidos, totalVagas, rotuloTotal, progresso = "" }) {
   const ocupadas = partidos.reduce((s, p) => s + p.vagas, 0);
   const quadrados = partidos.flatMap((p) => Array.from({ length: p.vagas }, () => `<i style="--cor:${corPartido(p.sigla)}" title="${esc(p.sigla)}"></i>`)).join("");
   const vazias = Array.from({ length: Math.max(0, totalVagas - ocupadas) }, () => `<i class="vazia"></i>`).join("");
   const legenda = partidos.filter((p) => p.vagas > 0)
     .map((p) => `<span><i class="pt" style="--cor:${corPartido(p.sigla)}"></i>${esc(p.sigla)}<b>${p.vagas}</b></span>`).join("");
   return `<section class="card"><div class="titulo-cadeiras"><h2>${esc(titulo)}</h2><span><strong>${ocupadas}</strong> <span class="muted">de ${totalVagas} ${esc(rotuloTotal)}</span></span></div>
-    <p class="muted">${esc(subtitulo)}</p>
+    ${progresso}<p class="muted">${esc(subtitulo)}</p>
     <div class="waffle" role="img" aria-label="${esc(titulo)}">${quadrados}${vazias}</div>
     <div class="legenda">${legenda || `<span class="muted">Nenhuma cadeira distribuída ainda.</span>`}</div></section>`;
 }
@@ -227,15 +227,36 @@ function tabelaPartidos(dist, d) {
   return `<div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Votos</th><th>% dos votos</th><th>Cadeiras</th><th>QP</th><th>Por quociente</th><th>Por sobras</th>${final ? "<th>Oficial TSE</th>" : ""}</tr>${linhas}</table></div>`;
 }
 
-function listaEleitos(d, dist) {
+const POR_PAGINA = 15;
+
+/** Candidatos eleitos (oficiais ou projetados), do mais votado ao menos votado. */
+function dadosEleitos(d, dist) {
   const oficiais = d.candidatos.filter((c) => c.eleito);
   const usaOficial = d.totalizacaoFinal && oficiais.length > 0;
   const base = usaOficial
-    ? oficiais.map((c) => ({ sq: c.id, foto: fotoDe(cargoAtivo(), estado.uf, c), nome: c.nome, partido: c.partido, votos: c.votos, sub: ` ${c.situacao}` }))
-    : [...dist.eleitos].sort((a, b) => b.votos - a.votos).map((e) => ({ sq: e.id, foto: fotoDe(cargoAtivo(), estado.uf, { id: e.id, partido: e.partido }), nome: e.nome, partido: e.partido, votos: e.votos, sub: e.via === "quociente" ? " · quociente" : e.via === "art. 111" ? " · art. 111" : ` · sobra (${e.rodada ?? 1}ª rodada)` }));
-  const max = Math.max(1, ...base.map((b) => b.votos));
-  const itens = base.map((b, i) => itemCandidato({ pos: i + 1, ...b, pctVotos: null, max, eleito: true })).join("");
-  return { titulo: usaOficial ? `Eleitos, resultado oficial do TSE (${base.length} de ${dist.vagas})` : `Eleitos, projeção (${base.length} de ${dist.vagas})`, itens };
+    ? oficiais.map((c) => ({ id: c.id, partido: c.partido, nome: c.nome, votos: c.votos, sub: c.situacao }))
+    : [...dist.eleitos].sort((a, b) => b.votos - a.votos).map((e) => ({ id: e.id, partido: e.partido, nome: e.nome, votos: e.votos, sub: e.via === "quociente" ? "quociente" : e.via === "art. 111" ? "art. 111" : `sobra (${e.rodada ?? 1}ª rodada)` }));
+  return { usaOficial, base };
+}
+
+/** Box dos eleitos: 15 por página, com a paginação dentro do próprio box. */
+function boxEleitos(d, dist) {
+  const { usaOficial, base } = dadosEleitos(d, dist);
+  const paginas = Math.max(1, Math.ceil(base.length / POR_PAGINA));
+  const pag = Math.min(Math.max(0, estado.pagEleitos), paginas - 1);
+  const ini = pag * POR_PAGINA, fatia = base.slice(ini, ini + POR_PAGINA);
+  const max = Math.max(1, base[0]?.votos ?? 1);
+  const cargo = cargoAtivo();
+  const itens = fatia.map((b, i) => `<li class="ce" style="--cor:${corPartido(b.partido)}" data-sq="${esc(b.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
+      <span class="pos">${ini + i + 1}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, estado.uf, b.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+      <span class="ce-nome"><b>${esc(b.nome)}</b><span class="chip" style="--cor:${corPartido(b.partido)}">${esc(b.partido)}</span><small>${esc(b.sub)}</small></span>
+      <span class="ce-votos">${fmt(b.votos)}</span><span class="cr-barra"><i style="width:${(b.votos / max) * 100}%"></i></span></li>`).join("");
+  const nav = paginas > 1
+    ? `<nav class="paginacao" aria-label="Páginas dos eleitos"><button type="button" data-pag-eleitos="-1" ${pag === 0 ? "disabled" : ""}>‹ Anteriores</button>
+        <span>${ini + 1}–${ini + fatia.length} de ${base.length}</span><button type="button" data-pag-eleitos="1" ${pag >= paginas - 1 ? "disabled" : ""}>Próximos ›</button></nav>` : "";
+  return `<section class="card"><div class="titulo-cadeiras"><h2>Candidatos eleitos</h2><span class="muted">${base.length} de ${dist.vagas}</span></div>
+    <p class="muted">${usaOficial ? "Resultado oficial do TSE." : "Projeção com os votos contados até agora."}</p>
+    ${base.length ? `<ol class="lista-eleitos" start="${ini + 1}">${itens}</ol>${nav}` : `<p class="muted">Nenhum candidato eleito ainda.</p>`}</section>`;
 }
 
 function maisVotados(d, rotulo = "Candidatos por votos") {
@@ -330,18 +351,20 @@ function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
 
 function telaProporcionalUF(v) {
   const { d, dist } = v, { uf } = estado, aba = cargoAtivo();
+  const quando = d.atualizadoEm ? ` · totalização do TSE: ${esc(d.atualizadoEm)}` : "";
+  const progresso = `<div class="prog-mini"><div class="prog-linha">${selo(d.andamento)}<span><strong>${pct(d.pctSecoes)}</strong> das seções</span></div>
+    <div class="barra-prog"><i style="width:${Math.min(100, d.pctSecoes)}%"></i></div>
+    <p class="muted">${fmt(d.secoesApuradas)} de ${fmt(d.secoesTotal)} seções apuradas${quando}</p>${avisosApuracao(d)}</div>`;
   const cadeiras = blocoCadeiras({
-    titulo: `${CARGOS[aba].nome}: cadeiras por partido/federação`,
-    subtitulo: dist.oficial ? "Distribuição oficial do TSE (totalização final)." : `Projeção com ${pct(d.pctSecoes)} das seções apuradas. Quociente eleitoral: ${fmt(dist.qe)}${d.qeTse ? ` (TSE: ${fmt(d.qeTse)})` : ""}.`,
-    partidos: dist.linhas, totalVagas: dist.vagas, rotuloTotal: "cadeiras",
+    titulo: `${CARGOS[aba].nome}: ${nomeUF(uf)}`,
+    subtitulo: dist.oficial ? "Cadeiras por partido/federação: distribuição oficial do TSE (totalização final)." : `Cadeiras por partido/federação, em projeção. Quociente eleitoral: ${fmt(dist.qe)}${d.qeTse ? ` (TSE: ${fmt(d.qeTse)})` : ""}.`,
+    partidos: dist.linhas, totalVagas: dist.vagas, rotuloTotal: "cadeiras", progresso,
   });
-  const el = listaEleitos(d, dist);
-  return `${blocoProgresso(`${CARGOS[aba].nome}: ${nomeUF(uf)}`, d, null)}
-    ${cadeiras}
+  return `${cadeiras}
     ${dist.art111 ? aviso("Nenhum partido ou federação alcançou o quociente eleitoral. Pelo art. 111 do Código Eleitoral, as vagas ficam com os candidatos mais votados.") : ""}
+    ${boxEleitos(d, dist)}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
     ${cartoesVotacao(d, { proporcional: true })}
-    <section class="card"><h2>${el.titulo}</h2>${el.itens}</section>
     ${maisVotados(d)}`;
 }
 
@@ -376,7 +399,7 @@ let navAnterior = "", subAnterior = "";
 function renderNavegacao(v) {
   const nav = v.tipo === "andamento" ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf })
     : v.tipo === "presidente" ? navegacaoRegional(v.ac, { regiao: estado.regiao, uf: estado.uf })
-    : estado.aba === "estados" ? tiraEstados(estado.uf, v.e) : "";
+    : "";
   const sub = estado.aba === "estados" ? barraEstado(estado.uf, estado.cargo) : "";
   const preserva = (el, html, anterior) => {
     if (html === anterior) return anterior;
@@ -446,14 +469,15 @@ $("nav").addEventListener("click", (e) => {
 // ---------- seleção de estado: tira, barra fixa e folha de busca ----------
 const folha = $("seletor-estado");
 function abrirSeletor() {
-  folha.innerHTML = folhaEstados(estado.uf);
+  folha.innerHTML = folhaEstados(estado.uf, estado.view?.e);
   folha.showModal();
   folha.querySelector("#busca-estado").focus();
 }
 function escolherEstado(uf) { if (folha.open) folha.close(); navegar({ uf, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); }
-$("nav").addEventListener("click", (e) => { const b = e.target.closest("[data-pick-uf]"); if (b) navegar({ uf: b.dataset.pickUf, mun: "" }); });
 $("sub").addEventListener("click", (e) => {
   if (e.target.closest("[data-abrir-seletor]")) { abrirSeletor(); return; }
+  const viz = e.target.closest("[data-vizinho]");
+  if (viz) { navegar({ uf: vizinho(estado.uf, Number(viz.dataset.vizinho)), mun: "" }); return; }
   const c = e.target.closest("[data-cargo]");
   if (c) { navegar({ cargo: c.dataset.cargo, mun: "" }); window.scrollTo({ top: Math.min(window.scrollY, document.getElementById("sub").offsetTop), behavior: "smooth" }); }
 });
@@ -463,13 +487,19 @@ folha.addEventListener("click", (e) => {
 });
 folha.addEventListener("input", (e) => {
   if (e.target.id !== "busca-estado") return;
-  const achados = new Set(filtrarEstados(e.target.value));
-  folha.querySelectorAll("[data-escolher-uf]").forEach((b) => { b.hidden = !achados.has(b.dataset.escolherUf); });
-  folha.querySelectorAll(".grade-ufs").forEach((g) => { const h = g.previousElementSibling; const vazio = ![...g.children].some((b) => !b.hidden); g.hidden = vazio; if (h) h.hidden = vazio; });
-  folha.querySelector(".vazio-busca").hidden = achados.size > 0;
+  const texto = e.target.value.trim(), lista = folha.querySelector(".lista-busca");
+  const achados = texto ? filtrarEstados(texto) : [];
+  lista.hidden = !texto;
+  folha.querySelector(".mapa-brasil").hidden = !!texto;
+  folha.querySelector(".nome-estado-mapa").hidden = !!texto;
+  lista.innerHTML = achados.length
+    ? achados.map((u) => `<li><button type="button" data-escolher-uf="${u}"><b>${u}</b> ${esc(UFS[u])}</button></li>`).join("")
+    : `<li class="muted">Nenhum estado encontrado.</li>`;
 });
+const nomeDoMapa = (e) => { const t = e.target.closest?.(".tile"); const el = folha.querySelector("#nome-estado-mapa"); if (t && el) el.textContent = UFS[t.dataset.escolherUf]; };
+folha.addEventListener("pointerover", nomeDoMapa); folha.addEventListener("focusin", nomeDoMapa);
 folha.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && e.target.id === "busca-estado") { const p = folha.querySelector("[data-escolher-uf]:not([hidden])"); if (p) escolherEstado(p.dataset.escolherUf); }
+  if (e.key === "Enter" && e.target.id === "busca-estado") { const p = folha.querySelector(".lista-busca [data-escolher-uf]"); if (p) escolherEstado(p.dataset.escolherUf); }
 });
 iniciarFicha();
 function apuracaoDe(sq) {
@@ -486,6 +516,8 @@ $("conteudo").addEventListener("click", (e) => {
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
+  const pag = e.target.closest("[data-pag-eleitos]");
+  if (pag) { estado.pagEleitos = Math.max(0, estado.pagEleitos + Number(pag.dataset.pagEleitos)); render(); return; }
   const abrir = e.target.closest("[data-abrir-estado]");
   if (abrir) { navegar({ aba: "estados", uf: abrir.dataset.abrirEstado, cargo: "resumo", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   const ir = e.target.closest("[data-ir]");

@@ -19,6 +19,9 @@ export const CONFIG = {
   atualizarHistoricoACadaSegundos: 30,
 };
 
+// Os gráficos de evolução começam às 17h (Brasília) do dia da eleição, quando o TSE inicia a divulgação.
+export const INICIO_APURACAO = Date.parse("2026-10-04T17:00:00-03:00");
+
 export const CARGOS = {
   presidente: { cod: 1, nome: "Presidente", nacional: true, federal: true },
   governador: { cod: 3, nome: "Governador" },

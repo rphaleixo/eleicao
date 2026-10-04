@@ -1,6 +1,6 @@
 // Aba "Marcha da apuração": painel único com o andamento do Brasil e a lista de estados.
 // Os componentes (heroApuracao, linhaEstado, chipsRegiao...) são reaproveitados nas outras abas.
-import { UFS } from "./config.js";
+import { UFS, INICIO_APURACAO } from "./config.js";
 import { areaPresenca } from "./graficos.js";
 import { urlFoto } from "./tse.js";
 import { corPartido } from "./cores.js";
@@ -56,7 +56,7 @@ function anel(valor) {
 /** Gráfico empilhado (presentes e ausentes, em % do eleitorado) com a legenda dos três pedaços. */
 export function graficoPresenca({ hist, chave, a, altura = 160, titulo }) {
   const comp = a.eleitores ? (a.comparecimento / a.eleitores) * 100 : 0, aus = a.eleitores ? (a.abstencao / a.eleitores) * 100 : 0;
-  return `${areaPresenca(hist, chave, a.eleitores, { largura: largura(), altura, rotulo: titulo })}
+  return `${areaPresenca(hist, chave, a.eleitores, { largura: largura(), altura, rotulo: titulo, inicio: INICIO_APURACAO })}
     <div class="presenca-leg"><span><i class="pt pres"></i>Presentes <strong>${pct(comp)}</strong></span><span><i class="pt aus"></i>Ausentes <strong>${pct(aus)}</strong></span><span><i class="pt falta"></i>A apurar <strong>${pct(Math.max(0, 100 - comp - aus))}</strong></span></div>`;
 }
 

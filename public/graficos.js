@@ -6,8 +6,9 @@ const hhmm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit",
  * @param {{t:number}[]} pontos fotos do histórico (t em segundos)
  * @param {(p:object)=>number|undefined} valor extrai o % de cada foto
  */
-export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotulo = "Evolução da apuração" } = {}) {
-  const pts = pontos.map((p) => ({ t: p.t * 1000, v: valor(p) })).filter((p) => p.v != null);
+export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotulo = "Evolução da apuração", inicio = 0 } = {}) {
+  const pts = pontos.map((p) => ({ t: p.t * 1000, v: valor(p) })).filter((p) => p.v != null && p.t >= inicio);
+  if (inicio && pts.length) pts.unshift({ t: inicio, v: 0 });
   if (pts.length < 2) {
     return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
   }
@@ -48,13 +49,14 @@ export function sparkline(pontos, valor, { largura = 84, altura = 24 } = {}) {
  * @param {string|string[]} chave "br", "rj", "zz"... (lista = soma, usada nas regiões)
  * @param {number} eleitorado total de eleitores aptos
  */
-export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura = 170, rotulo = "Comparecimento e abstenção" } = {}) {
+export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura = 170, rotulo = "Comparecimento e abstenção", inicio = 0 } = {}) {
   if (!eleitorado) return `<p class="muted vazio-grafico">Sem dados de eleitorado.</p>`;
   const pts = pontos.map((p) => {
     const chaves = [].concat(chave), partes = chaves.map((k) => p.p?.[k]);
     const par = partes.every(Boolean) ? [partes.reduce((s, x) => s + x[0], 0), partes.reduce((s, x) => s + x[1], 0)] : p.f?.[chaves[0]] === 0 ? [0, 0] : null; // antes da apuração começar, tudo é zero
     return par ? { t: p.t * 1000, c: (par[0] / eleitorado) * 100, a: (par[1] / eleitorado) * 100 } : null;
-  }).filter(Boolean);
+  }).filter((p) => p && p.t >= inicio);
+  if (inicio && pts.length) pts.unshift({ t: inicio, c: 0, a: 0 });
   if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
   const m = { e: 38, d: 12, c: 10, b: 24 };
   const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, t0 + 60000);
@@ -81,7 +83,7 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
  * @param {string|string[]} local "br", "rj", "zz"... (lista = soma dos locais)
  * @param {(sigla:string)=>string} cor cor do partido
  */
-export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6 } = {}) {
+export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6, inicio = 0 } = {}) {
   const locais = [].concat(local); // lista = soma de vários locais (estados de uma região)
   const junta = (v) => {
     const rs = locais.map((l) => v?.[l]).filter(Boolean);
@@ -90,14 +92,14 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
     for (const r of rs) for (const [id, n] of Object.entries(r.c)) c[id] = (c[id] ?? 0) + n;
     return { vv: rs.reduce((t, r) => t + r.vv, 0), c };
   };
-  const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: junta(p.v) })).filter((p) => p.r && p.r.vv > 0);
+  const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: junta(p.v) })).filter((p) => p.r && p.r.vv > 0 && p.t >= inicio);
   if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando os primeiros votos forem apurados. O resultado é registrado a cada minuto.</p>`;
   const ult = pts[pts.length - 1].r;
   const ids = Object.keys(ult.c).sort((a, b) => ult.c[b] - ult.c[a]).slice(0, max);
   const pc = (r, id) => ((r.c[id] ?? 0) / r.vv) * 100;
   const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => ids.map((id) => pc(p.r, id)))) / 10) * 10);
   const m = { e: 38, d: 12, c: 10, b: 24 };
-  const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, t0 + 60000);
+  const t0 = inicio || pts[0].t, t1 = Math.max(pts[pts.length - 1].t, t0 + 60000);
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
   const y = (v) => m.c + (1 - v / topo) * (altura - m.c - m.b);
   const passo = topo <= 20 ? 5 : 10, linhasGrade = [];

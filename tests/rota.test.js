@@ -2,7 +2,7 @@ globalThis.location = { search: "" };
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
 const { lerRota, montarRota } = await import("../public/rota.js");
-const { filtrarEstados, tiraEstados, barraEstado, folhaEstados } = await import("../public/seletor.js");
+const { filtrarEstados, barraEstado, folhaEstados, vizinho, MAPA } = await import("../public/seletor.js");
 const { UFS } = await import("../public/config.js");
 const o = { ufs: UFS, ufPadrao: "SP" };
 
@@ -39,11 +39,27 @@ test("busca de estado sem acento e por sigla", () => {
   assert.deepEqual(filtrarEstados("xyz"), []);
 });
 
-test("tira, barra e folha de seleção", () => {
-  const ac = { ufs: { rj: { andamento: "p" } } };
-  assert.equal((tiraEstados("RJ", ac).match(/data-pick-uf/g) || []).length, 27);
-  assert.ok(tiraEstados("RJ", ac).includes('data-pick-uf="RJ" aria-pressed="true"'));
+test("estado anterior e seguinte percorrem a ordem alfabética e dão a volta", () => {
+  assert.equal(vizinho("AC", 1), "AL");
+  assert.equal(vizinho("AC", -1), "TO");
+  assert.equal(vizinho("TO", 1), "AC");
+  assert.equal(vizinho("RJ", -1), "PI");
+  assert.equal(vizinho("RJ", 1), "RN");
+  let uf = "SP"; for (let i = 0; i < 27; i++) uf = vizinho(uf, 1);
+  assert.equal(uf, "SP");
+});
+
+test("mapa de blocos: 27 estados, cada um na sua posição", () => {
+  assert.deepEqual(Object.keys(MAPA).sort(), Object.keys(UFS).sort());
+  const pos = Object.values(MAPA).map(([c, l]) => `${c},${l}`);
+  assert.equal(new Set(pos).size, 27); // nenhum bloco em cima do outro
+});
+
+test("barra e folha de seleção", () => {
   const b = barraEstado("RJ", "senador");
-  assert.ok(b.includes("Rio de Janeiro") && b.includes('data-cargo="senador" aria-selected="true"') && b.includes("data-abrir-seletor"));
-  assert.equal((folhaEstados("RJ").match(/data-escolher-uf/g) || []).length, 27);
+  assert.ok(b.includes("Rio de Janeiro") && b.includes('data-cargo="senador" aria-selected="true"') && b.includes("data-abrir-seletor") && b.includes('data-vizinho="-1"') && b.includes('data-vizinho="1"'));
+  assert.ok(b.includes("Estado anterior: Piauí") && b.includes("Próximo estado: Rio Grande do Norte"));
+  const f = folhaEstados("RJ", { ufs: { rj: { andamento: "p" } } });
+  assert.equal((f.match(/data-escolher-uf/g) || []).length, 27);
+  assert.ok(f.includes('data-escolher-uf="RJ" style') && f.includes('aria-pressed="true"') && f.includes("ponto p"));
 });

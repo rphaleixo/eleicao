@@ -25,6 +25,7 @@ export const CAMINHO_VALIDO = new RegExp(
     ")$"
 );
 
+const INICIO_APURACAO = Date.parse("2026-10-04T17:00:00-03:00") / 1000; // histórico anterior a 17h (Brasília) é descartado
 const CACHE_JSON = 10; // segundos
 const CACHE_FOTO = 86400;
 
@@ -123,7 +124,8 @@ async function lerHistorico(request, env, ctx, chaveKV, vazio) {
   const chave = new Request(new URL(request.url).origin + new URL(request.url).pathname);
   const guardado = await cache.match(chave);
   if (guardado) return guardado;
-  const dados = (env.HIST && (await env.HIST.get(chaveKV, "json"))) || vazio;
+  const bruto = (env.HIST && (await env.HIST.get(chaveKV, "json"))) || vazio;
+  const dados = { ...bruto, pontos: (bruto.pontos ?? []).filter((p) => p.t >= INICIO_APURACAO) };
   const resposta = new Response(JSON.stringify(dados), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
