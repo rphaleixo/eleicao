@@ -23,6 +23,21 @@ export function urlsResultado(cargo, uf, municipio) {
   return [`${base}/dados/${u}/${arq(u)}-u.json`];
 }
 
+/** Andamento de todos os estados (EA14): um arquivo por eleição. Presidente é a eleição federal. */
+export function urlAcompanhamento(cargo) {
+  const e = codEleicao(cargo);
+  return `/api/ele${CONFIG.ano}/${e}/dados/br/br-e${pad6(e)}-ab.json`;
+}
+
+export const urlHistorico = () => "/api/historico";
+
+/** Foto do candidato: Presidente fica na pasta "br"; os demais cargos na pasta do estado. */
+export function urlFoto(cargo, uf, sqcand) {
+  const e = codEleicao(cargo);
+  const pasta = cargo === "presidente" || uf === "BR" ? "br" : uf.toLowerCase();
+  return `/api/ele${CONFIG.ano}/${e}/fotos/${pasta}/${sqcand}.jpeg`;
+}
+
 export const urlMunicipios = (cargo = "governador") =>
   `/api/ele${CONFIG.ano}/${codEleicao(cargo)}/config/mun-e${pad6(codEleicao(cargo))}-cm.json`;
 
@@ -84,6 +99,8 @@ export function normalizar(json) {
       id: String(a.n),
       nome: a.tp === "f" ? a.nm : pars[0]?.sg || a.nm,
       nomeCompleto: a.nm,
+      // Federação: composição (ex.: "PT/PC do B/PV"); partido isolado: a sigla.
+      sigla: a.tp === "f" ? a.com || a.nm : pars[0]?.sg || a.nm,
       federacao: a.tp === "f",
       votosNominais,
       votosLegenda,
@@ -93,7 +110,7 @@ export function normalizar(json) {
     });
     candidatos.push(...cands);
   }
-  candidatos.sort((x, y) => y.votos - x.votos);
+  candidatos.sort((x, y) => y.votos - x.votos || Number(x.numero) - Number(y.numero));
 
   const s = json.s ?? {}, v = json.v ?? {};
   return {
@@ -107,6 +124,8 @@ export function normalizar(json) {
     brancos: num(v.vb),
     nulos: num(v.tvn ?? v.vn),
     atualizadoEm: [json.dt, json.ht].filter(Boolean).join(" "),
+    comparecimento: num(json.e?.c), pctComparecimento: num(json.e?.pc),
+    abstencao: num(json.e?.a), pctAbstencao: num(json.e?.pa),
     // Estado da apuração (EA20): n não iniciada, p em andamento, f finalizada.
     andamento: json.and ?? "n",
     totalizacaoFinal: json.tf === "s",
@@ -130,4 +149,16 @@ export function lerMunicipios(json) {
       .sort((x, y) => x.nome.localeCompare(y.nome, "pt-BR"));
   }
   return out;
+}
+
+/** Arquivo de acompanhamento -> { sp: { pct, ts, st, andamento, dt, ht }, br: {...} } */
+export function lerAcompanhamento(json) {
+  const ufs = {};
+  for (const a of json.abr ?? []) {
+    ufs[String(a.cdabr).toLowerCase()] = {
+      pct: num(a.s?.pst), ts: num(a.s?.ts), st: num(a.s?.st), andamento: a.and ?? "n", dt: a.dt ?? "", ht: a.ht ?? "",
+      eleitores: num(a.e?.te), comparecimento: num(a.e?.c), abstencao: num(a.e?.a),
+    };
+  }
+  return { ufs, geradoEm: [json.dg, json.hg].filter(Boolean).join(" ") };
 }

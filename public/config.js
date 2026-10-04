@@ -14,7 +14,9 @@ export const CONFIG = {
   turno,
   eleicaoFederal: p.get("fed") || PADRAO_2026.federal,
   eleicaoEstadual: p.get("est") || PADRAO_2026.estadual,
-  atualizarACadaSegundos: 60,
+  atualizarACadaSegundos: 10, // requisições automáticas a cada 10 segundos
+  atualizarNacionalACadaSegundos: 30, // soma dos 27 estados (arquivos grandes)
+  atualizarHistoricoACadaSegundos: 30,
 };
 
 export const CARGOS = {
@@ -24,6 +26,15 @@ export const CARGOS = {
   "dep-federal": { cod: 6, nome: "Deputado Federal", proporcional: true },
   "dep-estadual": { cod: 7, nome: "Deputado Estadual", proporcional: true },
 };
+
+export const ABAS = [
+  { id: "andamento", nome: "Andamento" },
+  { id: "presidente", nome: "Presidente" },
+  { id: "governador", nome: "Governador" },
+  { id: "senador", nome: "Senador" },
+  { id: "dep-federal", nome: "Dep. Federal" },
+  { id: "dep-estadual", nome: "Dep. Estadual" },
+];
 
 export const UFS = {
   AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",
