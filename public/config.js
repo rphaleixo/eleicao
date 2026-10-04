@@ -33,6 +33,7 @@ export const CARGOS = {
 export const ABAS = [
   { id: "andamento", nome: "Marcha da apuração" },
   { id: "presidente", nome: "Presidente" },
+  { id: "governadores", nome: "Governadores" },
   { id: "camara", nome: "Câmara (513)" },
   { id: "estados", nome: "Estados" },
 ];

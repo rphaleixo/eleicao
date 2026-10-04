@@ -18,6 +18,7 @@ test("endereços novos", () => {
 
 test("endereços antigos viram a visão por estado", () => {
   assert.deepEqual(lerRota("#/governador/SP/71072", o), { aba: "estados", uf: "SP", cargo: "governador", mun: "71072" });
+  assert.equal(lerRota("#/governador/BR", o).aba, "governadores");
   assert.deepEqual(lerRota("#/senador/BR", o), { aba: "estados", uf: "SP", cargo: "senador", mun: "" });
   assert.deepEqual(lerRota("#/dep-federal/BR", o).aba, "camara");
   assert.deepEqual(lerRota("#/dep-federal/MG", o), { aba: "estados", uf: "MG", cargo: "dep-federal", mun: "" });
@@ -26,7 +27,7 @@ test("endereços antigos viram a visão por estado", () => {
 });
 
 test("montar e ler são inversos", () => {
-  for (const r of [{ aba: "estados", uf: "RJ", cargo: "governador", mun: "71072" }, { aba: "estados", uf: "AC", cargo: "resumo", mun: "" }, { aba: "presidente", uf: "BA", cargo: "resumo", mun: "" }, { aba: "camara", uf: "BR", cargo: "resumo", mun: "" }]) {
+  for (const r of [{ aba: "estados", uf: "RJ", cargo: "governador", mun: "71072" }, { aba: "estados", uf: "AC", cargo: "resumo", mun: "" }, { aba: "presidente", uf: "BA", cargo: "resumo", mun: "" }, { aba: "camara", uf: "BR", cargo: "resumo", mun: "" }, { aba: "governadores", uf: "BR", cargo: "resumo", mun: "" }]) {
     assert.deepEqual(lerRota(montarRota(r), o), r);
   }
 });

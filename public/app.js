@@ -2,6 +2,7 @@ import { telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao,
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
+import { cardEstado, gradeCards } from "./cardsEstados.js";
 import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
 import { barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js";
@@ -144,6 +145,11 @@ async function carregarView(rota) {
     if (CARGOS[cargo].proporcional) { const d = await obter(cargo, uf); return { ...base, d, dist: distribuirEstado(d) }; }
     const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente(locaisResultado(uf, "")) : null]);
     return { ...base, d, rp };
+  }
+  if (aba === "governadores") {
+    const lista = emSegundoPlano("pan-governador", CONFIG.atualizarACadaSegundos * 900, () => panorama("governador"));
+    const e = await obterAcompanhamento("governador");
+    return { tipo: "governadores", e, lista };
   }
   const acomp = obterAcompanhamento(aba === "camara" ? "dep-federal" : aba);
   if (aba === "presidente") {
@@ -318,6 +324,23 @@ function telaEstados(v) {
   return telaMajoritaria(v);
 }
 
+function telaGovernadores(v) {
+  const { regiao } = estado;
+  const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, regiao === "exterior" ? "" : regiao, "BR");
+  const ds = v.lista ? v.lista.map((x) => x.d).filter(Boolean) : [];
+  const definidos = ds.filter((d) => d.definido === "e").length, segundoTurno = ds.filter((d) => d.definido === "s").length;
+  const extra = v.lista ? `<p class="hero-sub">${definidos} governador${definidos === 1 ? "" : "es"} definido${definidos === 1 ? "" : "s"} · ${segundoTurno} para o 2º turno</p>` : "";
+  const hero = heroApuracao({ ...p, titulo: regiao ? p.titulo : "Governadores", subtitulo: regiao ? p.subtitulo : "Eleições em 27 estados", extra, grafico: false, hist: [] });
+  const ufs = (regiao && REGIOES[regiao] ? REGIOES[regiao].ufs : Object.keys(UFS)).slice();
+  const apurado = (u) => v.e.ufs[u.toLowerCase()]?.pct ?? 0;
+  ufs.sort(estado.ordem === "pct" ? (a, b) => apurado(b) - apurado(a) : (a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
+  const cards = v.lista ? ufs.map((u) => cardEstado(u, v.lista.find((x) => x.uf === u)?.d ?? null, v.e.ufs[u.toLowerCase()])) : null;
+  return `${hero}<section class="card"><div class="estados-topo"><h2>Governador por estado</h2>
+      <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
+    ${cards ? gradeCards(cards) : `<p class="muted">Carregando os 27 estados…</p>`}
+    <p class="muted nota">Toque em um estado para ver a disputa completa. Abstenção sobre as seções já apuradas.</p></section>`;
+}
+
 function telaPresidente(v) {
   const { regiao, uf, mun } = estado;
   const emRegiao = uf === "BR" && REGIOES[regiao];
@@ -350,17 +373,8 @@ function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
   if (uf !== "BR") return "";
   if (!v.lista) return carregandoEstados("Resultado por estado");
   const ufs = estado.regiao === "exterior" ? ["ZZ"] : ufsRegiao ?? [...Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR")), "ZZ"];
-  const itens = ufs.map((u) => {
-    const d = v.lista.find((x) => x.uf === u)?.d, ac = v.ac.ufs[u.toLowerCase()];
-    const top = (d?.candidatos ?? []).filter((c) => c.votos > 0).slice(0, 2);
-    const lids = top.length
-      ? top.map((c) => `<span><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${esc(c.nome)} <b>${pct(c.pct)}</b></span>`).join("")
-      : `<span class="muted">Sem votos apurados</span>`;
-    return `<li><button type="button" class="linha-estado" data-uf="${u}"><span class="sigla">${u === "ZZ" ? "EX" : u}</span>
-      <span class="le-meio"><span class="le-nome">${esc(nomeUF(u))}</span><span class="le-lids">${lids}</span></span>
-      <span class="linha-uf-pct">${pct(ac?.pct ?? 0)}<small>apurado</small></span><span class="seta" aria-hidden="true">›</span></button></li>`;
-  }).join("");
-  return `<section class="card"><h2>Resultado por estado</h2><ul class="lista-estados">${itens}</ul>
+  const cards = ufs.map((u) => cardEstado(u, v.lista.find((x) => x.uf === u)?.d ?? null, v.ac.ufs[u.toLowerCase()]));
+  return `<section class="card"><h2>Resultado por estado</h2>${gradeCards(cards)}
     <p class="muted nota">Toque em um estado para ver o resultado dele. O resultado final da eleição presidencial é nacional.</p></section>`;
 }
 
@@ -413,8 +427,9 @@ function telaNacionalProp(v) {
 let navAnterior = "", subAnterior = "";
 let ultimoAc = null; // andamento por estado mais recente, para a navegação aparecer enquanto a tela carrega
 function renderNavegacao(v) {
-  ultimoAc = v?.f ?? v?.ac ?? ultimoAc;
-  const nav = (estado.aba === "andamento" || estado.aba === "presidente") && ultimoAc ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf }) : "";
+  ultimoAc = v?.f ?? v?.ac ?? v?.e ?? ultimoAc;
+  const nav = (estado.aba === "andamento" || estado.aba === "presidente" || estado.aba === "governadores") && ultimoAc
+    ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf, comExterior: estado.aba !== "governadores", comEstados: estado.aba !== "governadores" }) : "";
   const sub = estado.aba === "estados" ? barraEstado(estado.uf, estado.cargo) : "";
   const preserva = (el, html, anterior) => {
     if (html === anterior) return anterior;
@@ -433,7 +448,7 @@ function renderNavegacao(v) {
 function render() {
   const v = estado.view;
   if (!v) return;
-  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "nacional-prop": telaNacionalProp }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, governadores: telaGovernadores, "nacional-prop": telaNacionalProp }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
@@ -550,6 +565,7 @@ $("conteudo").addEventListener("click", (e) => {
   const tr = e.target.closest("[data-uf]");
   if (tr && estado.aba === "andamento") { navegar({ uf: estado.uf === tr.dataset.uf ? "BR" : tr.dataset.uf, mun: "" }); return; } // abre/fecha o resumo na própria lista
   if (tr && estado.aba === "camara") { navegar({ aba: "estados", uf: tr.dataset.uf, cargo: "dep-federal", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (tr && estado.aba === "governadores") { navegar({ aba: "estados", uf: tr.dataset.uf, cargo: "governador", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (tr && estado.aba === "presidente") { navegar({ uf: tr.dataset.uf, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
 addEventListener("hashchange", () => { lerHash(); montarControles(); atualizar(); });

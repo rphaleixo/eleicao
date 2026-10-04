@@ -80,13 +80,13 @@ export const regiaoDe = (uf) => Object.entries(REGIOES).find(([, r]) => r.ufs.in
  * Navegação por região e estado, usada no topo das abas:
  * 1ª linha: Brasil e regiões (com o % apurado); 2ª linha: "Região inteira" e os estados da região escolhida.
  */
-export function navegacaoRegional(ac, { regiao, uf, comExterior = true }) {
+export function navegacaoRegional(ac, { regiao, uf, comExterior = true, comEstados = true }) {
   const chip = (attrs, nome, valor, ativo) => `<button type="button" ${attrs} aria-pressed="${ativo}">${nome}${valor == null ? "" : ` <small>${pct(valor)}</small>`}</button>`;
   const linha1 = chip('data-regiao=""', "Brasil", null, regiao === "")
     + Object.entries(REGIOES).map(([k, r]) => chip(`data-regiao="${k}"`, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct, regiao === k)).join("")
     + (comExterior && ac.ufs.zz ? chip('data-regiao="exterior"', "Exterior", doEstado(ac.ufs.zz).pct, regiao === "exterior") : "");
   const r = REGIOES[regiao];
-  const linha2 = r
+  const linha2 = r && comEstados
     ? `<div class="chips chips-estados" role="group" aria-label="Estados de ${esc(r.nome)}">${chip("data-regiao-inteira", "Região inteira", null, uf === "BR")}${r.ufs.slice().sort((x, y) => UFS[x].localeCompare(UFS[y], "pt-BR"))
         .map((u) => chip(`data-nav-uf="${u}"`, esc(UFS[u]), doEstado(ac.ufs[u.toLowerCase()])?.pct ?? 0, uf === u)).join("")}</div>`
     : "";
