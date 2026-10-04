@@ -5,7 +5,7 @@
 
 import { fichaDoCandidato } from "./candidato.js";
 import { carregarSeed } from "./carga.js";
-import { acrescentar, pontoDeAcompanhamento } from "./historico.js";
+import { acrescentar, pontoDeAcompanhamento, presencaDeAcompanhamento } from "./historico.js";
 
 const ORIGEM_TSE = "https://resultados.tse.jus.br/oficial/";
 const ANO = "2026";
@@ -80,7 +80,8 @@ async function candidato(env, sq) {
 async function buscarAcompanhamento(eleicao) {
   const r = await fetch(`${ORIGEM_TSE}ele${ANO}/${eleicao}/dados/br/br-e00${eleicao}-ab.json`);
   if (!r.ok) return null;
-  return pontoDeAcompanhamento(await r.json());
+  const ab = await r.json();
+  return { pct: pontoDeAcompanhamento(ab), presenca: presencaDeAcompanhamento(ab) };
 }
 
 export async function registrarHistorico(env) {
@@ -88,7 +89,7 @@ export async function registrarHistorico(env) {
   const [f, e] = await Promise.all([buscarAcompanhamento(ELEICAO_FEDERAL), buscarAcompanhamento(ELEICAO_ESTADUAL)]);
   if (!f && !e) return;
   const atual = await env.HIST.get("historico", "json");
-  const { historico, mudou } = acrescentar(atual, { f: f ?? {}, e: e ?? {} });
+  const { historico, mudou } = acrescentar(atual, { f: f?.pct ?? {}, e: e?.pct ?? {}, p: f?.presenca });
   if (mudou) await env.HIST.put("historico", JSON.stringify(historico));
 }
 

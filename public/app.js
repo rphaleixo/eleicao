@@ -88,13 +88,20 @@ async function estadosDepFederal() {
   return lista.map(({ uf, d }) => ({ uf, d, dist: distribuirEstado(d) }));
 }
 
+async function detalhesEstado(uf) {
+  const talvez = (cargo) => obter(cargo, uf).catch(() => null);
+  const [pres, gov, sen] = await Promise.all([talvez("presidente"), uf === "ZZ" ? null : talvez("governador"), uf === "ZZ" ? null : talvez("senador")]);
+  return { pres, gov, sen };
+}
+
 async function carregarView() {
   const { aba, uf, mun } = estado;
   const hist = obterHistorico();
   if (aba === "andamento") {
-    const talvez = (cargo) => (uf === "BR" || (uf === "ZZ" && cargo !== "presidente") ? null : obter(cargo, uf).catch(() => null));
-    const [f, e, h, pres, gov, sen] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist, talvez("presidente"), talvez("governador"), talvez("senador")]);
-    return { tipo: "andamento", f, e, h, detalhe: { pres, gov, sen } };
+    const [f, e, h] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist]);
+    // Resumo do estado aberto na lista: busca em segundo plano, sem travar o painel principal.
+    const detalhe = uf === "BR" ? {} : emSegundoPlano("det-" + uf, 9000, () => detalhesEstado(uf)) ?? {};
+    return { tipo: "andamento", f, e, h, detalhe };
   }
   const cargo = CARGOS[aba];
   const acomp = obterAcompanhamento(aba);
@@ -372,7 +379,8 @@ $("uf").addEventListener("change", () => navegar({ uf: $("uf").value, mun: "" })
 $("mun").addEventListener("change", () => navegar({ mun: $("mun").value }));
 iniciarFicha();
 function apuracaoDe(sq) {
-  const c = estado.view?.d?.candidatos?.find((x) => x.id === String(sq));
+  const fontes = [estado.view?.d, ...Object.values(estado.view?.detalhe ?? {})].filter(Boolean);
+  const c = fontes.flatMap((f) => f.candidatos).find((x) => x.id === String(sq));
   return c ? { votos: c.votos, pct: c.pct, situacao: c.eleito ? c.situacao || "Eleito" : !c.elegivel ? c.situacaoVoto : null } : null;
 }
 $("conteudo").addEventListener("keydown", (e) => {
@@ -382,17 +390,15 @@ $("conteudo").addEventListener("keydown", (e) => {
 $("conteudo").addEventListener("click", (e) => {
   const it = e.target.closest("[data-sq]");
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
-  const serie = e.target.closest("[data-serie]");
-  if (serie) { estado.serie = serie.dataset.serie; render(); return; }
   const reg = e.target.closest("[data-regiao]");
   if (reg) { estado.regiao = reg.dataset.regiao; render(); return; }
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
-  if (e.target.closest("[data-voltar]")) { navegar({ uf: "BR", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   const ir = e.target.closest("[data-ir]");
   if (ir) { navegar({ aba: ir.dataset.ir, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (e.target.closest("[data-mais]")) { estado.mostrar += 50; render(); return; }
   const tr = e.target.closest("[data-uf]");
+  if (tr && estado.aba === "andamento") { navegar({ uf: estado.uf === tr.dataset.uf ? "BR" : tr.dataset.uf, mun: "" }); return; } // abre/fecha o resumo na própria lista
   if (tr) {
     const aba = estado.aba === "andamento" ? "andamento" : estado.aba;
     navegar({ aba: aba === "dep-estadual" || aba === "dep-federal" || aba === "andamento" || aba === "presidente" || aba === "governador" || aba === "senador" ? aba : "presidente", uf: tr.dataset.uf, mun: "" });

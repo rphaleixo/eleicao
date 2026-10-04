@@ -40,3 +40,36 @@ export function sparkline(pontos, valor, { largura = 84, altura = 24 } = {}) {
   const d = v.map((n, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(n).toFixed(1)}`).join(" ");
   return `<svg class="spark" viewBox="0 0 ${largura} ${altura}" aria-hidden="true"><path d="${d}"/></svg>`;
 }
+
+/**
+ * Evolução do comparecimento e da abstenção, empilhados, em % do eleitorado total.
+ * Quando a apuração se completa, as duas áreas somam 100%.
+ * @param {object[]} pontos histórico (cada foto pode ter p[chave] = [compareceram, abstiveram])
+ * @param {string} chave "br", "rj", "zz"...
+ * @param {number} eleitorado total de eleitores aptos
+ */
+export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura = 170, rotulo = "Comparecimento e abstenção" } = {}) {
+  if (!eleitorado) return `<p class="muted vazio-grafico">Sem dados de eleitorado.</p>`;
+  const pts = pontos.map((p) => {
+    const par = p.p?.[chave] ?? (p.f?.[chave] === 0 ? [0, 0] : null); // antes da apuração começar, tudo é zero
+    return par ? { t: p.t * 1000, c: (par[0] / eleitorado) * 100, a: (par[1] / eleitorado) * 100 } : null;
+  }).filter(Boolean);
+  if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
+  const m = { e: 38, d: 12, c: 10, b: 24 };
+  const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, t0 + 60000);
+  const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
+  const y = (v) => m.c + (1 - Math.min(100, v) / 100) * (altura - m.c - m.b);
+  const degrau = (valor) => {
+    let d = `${x(pts[0].t).toFixed(1)},${y(valor(pts[0])).toFixed(1)}`;
+    for (let i = 1; i < pts.length; i++) d += ` ${x(pts[i].t).toFixed(1)},${y(valor(pts[i - 1])).toFixed(1)} ${x(pts[i].t).toFixed(1)},${y(valor(pts[i])).toFixed(1)}`;
+    return d;
+  };
+  const topo = degrau((p) => p.c + p.a), meio = degrau((p) => p.c);
+  const base = (t) => `${x(t).toFixed(1)},${y(0)}`;
+  const ult = pts[pts.length - 1], fim = base(ult.t), ini = base(t0);
+  const grade = [0, 25, 50, 75, 100].map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${g}%</text>`).join("");
+  const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; }).join("");
+  return `<svg class="grafico" viewBox="0 0 ${largura} ${altura}" role="img" aria-label="${rotulo}: ${ult.c.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% presentes e ${ult.a.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% ausentes do eleitorado">
+    ${grade}${ticks}<polygon class="g-aus" points="${topo} ${fim} ${ini}"/><polygon class="g-pres" points="${meio} ${fim} ${ini}"/>
+    <polyline class="g-borda" points="${topo}"/></svg>`;
+}

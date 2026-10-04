@@ -8,7 +8,7 @@ const ufs = Object.fromEntries(Object.keys(UFS).map((u) => [u.toLowerCase(), { p
 ufs.br = { ...ufs.ac, ts: 270, st: 135 };
 const ufsF = { ...ufs, zz: { pct: 10, ts: 5, st: 1, andamento: "p", eleitores: 50, comparecimento: 5, abstencao: 5, dt: "", ht: "" } };
 const v = { f: { ufs: ufsF }, e: { ufs }, h: [], detalhe: { pres: null, gov: null, sen: null } };
-const est = (o) => ({ uf: "BR", serie: "f", regiao: "", ordem: "az", ...o });
+const est = (o) => ({ uf: "BR", regiao: "", ordem: "az", ...o });
 
 test("regiões cobrem os 27 estados, sem repetição", () => {
   const todas = Object.values(REGIOES).flatMap((r) => r.ufs);
@@ -23,20 +23,23 @@ test("agregar soma seções e calcula percentuais", () => {
   assert.equal(Math.round(a.pctAbst), 30);
 });
 
-test("exterior (ZZ) é um estado só na eleição presidencial", () => {
-  assert.equal(ufsVisiveis("", "f").length, 28);
-  assert.equal(ufsVisiveis("", "e").length, 27);
-  assert.deepEqual(ufsVisiveis("exterior", "f"), ["ZZ"]);
-  assert.deepEqual(ufsVisiveis("exterior", "e"), []);
-  assert.ok(!ufsVisiveis("sul", "f").includes("ZZ"));
+const detalhe = {
+  pres: { candidatos: Array.from({ length: 7 }, (_, i) => ({ id: String(i), nome: "Cand " + i, partido: "P" + i, votos: 100 - i, pct: 10 - i })), votosValidos: 900, brancos: 60, nulos: 40, pctSecoes: 50, divulgaVotos: true },
+  gov: null, sen: undefined,
+};
+
+test("exterior (ZZ) é um estado da lista", () => {
+  assert.equal(ufsVisiveis("").length, 28);
+  assert.deepEqual(ufsVisiveis("exterior"), ["ZZ"]);
+  assert.ok(!ufsVisiveis("sul").includes("ZZ"));
 });
 
-test("tela do Brasil: painel, chips de região e lista de estados com Exterior", () => {
+test("tela do Brasil: painel único e lista de estados, sem seletor de eleição", () => {
   const h = telaMarcha(v, est({}));
-  for (const t of ["Brasil", "Norte", "Acre", "Tocantins", "Exterior", 'data-uf="ZZ"', "anel"]) assert.ok(h.includes(t), t);
-  assert.equal((h.match(/class="card/g) || []).length, 2); // só dois blocos: painel e estados
-  const e = telaMarcha(v, est({ serie: "e" }));
-  assert.ok(!e.includes('data-uf="ZZ"') && e.includes("só para Presidente") && e.includes('data-serie="e" aria-pressed="true"'));
+  for (const t of ["Brasil", "Norte", "Acre", "Tocantins", "Exterior", 'data-uf="ZZ"', "anel", "Presentes", "Ausentes", "A apurar"]) assert.ok(h.includes(t), t);
+  assert.ok(!h.includes("data-serie"));
+  assert.equal((h.match(/class="card/g) || []).length, 2);
+  assert.ok(!h.includes("expandido"));
   const sul = telaMarcha(v, est({ regiao: "sul" }));
   assert.ok(sul.includes("Santa Catarina") && !sul.includes("Acre") && !sul.includes('data-uf="ZZ"'));
 });
@@ -47,9 +50,17 @@ test("ordenar por % apurado", () => {
   assert.ok(h.indexOf('data-uf="SP"') < h.indexOf('data-uf="AC"'));
 });
 
-test("detalhe do estado e do exterior", () => {
-  const rj = telaMarcha(v, est({ uf: "RJ" }));
-  assert.ok(rj.includes("Rio de Janeiro") && rj.includes("data-voltar") && rj.includes('data-ir="dep-federal"') && rj.includes("data-serie"));
-  const zz = telaMarcha(v, est({ uf: "ZZ", serie: "e" }));
-  assert.ok(zz.includes("Exterior") && !zz.includes("data-serie") && !zz.includes('data-ir="governador"') && zz.includes('data-ir="presidente"'));
+test("estado aberto: resumo, gráfico e carrossel com top 5 e votos brancos/nulos/válidos", () => {
+  const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ" }));
+  assert.ok(h.includes('aria-expanded="true"') && h.includes("expandido") && h.includes("carrossel"));
+  assert.ok(h.includes("Eleitores aptos") && h.includes("Abstenções"));
+  assert.equal((h.match(/data-sq=/g) || []).length, 5); // só os 5 primeiros do Presidente
+  assert.ok(h.includes("Válidos") && h.includes("Brancos") && h.includes("Nulos"));
+  assert.ok(h.includes("Dados indisponíveis") && h.includes("Carregando")); // Governador falhou, Senador ainda carregando
+  assert.equal((h.match(/aria-expanded="true"/g) || []).length, 1);
+});
+
+test("exterior aberto mostra só o Presidente", () => {
+  const h = telaMarcha({ ...v, detalhe }, est({ uf: "ZZ" }));
+  assert.ok(h.includes("expandido") && h.includes('data-ir="presidente"') && !h.includes('data-ir="governador"') && !h.includes('data-ir="senador"'));
 });

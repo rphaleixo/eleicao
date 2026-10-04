@@ -113,6 +113,9 @@ export function normalizar(json) {
   candidatos.sort((x, y) => y.votos - x.votos || Number(x.numero) - Number(y.numero));
 
   const s = json.s ?? {}, v = json.v ?? {};
+  // Em todo o site o % do candidato é votos no candidato ÷ votos válidos.
+  const validos = num(v.vv);
+  if (validos > 0) for (const c of candidatos) c.pct = (c.votos / validos) * 100;
   return {
     cargoNome: cargo.nmn ?? "",
     vagas: num(cargo.nv),

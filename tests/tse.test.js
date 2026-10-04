@@ -76,3 +76,10 @@ test("estado da apuração, matematicamente definido e divulgação (EA20)", () 
   assert.equal(b.semEleito, true);
   assert.deepEqual(b.motivosSemEleito, ["Pendência judicial"]);
 });
+
+test("% do candidato = votos no candidato ÷ votos válidos", () => {
+  const json = { v: { vv: "1000", vb: "10", vn: "20" }, carg: [{ cd: "3", nv: "1", agr: [{ n: "13", par: [{ sg: "PT", cand: [{ n: "13", sqcand: "1", nm: "A", vap: "600", pvap: "99,99" }, { n: "22", sqcand: "2", nm: "B", vap: "250", pvap: "1,00" }] }] }] }] };
+  const d = normalizar(json);
+  assert.equal(d.candidatos[0].pct, 60);
+  assert.equal(d.candidatos[1].pct, 25);
+});
