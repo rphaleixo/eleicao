@@ -135,16 +135,25 @@ function telaProporcional(d) {
 
   if (r) {
     html += `<div class="card tabela-scroll"><h2 style="margin-top:0">Vagas por partido ou federação</h2><table>
-      <tr><th>Partido / federação</th><th>Votos</th><th>Quociente partidário</th><th>Por quociente</th><th>Por sobras</th><th>Total</th></tr>
+      <tr><th>Partido / federação</th><th>Votos</th><th>Quociente partidário</th><th>Por quociente</th><th>Por sobras</th><th>Total</th>${d.totalizacaoFinal ? "<th>Oficial TSE</th>" : ""}</tr>
       ${r.partidos.map((p) => {
         const q = p.eleitos.filter((c) => c.via === "quociente").length;
-        return `<tr><td>${esc(p.nome)}</td><td>${fmt(p.votos)}</td><td>${p.qp}</td><td>${q}</td><td>${p.eleitos.length - q}</td><td><strong>${p.eleitos.length}</strong></td></tr>`;
+        return `<tr><td>${esc(p.nome)}</td><td>${fmt(p.votos)}</td><td>${p.qp}</td><td>${q}</td><td>${p.eleitos.length - q}</td><td><strong>${p.eleitos.length}</strong></td>${d.totalizacaoFinal ? `<td>${d.partidos.find((x) => x.id === p.id)?.vagasTse ?? ""}</td>` : ""}</tr>`;
       }).join("")}</table>`;
+    if (r.eleitos.some((e) => e.via === "art. 111")) {
+      html += `<p class="aviso">Nenhum partido ou federação alcançou o quociente eleitoral. Pelo art. 111 do Código Eleitoral, as vagas ficam com os candidatos mais votados.</p>`;
+    }
     if (r.proximoFora) {
       html += `<p class="muted">Primeiro fora, hoje: ${esc(r.proximoFora.cand.nome)} (${esc(r.proximoFora.partido)}), média ${fmt(r.proximoFora.media)}.</p>`;
     }
-    html += `</div><div class="card"><h2 style="margin-top:0">Eleitos (${r.eleitos.length} de ${vagas})</h2>
+    const oficiais = d.candidatos.filter((c) => c.eleito);
+    if (d.totalizacaoFinal && oficiais.length) {
+      html += `</div><div class="card"><h2 style="margin-top:0">Eleitos, resultado oficial do TSE (${oficiais.length} de ${vagas})</h2>
+        ${oficiais.map((c) => `<div class="cand eleito"><div class="nome">${esc(c.nome)} <small>${esc(c.partido)} · ${esc(c.situacao)}</small></div><div class="num"><strong>${fmt(c.votos)}</strong></div></div>`).join("")}</div>`;
+    } else {
+      html += `</div><div class="card"><h2 style="margin-top:0">Eleitos, projeção (${r.eleitos.length} de ${vagas})</h2>
       ${listaCandidatos(r.eleitos.map((e) => ({ ...e, numero: "", pct: 0, eleito: true })), 100).replace(/<span class="muted">0,00%<\/span>/g, "")}</div>`;
+    }
   }
   html += `<div class="card"><h2 style="margin-top:0">Mais votados</h2>${listaCandidatos(d.candidatos, 30)}</div>`;
   return html;

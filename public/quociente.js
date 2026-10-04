@@ -95,6 +95,20 @@ export function distribuirCadeiras(vagas, partidos, regras = REGRAS_STF_2024) {
     ocupadas++;
   }
 
+  // Art. 111: se nenhum partido ou federação alcançar o quociente eleitoral, os lugares são
+  // preenchidos pelos candidatos mais votados, sem considerar partido.
+  if (ocupadas === 0 && ps.every((p) => p.qp === 0)) {
+    const todos = ps
+      .flatMap((p) => p.candidatos.map((c) => ({ ...c, p })))
+      .filter((c) => c.votos > 0)
+      .sort((a, b) => b.votos - a.votos)
+      .slice(0, vagas);
+    for (const c of todos) {
+      c.p.eleitos.push({ id: c.id, nome: c.nome, votos: c.votos, via: "art. 111" });
+      ocupadas++;
+    }
+  }
+
   // Quem seria o próximo da fila (primeiro fora): mostra a disputa pela última vaga.
   let proximoFora = null;
   for (const p of ps) {

@@ -64,3 +64,15 @@ test("candidato sub judice conta votos para o partido mas não ocupa vaga", () =
   assert.equal(r.votosValidos, 1990);
   assert.ok(!r.eleitos.some((e) => e.id === "sj"));
 });
+
+test("art. 111: nenhum partido alcança o quociente, elegem-se os mais votados", () => {
+  // 20 partidos com ~60 votos: o quociente (101) não é alcançado por nenhum
+  const partidos = Array.from({ length: 20 }, (_, i) => ({
+    id: "P" + i, nome: "P" + i, candidatos: cands(60 - i),
+  }));
+  const r = distribuirCadeiras(10, partidos, REGRAS_CODIGO_LITERAL);
+  assert.equal(r.qe, 101);
+  assert.equal(r.eleitos.length, 10);
+  assert.ok(r.eleitos.every((e) => e.via === "art. 111"));
+  assert.deepEqual(r.eleitos.map((e) => e.votos), [60, 59, 58, 57, 56, 55, 54, 53, 52, 51]);
+});
