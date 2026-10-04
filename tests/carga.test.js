@@ -15,7 +15,7 @@ test("carregarSeed aplica os arquivos pendentes e marca concluído", async () =>
         sql, args: [],
         bind(...a) { this.args = a; return this; },
         async all() { return { results: tabela.map((arquivo) => ({ arquivo })) }; },
-        async run() { if (sql.startsWith("INSERT OR REPLACE INTO carga")) tabela.push(sql.includes("'concluido'") ? "concluido" : this.args[0]); return {}; },
+        async run() { if (sql.startsWith("INSERT OR REPLACE INTO carga")) tabela.push(sql.includes("VALUES (?, ?, ?)") ? this.args[0] : this.args[0]); return {}; },
       };
     },
     async batch(l) { lotes.push(l.length); return []; },
@@ -28,7 +28,7 @@ test("carregarSeed aplica os arquivos pendentes e marca concluído", async () =>
   const r = await carregarSeed({ DB, ASSETS });
   assert.equal(r.feito, true);
   assert.deepEqual(lotes, [2, 2]);
-  assert.deepEqual(tabela, ["001.sql", "002.sql", "concluido"]);
+  assert.deepEqual(tabela, ["001.sql", "002.sql", "concluido-2"]);
   assert.deepEqual(await carregarSeed({ DB, ASSETS }), { feito: true });
   assert.equal(lotes.length, 2);
 });

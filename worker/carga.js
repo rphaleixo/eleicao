@@ -11,12 +11,13 @@ export async function carregarSeed(env) {
   if (!env.DB) return { feito: true };
   const { results } = await env.DB.prepare("SELECT arquivo FROM carga").all();
   const feitos = new Set(results.map((r) => r.arquivo));
-  if (feitos.has("concluido")) return { feito: true };
 
   const lerAsset = (nome) => env.ASSETS.fetch(new Request(`https://assets.local/_seed/${nome}`));
   const ri = await lerAsset("indice.json");
   if (!ri.ok) return { feito: true, motivo: "sem seed" };
   const { arquivos } = await ri.json();
+  const marca = `concluido-${arquivos}`;
+  if (feitos.has(marca)) return { feito: true };
 
   let aplicados = 0;
   for (let i = 1; i <= arquivos && aplicados < POR_EXECUCAO; i++) {
@@ -32,7 +33,7 @@ export async function carregarSeed(env) {
   }
   const completo = Array.from({ length: arquivos }, (_, i) => String(i + 1).padStart(3, "0") + ".sql").every((n) => feitos.has(n));
   if (completo) {
-    await env.DB.prepare("INSERT OR REPLACE INTO carga (arquivo, linhas, carregado_em) VALUES ('concluido', ?, ?)").bind(arquivos, new Date().toISOString()).run();
+    await env.DB.prepare("INSERT OR REPLACE INTO carga (arquivo, linhas, carregado_em) VALUES (?, ?, ?)").bind(marca, arquivos, new Date().toISOString()).run();
   }
   return { feito: completo, aplicados };
 }
