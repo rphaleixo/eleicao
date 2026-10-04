@@ -58,8 +58,8 @@ select, input { font: inherit; padding: 8px; border: 1px solid var(--line); bord
 .rank-item { display: grid; grid-template-columns: 26px 52px 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
 .rank-item:first-of-type { border-top: 0; }
 .pos { font-weight: 700; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
-.foto { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--barra); border: 3px solid var(--cor, var(--barra)); }
-.foto-vazia { width: 52px; height: 52px; border-radius: 50%; background: var(--barra); border: 3px solid var(--cor, var(--barra)); }
+.foto { width: 52px; height: 52px; aspect-ratio: 1; border-radius: 6px; object-fit: cover; background: #fff; border: 3px solid var(--cor, var(--barra)); }
+.foto-vazia { width: 52px; height: 52px; border-radius: 6px; background: var(--barra); border: 3px solid var(--cor, var(--barra)); }
 .cand-nome { font-weight: 600; overflow-wrap: anywhere; }
 .cand-sub { font-size: .82rem; color: var(--muted); }
 .chip { display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 7px; border-radius: 6px; color: #fff; background: var(--cor, #8a94a3); margin-right: 6px; vertical-align: 1px; text-shadow: 0 1px 1px rgba(0,0,0,.25); }

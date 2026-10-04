@@ -3,6 +3,7 @@
 // então vai ao TSE. Assim o TSE recebe poucas consultas, não importa quantas pessoas
 // estejam no site. Também registra o histórico da apuração (rotina agendada).
 
+import { carregarSeed } from "./carga.js";
 import { acrescentar, pontoDeAcompanhamento } from "./historico.js";
 
 const ORIGEM_TSE = "https://resultados.tse.jus.br/oficial/";
@@ -28,6 +29,7 @@ const CACHE_FOTO = 86400;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/_seed/")) return new Response("Não encontrado", { status: 404 });
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     if (request.method !== "GET") return new Response("Método não permitido", { status: 405 });
 
@@ -58,6 +60,7 @@ export default {
   // Rotina agendada (a cada minuto): guarda a foto do andamento de todos os estados.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(registrarHistorico(env));
+    ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
   },
 };
 

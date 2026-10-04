@@ -174,7 +174,7 @@ function listaMajoritaria(d, aba, uf, { limite = 40 } = {}) {
     const badge = c.eleito ? `<span class="badge">${esc(c.situacao || "Eleito")}</span>`
       : c.situacao === "2º turno" ? `<span class="badge">2º turno</span>`
       : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
-    const foto = `<img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" style="--cor:${corPartido(c.partido)}" onerror="this.style.visibility='hidden'">`;
+    const foto = `<img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" style="--cor:${corPartido(c.partido)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">`;
     html += itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: c.pct, max, badge, foto, eleito: c.eleito });
     if (aba === "senador" && vagas > 1 && i === vagas - 1 && d.candidatos.length > vagas) {
       html += `<div class="linha-corte">posição de eleito (${vagas} vagas)</div>`;
