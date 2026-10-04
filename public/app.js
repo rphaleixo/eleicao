@@ -6,6 +6,7 @@ import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { statusProjecao } from "./status.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
+import { barraBusca, buscaVazia, filtrando as buscando, passaBusca } from "./buscaCandidatos.js";
 import { blocoTop10, cardsMaisVotados } from "./deputadosVotados.js";
 import { seletorAgrupCamara, plenarioCamara, porPartidoCamara, cardsEstadosCamara, tabelaEstadosCamara, lideresCamara, MAIORIA_CAMARA } from "./camara.js";
 import { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO, mapaMunicipal } from "./mapa.js";
@@ -32,7 +33,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia() };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -75,6 +76,7 @@ function navegar(mudanca) {
   if (mudanca.aba || mudanca.uf || mudanca.cargo) estado.mun = mudanca.mun ?? "";
   if (estado.aba === "estados") { guardarUf(estado.uf); estado.ufPadrao = estado.uf; }
   estado.mostrar = 50; estado.pagEleitos = 0;
+  if (mudanca.uf || mudanca.cargo || mudanca.aba) estado.busca = buscaVazia();
   if (mudanca.uf || mudanca.cargo || mudanca.aba) estado.munSel = "";
   gravarHash(); montarControles();
   const guardada = cacheViews.get(chaveRota());
@@ -302,7 +304,9 @@ function dadosEleitos(d, dist) {
 
 /** Box dos eleitos: 15 por página, com a paginação dentro do próprio box. */
 function boxEleitos(d, dist) {
-  const { usaOficial, base } = dadosEleitos(d, dist);
+  const { usaOficial, base: completa } = dadosEleitos(d, dist);
+  const busca = estado.busca, numeros = new Map(d.candidatos.map((c) => [c.id, c.numero]));
+  const base = buscando(busca) ? completa.filter((b) => passaBusca({ ...b, numero: numeros.get(b.id) }, busca)) : completa;
   const paginas = Math.max(1, Math.ceil(base.length / POR_PAGINA));
   const pag = Math.min(Math.max(0, estado.pagEleitos), paginas - 1);
   const ini = pag * POR_PAGINA, fatia = base.slice(ini, ini + POR_PAGINA);
@@ -315,19 +319,20 @@ function boxEleitos(d, dist) {
   const nav = paginas > 1
     ? `<nav class="paginacao" aria-label="Páginas dos eleitos"><button type="button" data-pag-eleitos="-1" ${pag === 0 ? "disabled" : ""}>‹ Anteriores</button>
         <span>${ini + 1}–${ini + fatia.length} de ${base.length}</span><button type="button" data-pag-eleitos="1" ${pag >= paginas - 1 ? "disabled" : ""}>Próximos ›</button></nav>` : "";
-  return `<section class="card"><div class="titulo-cadeiras"><h2>Candidatos eleitos</h2><span class="muted">${base.length} de ${dist.vagas}</span></div>
+  return `<section class="card"><div class="titulo-cadeiras"><h2>Candidatos eleitos</h2><span class="muted">${buscando(busca) ? `${base.length} na busca · ` : ""}${completa.length} de ${dist.vagas}</span></div>
     <p class="muted">${usaOficial ? "Resultado oficial do TSE." : "Projeção com os votos contados até agora."}</p>
-    ${base.length ? `<ol class="lista-eleitos" start="${ini + 1}">${itens}</ol>${nav}` : `<p class="muted">Nenhum candidato eleito ainda.</p>`}</section>`;
+    ${base.length ? `<ol class="lista-eleitos" start="${ini + 1}">${itens}</ol>${nav}` : `<p class="muted">${buscando(busca) ? "Nenhum eleito com essa busca." : "Nenhum candidato eleito ainda."}</p>`}</section>`;
 }
 
 function maisVotados(d, rotulo = "Candidatos por votos", projetados = null) {
   const max = Math.max(1, d.candidatos[0]?.votos ?? 1);
   const selo = (c) => c.sit ? seloSit(c, { rotulo: rotuloEleito(c) }) : projetados?.has(c.id) ? seloProjetado() : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
-  const itens = d.candidatos.slice(0, estado.mostrar).map((c, i) =>
+  const todos = d.candidatos.map((c, i) => ({ c, i })).filter(({ c }) => passaBusca(c, estado.busca)); // a posição é a do ranking completo
+  const itens = todos.slice(0, estado.mostrar).map(({ c, i }) =>
     itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: null, max, foto: fotoDe(cargoAtivo(), estado.uf, c), sq: c.id,
       badge: selo(c), eleito: !!c.sit })).join("");
-  const mais = d.candidatos.length > estado.mostrar ? `<button class="mais" data-mais>Ver mais (${fmt(d.candidatos.length - estado.mostrar)} candidatos)</button>` : "";
-  return `<section class="card"><h2>${esc(rotulo)} (${fmt(d.candidatos.length)})</h2>${itens}${mais}</section>`;
+  const mais = todos.length > estado.mostrar ? `<button class="mais" data-mais>Ver mais (${fmt(todos.length - estado.mostrar)} candidatos)</button>` : "";
+  return `<section class="card"><h2>${esc(rotulo)} (${fmt(buscando(estado.busca) ? todos.length : d.candidatos.length)})</h2>${itens || `<p class="muted">Nenhum candidato com essa busca.</p>`}${mais}</section>`;
 }
 
 function carregandoEstados(titulo) {
@@ -599,6 +604,7 @@ function telaProporcionalUF(v) {
   });
   return `${cadeiras}
     ${dist.art111 ? aviso("Nenhum partido ou federação alcançou o quociente eleitoral. Pelo art. 111 do Código Eleitoral, as vagas ficam com os candidatos mais votados.") : ""}
+    ${barraBusca(d.candidatos, estado.busca, d.candidatos.filter((c) => passaBusca(c, estado.busca)).length)}
     ${boxEleitos(d, dist)}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
     ${cartoesVotacao(d, { proporcional: true })}
@@ -688,7 +694,7 @@ function renderNavegacao(v) {
 function render(forcar = false) {
   const v = estado.view;
   if (!v) return;
-  if (!forcar && document.activeElement?.tagName === "SELECT" && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
+  if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
   const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
@@ -788,7 +794,17 @@ function apuracaoDe(sq) {
   return c ? { votos: c.votos, pct: c.pct, situacao: c.sit ? TEXTO_SIT[c.sit] : c.eleito ? c.situacao || "Eleito" : !c.elegivel ? c.situacaoVoto : null } : null;
 }
 iniciarGraficos($("conteudo"));
+$("conteudo").addEventListener("input", (e) => {
+  const campo = e.target.closest?.("[data-busca-texto]");
+  if (!campo) return;
+  const pos = campo.selectionStart;
+  estado.busca.texto = campo.value; estado.mostrar = 50; estado.pagEleitos = 0;
+  render(true);
+  const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
+});
 $("conteudo").addEventListener("change", (e) => {
+  const bp = e.target.closest?.("[data-busca-partido]");
+  if (bp) { estado.busca.partido = bp.value; estado.mostrar = 50; estado.pagEleitos = 0; render(true); return; }
   const os = e.target.closest?.("[data-ordem-sel]");
   if (os) { estado.ordem = os.value; render(true); return; }
   const fs = e.target.closest?.("[data-f-status]");
@@ -805,6 +821,7 @@ $("conteudo").addEventListener("keydown", (e) => {
   if (it && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); }
 });
 $("conteudo").addEventListener("click", (e) => {
+  if (e.target.closest("[data-busca-limpar]")) { estado.busca = buscaVazia(); estado.mostrar = 50; estado.pagEleitos = 0; render(true); return; }
   if (e.target.closest("[data-ver-completa]")) { window.scrollTo({ top: 0 }); return; } // o endereço (#/estados/UF/dep-federal) abre a apuração
   const it = e.target.closest("[data-sq]");
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }

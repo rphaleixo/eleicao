@@ -592,3 +592,8 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 .np-item[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--acento-txt); font-weight: 600; } .np-item[aria-pressed="true"] small { color: inherit; opacity: .85; }
 .np-inteira { grid-column: 1 / -1; }
 @media (max-width: 520px) { .esc-rotulo { display: none; } .escopo-barra small { font-size: .78rem; } }
+
+/* Busca de candidatos */
+.busca-linha { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 6px; } @media (min-width: 520px) { .busca-linha { grid-template-columns: 2fr 1fr; } }
+.busca-texto input { width: 100%; min-height: 40px; box-sizing: border-box; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--txt); font: inherit; font-size: .95rem; }
+.busca-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 0; }
