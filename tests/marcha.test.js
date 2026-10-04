@@ -54,6 +54,7 @@ test("estado aberto: resumo, gráfico e carrossel com top 5 e votos brancos/nulo
   const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ" }));
   assert.ok(h.includes('aria-expanded="true"') && h.includes("expandido") && h.includes("carrossel"));
   assert.ok(h.includes("Eleitores aptos") && h.includes("Abstenções"));
+  assert.ok(!h.includes("exp-grafico")); // sem gráfico de evolução dentro do estado
   assert.equal((h.match(/data-sq=/g) || []).length, 5); // só os 5 primeiros do Presidente
   assert.ok(h.includes("Válidos") && h.includes("Brancos") && h.includes("Nulos"));
   assert.ok(h.includes("Dados indisponíveis") && h.includes("Carregando")); // Governador falhou, Senador ainda carregando
@@ -63,4 +64,22 @@ test("estado aberto: resumo, gráfico e carrossel com top 5 e votos brancos/nulo
 test("exterior aberto mostra só o Presidente", () => {
   const h = telaMarcha({ ...v, detalhe }, est({ uf: "ZZ" }));
   assert.ok(h.includes("expandido") && h.includes('data-ir="presidente"') && !h.includes('data-ir="governador"') && !h.includes('data-ir="senador"'));
+});
+
+test("sem votos, os 5 candidatos aparecem em ordem alfabética", () => {
+  const nomes = ["Zeca", "Ana", "Mário", "Bia", "Carlos", "Débora", "Ênio"];
+  const d0 = { candidatos: nomes.map((n, i) => ({ id: String(i), nome: n, partido: "P", votos: 0, pct: 0 })), votosValidos: 0, brancos: 0, nulos: 0, pctSecoes: 0, divulgaVotos: false };
+  const h = telaMarcha({ ...v, detalhe: { pres: d0, gov: null, sen: null } }, est({ uf: "RJ" }));
+  const ordem = [...h.matchAll(/class="cc-nome"><b>([^<]+)<\/b>/g)].map((m) => m[1]);
+  assert.deepEqual(ordem.slice(0, 5), ["Ana", "Bia", "Carlos", "Débora", "Ênio"]);
+});
+
+test("válidos, brancos e nulos mostram total e percentual", () => {
+  const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ" }));
+  assert.ok(h.includes("<strong>900</strong><small>90,0%</small>") && h.includes("<strong>60</strong><small>6,0%</small>") && h.includes("<strong>40</strong><small>4,0%</small>"));
+});
+
+test("cada estado mostra presentes, ausentes e a apurar, que somam 100%", () => {
+  const h = telaMarcha(v, est({}));
+  assert.ok(h.includes("Presentes <b>40,0%</b>") && h.includes("Ausentes <b>10,0%</b>") && h.includes("A apurar <b>50,0%</b>"));
 });

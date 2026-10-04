@@ -75,34 +75,46 @@ export function chipsRegiao(ac, regiao) {
   return `<div class="chips" role="group" aria-label="Filtrar por região">${chip("", "Todos")}${regs}${ext}</div>`;
 }
 
+/** Divisão do eleitorado em presentes, ausentes e ainda a apurar (somam 100%). */
+export function divisaoEleitorado(a) {
+  const comp = a?.eleitores ? (a.comparecimento / a.eleitores) * 100 : 0, aus = a?.eleitores ? (a.abstencao / a.eleitores) * 100 : 0;
+  return { comp, aus, falta: Math.max(0, 100 - comp - aus) };
+}
+
+export function legendaPresenca(a) {
+  const d = divisaoEleitorado(a);
+  return `<span class="le-leg"><span><i class="pt pres"></i>Presentes <b>${pct(d.comp)}</b></span><span><i class="pt aus"></i>Ausentes <b>${pct(d.aus)}</b></span><span><i class="pt falta"></i>A apurar <b>${pct(d.falta)}</b></span></span>`;
+}
+
 export function linhaEstado(uf, u, aberto = false, painel = "") {
   const a = doEstado(u);
   const estadoCls = u?.andamento === "f" ? "f" : u?.andamento === "p" ? "p" : "n";
-  const pc = a?.pct ?? 0;
+  const d = divisaoEleitorado(a);
   return `<li class="${aberto ? "aberto" : ""}"><button type="button" class="linha-estado" data-uf="${uf}" aria-expanded="${aberto}"><span class="sigla">${uf === "ZZ" ? "EX" : uf}</span>
     <span class="le-meio"><span class="le-nome">${esc(nomeEstado(uf))}<i class="ponto ${estadoCls}" title="${TEXTO_SITUACAO[u?.andamento] ?? TEXTO_SITUACAO.n}"></i></span>
-      <span class="le-barra"><i style="width:${Math.min(100, pc)}%"></i></span>
-      <span class="le-det">${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções` : "–"}</span></span>
-    <span class="le-pct">${pct(pc)}</span><span class="seta" aria-hidden="true">${aberto ? "⌃" : "⌄"}</span></button>${aberto ? painel : ""}</li>`;
+      <span class="le-barra" role="img" aria-label="Presentes ${pct(d.comp)}, ausentes ${pct(d.aus)}, a apurar ${pct(d.falta)}"><i class="pres" style="width:${d.comp}%"></i><i class="aus" style="width:${d.aus}%"></i></span>
+      ${legendaPresenca(a)}</span>
+    <span class="le-pct">${pct(a?.pct ?? 0)}<small>das seções</small></span><span class="seta" aria-hidden="true">${aberto ? "⌃" : "⌄"}</span></button>${aberto ? painel : ""}</li>`;
 }
 
 // ---------- resumo do estado (campo expansível) ----------
 function blocoVotos(d) {
   const total = d.votosValidos + d.brancos + d.nulos;
-  const parte = (rotulo, n) => `<span>${rotulo} <strong>${total ? pct((n / total) * 100) : "–"}</strong> <small>${fmt(n)}</small></span>`;
+  const parte = (rotulo, n) => `<div><span>${rotulo}</span><strong>${fmt(n)}</strong><small>${pct(total ? (n / total) * 100 : 0)}</small></div>`;
   return `<div class="votos-tipos">${parte("Válidos", d.votosValidos)}${parte("Brancos", d.brancos)}${parte("Nulos", d.nulos)}</div>`;
 }
 
 export function cardCargo({ titulo, aba, uf, d }) {
   if (d === undefined) return `<article class="card-cargo"><h3>${esc(titulo)}</h3><p class="muted">Carregando…</p></article>`;
   if (!d) return `<article class="card-cargo"><h3>${esc(titulo)}</h3><p class="muted">Dados indisponíveis no momento.</p></article>`;
-  const top = d.candidatos.filter((c) => c.votos > 0).slice(0, 5);
+  // Mais votados primeiro; sem votos (apuração não começou), ordem alfabética.
+  const top = d.candidatos.slice().sort((x, y) => y.votos - x.votos || x.nome.localeCompare(y.nome, "pt-BR")).slice(0, 5);
   const itens = top.length
     ? top.map((c, i) => `<li data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato"><span class="pos">${i + 1}</span>
         <img class="foto mini" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
         <span class="cc-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span></span>
         <span class="cc-votos"><strong>${pct(c.pct, 2)}</strong><small>${fmt(c.votos)}</small></span></li>`).join("")
-    : `<li class="vazio muted">${d.divulgaVotos ? "Sem votos apurados ainda." : "Votos ainda não divulgados pelo TSE."}</li>`;
+    : `<li class="vazio muted">Sem candidatos no arquivo do TSE.</li>`;
   return `<article class="card-cargo"><div class="cc-topo"><h3>${esc(titulo)}</h3><span class="muted">${pct(d.pctSecoes)} apurado</span></div>
     <ol class="cc-lista">${itens}</ol>${blocoVotos(d)}<button type="button" class="link" data-ir="${aba}">Ver completo ›</button></article>`;
 }
@@ -117,7 +129,6 @@ export function painelEstado(v, uf) {
   return `<div class="expandido">
     <div class="resumo-estado">${celula("Eleitores aptos", fmt(a.eleitores))}${celula("Compareceram", fmt(a.comparecimento), a.temPresenca ? `${pct(a.pctComp)} dos apurados` : "")}
       ${celula("Abstenções", fmt(a.abstencao), a.temPresenca ? `${pct(a.pctAbst)} dos apurados` : "")}${celula("Seções", `${fmt(a.st)} de ${fmt(a.ts)}`, est && uf !== "ZZ" ? `Estaduais: ${pct(est.pct)}` : "")}</div>
-    <div class="exp-grafico">${graficoPresenca({ hist: v.h, chave: k, a, altura: 130, titulo: `Comparecimento e abstenção: ${nomeEstado(uf)}` })}</div>
     <div class="carrossel" role="region" aria-label="Resumo das eleições em ${esc(nomeEstado(uf))}">${cargos.map(([titulo, aba, dd]) => cardCargo({ titulo, aba, uf, d: dd })).join("")}</div></div>`;
 }
 
