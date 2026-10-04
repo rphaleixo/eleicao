@@ -6,7 +6,7 @@ import { cardEstado, cardRegiao, gradeCards, linha2022 } from "./cardsEstados.js
 import { montarBancada, telaBancada } from "./bancada.js";
 import { mapaBrasil, legendaMapa, contarLideres } from "./mapa.js";
 import { ordenarCandidatos } from "./ranking.js";
-import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao } from "./situacao.js";
+import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao, seloSit, seloProjetado, rotuloEleito } from "./situacao.js";
 import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
 import { barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js";
@@ -280,7 +280,7 @@ function boxEleitos(d, dist) {
   const cargo = cargoAtivo();
   const itens = fatia.map((b, i) => `<li class="ce" style="--cor:${corPartido(b.partido)}" data-sq="${esc(b.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
       <span class="pos">${ini + i + 1}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, estado.uf, b.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
-      <span class="ce-nome"><b>${esc(b.nome)}</b><span class="chip" style="--cor:${corPartido(b.partido)}">${esc(b.partido)}</span><small>${esc(b.sub)}</small></span>
+      <span class="ce-nome"><b>${esc(b.nome)}</b><span class="chip" style="--cor:${corPartido(b.partido)}">${esc(b.partido)}</span>${usaOficial ? seloSit({ sit: "eleito" }, { curto: true }) : seloProjetado({ curto: true })}<small>${esc(b.sub)}</small></span>
       <span class="ce-votos">${fmt(b.votos)}</span><span class="cr-barra"><i style="width:${(b.votos / max) * 100}%"></i></span></li>`).join("");
   const nav = paginas > 1
     ? `<nav class="paginacao" aria-label="Páginas dos eleitos"><button type="button" data-pag-eleitos="-1" ${pag === 0 ? "disabled" : ""}>‹ Anteriores</button>
@@ -290,11 +290,12 @@ function boxEleitos(d, dist) {
     ${base.length ? `<ol class="lista-eleitos" start="${ini + 1}">${itens}</ol>${nav}` : `<p class="muted">Nenhum candidato eleito ainda.</p>`}</section>`;
 }
 
-function maisVotados(d, rotulo = "Candidatos por votos") {
+function maisVotados(d, rotulo = "Candidatos por votos", projetados = null) {
   const max = Math.max(1, d.candidatos[0]?.votos ?? 1);
+  const selo = (c) => c.sit ? seloSit(c, { rotulo: rotuloEleito(c) }) : projetados?.has(c.id) ? seloProjetado() : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
   const itens = d.candidatos.slice(0, estado.mostrar).map((c, i) =>
     itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: null, max, foto: fotoDe(cargoAtivo(), estado.uf, c), sq: c.id,
-      badge: c.eleito ? `<span class="badge">${esc(c.situacao || "Eleito")}</span>` : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "", eleito: c.eleito })).join("");
+      badge: selo(c), eleito: !!c.sit })).join("");
   const mais = d.candidatos.length > estado.mostrar ? `<button class="mais" data-mais>Ver mais (${fmt(d.candidatos.length - estado.mostrar)} candidatos)</button>` : "";
   return `<section class="card"><h2>${esc(rotulo)} (${fmt(d.candidatos.length)})</h2>${itens}${mais}</section>`;
 }
@@ -473,7 +474,7 @@ function telaProporcionalUF(v) {
     ${boxEleitos(d, dist)}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
     ${cartoesVotacao(d, { proporcional: true })}
-    ${maisVotados(d)}`;
+    ${maisVotados(d, "Candidatos por votos", new Set(dist.eleitos.map((e) => e.id)))}`;
 }
 
 function telaNacionalProp(v) {

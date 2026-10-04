@@ -4,8 +4,8 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 export const TEXTO_SIT = { eleito: "Eleito", segundo: "2º turno" };
 
 /** Selo do candidato: ✓ Eleito (verde) ou ② 2º turno (âmbar). Vazio se não houver situação. */
-export function seloSit(c, { curto = false } = {}) {
-  if (c?.sit === "eleito") return `<span class="selo-sit eleito" title="Candidato eleito"><i aria-hidden="true">✓</i>${curto ? "" : "Eleito"}</span>`;
+export function seloSit(c, { curto = false, rotulo = "Eleito" } = {}) {
+  if (c?.sit === "eleito") return `<span class="selo-sit eleito" title="${esc(rotulo)}"><i aria-hidden="true">✓</i>${curto ? "" : esc(rotulo)}</span>`;
   if (c?.sit === "segundo") return `<span class="selo-sit segundo" title="Vai ao 2º turno"><i aria-hidden="true">2º</i>${curto ? "" : "turno"}</span>`;
   return "";
 }
@@ -17,6 +17,12 @@ export function seloEleicao(d) {
   if (sit === "segundo") return `<span class="selo-sit segundo" title="Vai ao 2º turno"><i aria-hidden="true">2º</i>turno</span>`;
   return "";
 }
+
+/** Eleito na projeção (ainda não confirmado pelo TSE): contorno tracejado. */
+export const seloProjetado = ({ curto = false } = {}) => `<span class="selo-sit projetado" title="Eleito na projeção, ainda sem confirmação do TSE"><i aria-hidden="true">✓</i>${curto ? "" : "Projeção"}</span>`;
+
+/** Texto do selo de um eleito: "Eleito por QP", "Eleito por média"... ou só "Eleito". */
+export const rotuloEleito = (c) => (/^eleito\b/i.test(String(c?.situacao ?? "").trim()) ? String(c.situacao).trim() : "Eleito");
 
 /** Classe CSS que destaca a linha/cartão do candidato. */
 export const classeSit = (c) => (c?.sit ? ` sit-${c.sit}` : "");

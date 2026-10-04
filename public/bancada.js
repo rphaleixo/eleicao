@@ -1,6 +1,7 @@
 // Bancada do Senado em 2027: os 54 senadores que a eleição de hoje renova + os 27 que seguem no mandato (até 2031).
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
+import { UFS } from "./config.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 /** Chave para comparar siglas escritas de jeitos diferentes ("PC do B", "PCdoB", "UNIÃO"). */
@@ -32,6 +33,7 @@ export function montarBancada({ mandatos, resultados }) {
     if (!d) continue;
     const vagas = d.vagas || 2;
     const lideres = d.candidatos.filter((c) => c.votos > 0 && c.elegivel).sort((a, b) => b.votos - a.votos).slice(0, vagas);
+    Object.assign(doUf(uf), { apurado: d.pctSecoes, vagas, confirmados: lideres.filter((c) => c.sit === "eleito").length });
     for (const c of lideres) {
       const l = linha(rotuloDe(c.partido)); l.eleitos++; totalEleitos++;
       if (c.sit === "eleito") { l.confirmados++; confirmados++; }
@@ -54,13 +56,19 @@ export function plenario(b) {
   return `<div class="plenario" role="img" aria-label="Plenário do Senado: ${cheios.length} de 81 lugares projetados">${cheios.join("")}${vagas.join("")}</div>`;
 }
 
-export const AGRUPAMENTOS = { partido: "Por partido", estado: "Por estado" };
+export const AGRUPAMENTOS = { partido: "Por partido", estado: "Por estado", tabela: "Tabela" };
 
 function seletorAgrupamento(agrup) {
   return `<div class="seg mini" role="group" aria-label="Agrupar bancada">${Object.entries(AGRUPAMENTOS).map(([k, n]) => `<button type="button" data-agrup-bancada="${k}" aria-pressed="${k === agrup}">${n}</button>`).join("")}</div>`;
 }
 
-/** Uma linha por partido/federação: barra com os eleitos em 2026 (cheio) e os de 2022 (claro). */
+/** Situação da apuração do estado para a bancada: definida (todos confirmados), projeção ou sem votos. */
+export function situacaoUf(u) {
+  const proj = u.eleitos.length;
+  if (proj && u.confirmados >= (u.vagas || 2)) return "definida";
+  return proj ? "projeção" : "sem votos";
+}
+
 function porPartido(b) {
   const max = Math.max(1, ...b.linhas.map((l) => l.total));
   return `<ul class="bancada-partidos">${b.linhas.map((l) => `<li style="--cor:${corPartido(l.rotulo)}"><span class="chip" style="--cor:${corPartido(l.rotulo)}">${esc(l.rotulo)}</span>
@@ -69,25 +77,40 @@ function porPartido(b) {
     <p class="legenda-plenario"><span><i class="bp-leg e26"></i>Eleitos em 2026 (projeção)</span><span><i class="bp-leg e22"></i>Eleitos em 2022</span></p>`;
 }
 
-/** Uma linha por estado: o senador eleito em 2022 e os 2 mais votados em 2026, em siglas de partido. */
+/** Um card por estado, com os 3 senadores de 2027 em destaque: o eleito em 2022 e os 2 mais votados em 2026. */
 function porEstado(b) {
-  const chip = (rotulo, classe, titulo) => `<span class="chip ${classe}" style="--cor:${corPartido(rotulo)}" title="${esc(titulo)}">${esc(rotulo)}</span>`;
-  return `<ul class="bancada-estados">${b.porUf.map((u) => {
-    const antigo = u.mantem ? chip(u.mantem.rotulo, "c22", `${u.mantem.nome}: eleito em 2022`) : "";
-    const novos = u.eleitos.map((e) => chip(e.rotulo, e.confirmado ? "c26 ok" : "c26", `${e.nome}: ${e.confirmado ? "eleito" : "mais votado"} em 2026`)).join("");
-    const nomes = [u.mantem?.nome, ...u.eleitos.map((e) => e.nome)].filter(Boolean).map(esc).join(" · ");
-    return `<li><span class="sigla">${esc(u.uf)}</span><span class="be-chips">${antigo}${novos}${u.eleitos.length < 2 ? `<span class="chip c26 vazio">…</span>`.repeat(2 - u.eleitos.length) : ""}</span><small class="nomes-uf" title="${nomes}">${nomes}</small></li>`;
+  const linha = (tag, classe, nome, rotulo) => `<li class="bc-linha ${classe}" style="--cor:${corPartido(rotulo)}"><span class="bc-marca"></span><span class="bc-quem"><small>${tag}</small><b>${esc(nome)}</b></span><span class="chip" style="--cor:${corPartido(rotulo)}">${esc(rotulo)}</span></li>`;
+  const vazio = (tag) => `<li class="bc-linha vazia"><span class="bc-marca"></span><span class="bc-quem"><small>${tag}</small><b>Aguardando apuração</b></span></li>`;
+  return `<ul class="bancada-cards">${b.porUf.map((u) => {
+    const antigo = u.mantem ? linha("Eleito em 2022", "c22", u.mantem.nome, u.mantem.rotulo) : vazio("Eleito em 2022");
+    const novos = [0, 1].map((i) => { const e = u.eleitos[i]; return e ? linha(e.confirmado ? "Eleito em 2026 ✓" : "Mais votado em 2026", e.confirmado ? "c26 ok" : "c26", e.nome, e.rotulo) : vazio("Eleição de 2026"); }).join("");
+    return `<li class="bc"><div class="bc-topo"><span class="sigla">${esc(u.uf)}</span><b>${esc(UFS[u.uf] ?? u.uf)}</b><span class="bc-apurado">${u.apurado != null ? pct(u.apurado) : "–"}</span></div><ul class="bc-nomes">${antigo}${novos}</ul></li>`;
   }).join("")}</ul>
-  <p class="legenda-plenario"><span><i class="bp-leg e22"></i>Eleito em 2022</span><span><i class="bp-leg e26"></i>Mais votados em 2026</span></p>`;
+  <p class="legenda-plenario"><span><i class="bp-leg e22"></i>Eleito em 2022 (mandato até 2031)</span><span><i class="bp-leg e26"></i>Mais votados em 2026 (projeção)</span></p>`;
+}
+
+/** Tabela por estado: vagas, apuração, situação e a bancada de 2027 por partido/federação (os 3 senadores do estado). */
+function tabelaEstados(b) {
+  const linhas = b.porUf.map((u) => {
+    const cont = new Map();
+    for (const rotulo of [u.mantem?.rotulo, ...u.eleitos.map((e) => e.rotulo)].filter(Boolean)) cont.set(rotulo, (cont.get(rotulo) ?? 0) + 1);
+    const chips = [...cont.entries()].sort((x, y) => y[1] - x[1]).map(([r, n]) => `<span class="chip" style="--cor:${corPartido(r)}">${esc(r)} ${n}</span>`).join(" ");
+    const sit = situacaoUf(u);
+    return `<tr><td class="uf-nome">${esc(UFS[u.uf] ?? u.uf)}</td><td>${u.vagas ?? 2}</td><td><span class="mini-barra"><i style="width:${Math.min(100, u.apurado ?? 0)}%"></i></span>${pct(u.apurado ?? 0)}</td>
+      <td>${sit === "definida" ? `<span class="selo-sit eleito"><i aria-hidden="true">✓</i>definida</span>` : sit}</td><td style="text-align:left;white-space:normal">${chips || "–"}</td></tr>`;
+  }).join("");
+  return `<div class="tab-scroll"><table><tr><th>Estado</th><th>Vagas</th><th>Apurado</th><th>Situação</th><th style="text-align:right">Senadores em 2027 por partido/federação</th></tr>${linhas}</table></div>
+    <p class="muted">Cada estado tem 3 senadores em 2027: o eleito em 2022 mais os 2 eleitos agora (projeção: os 2 mais votados).</p>`;
 }
 
 export function telaBancada(b, { versao = "", carregando = false, agrupamento = "partido" } = {}) {
   if (carregando) return `<section class="card"><h2>Bancada do Senado em 2027</h2><p class="muted">Carregando a lista de senadores em exercício…</p></section>`;
   const maior = b.linhas[0];
+  const corpo = agrupamento === "estado" ? porEstado(b) : agrupamento === "tabela" ? tabelaEstados(b) : porPartido(b);
   return `<section class="card"><div class="titulo-cadeiras"><h2>Bancada em 2027</h2><span><strong>${b.totalMantem + b.totalEleitos}</strong> <span class="muted">de 81</span></span></div>
     ${plenario(b)}
     <p class="muted">${b.totalEleitos} dos 54 eleitos hoje projetados + ${b.totalMantem} eleitos em 2022. Maioria: ${MAIORIA_SENADO}.${maior ? ` Maior bancada: <strong>${esc(maior.rotulo)}</strong> (${maior.total}).` : ""}</p>
     <div class="bancada-topo">${seletorAgrupamento(agrupamento)}</div>
-    ${agrupamento === "estado" ? porEstado(b) : porPartido(b)}
+    ${corpo}
     <p class="muted nota">Projeção: os 2 mais votados de cada estado, com os votos contados até agora. Federações somam os partidos que as formam.${versao ? ` Senadores em exercício: Senado Federal (${esc(versao)}).` : ""}</p></section>`;
 }

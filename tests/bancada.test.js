@@ -38,7 +38,7 @@ test("partidos de uma federação entram juntos, e os 2 mais votados de cada est
 });
 
 test("plenário tem sempre 81 lugares e a tela, por partido ou por estado, é compacta", () => {
-  const b = montarBancada({ mandatos, resultados: [{ uf: "RJ", d: d([cand("1", "X", "PT", 500, "eleito"), cand("2", "Y", "PL", 400)], [fed]) }] });
+  const b = montarBancada({ mandatos, resultados: [{ uf: "RJ", d: { ...d([cand("1", "X", "PT", 500, "eleito"), cand("2", "Y", "PL", 400)], [fed]), pctSecoes: 42 } }] });
   const p = plenario(b);
   assert.equal((p.match(/<i class="pl-/g) || []).length, 81);
   assert.equal((p.match(/pl-eleito/g) || []).length, 2);
@@ -47,8 +47,19 @@ test("plenário tem sempre 81 lugares e a tela, por partido ou por estado, é co
   for (const t of ["Bancada em 2027", "Maioria: 41", "bancada-partidos", "Sem partido", 'data-agrup-bancada="partido" aria-pressed="true"', "Eleitos em 2022"]) assert.ok(porPartido.includes(t), t);
   assert.ok(!porPartido.includes("<table"));
   const porEstado = telaBancada(b, { agrupamento: "estado" });
-  assert.ok(porEstado.includes("bancada-estados") && porEstado.includes('data-agrup-bancada="estado" aria-pressed="true"') && !porEstado.includes("bancada-partidos"));
-  assert.equal((porEstado.match(/<li><span class="sigla">/g) || []).length, 3); // RJ, SP e BA têm alguém
+  assert.ok(porEstado.includes("bancada-cards") && porEstado.includes('data-agrup-bancada="estado" aria-pressed="true"') && !porEstado.includes("bancada-partidos"));
+  assert.ok(porEstado.includes("Eleito em 2022") && porEstado.includes("Eleito em 2026 ✓") && porEstado.includes("Mais votado em 2026") && porEstado.includes("Aguardando apuração"));
+  assert.equal((porEstado.match(/<li class="bc">/g) || []).length, 3); // RJ, SP e BA têm alguém
   assert.ok(porEstado.includes("Romário") || porEstado.includes("Rom"));
+  const tabela = telaBancada(b, { agrupamento: "tabela" });
+  assert.ok(tabela.includes("<table") && tabela.includes("Senadores em 2027 por partido/federação") && tabela.includes('data-agrup-bancada="tabela" aria-pressed="true"'));
+  assert.ok(tabela.includes("PT / PC do B / PV 2") || tabela.includes("PL 1"));
   assert.ok(telaBancada(b, { carregando: true }).includes("Carregando"));
+});
+
+test("situação do estado na tabela: definida, projeção ou sem votos", async () => {
+  const { situacaoUf } = await import("../public/bancada.js");
+  assert.equal(situacaoUf({ eleitos: [{}, {}], confirmados: 2, vagas: 2 }), "definida");
+  assert.equal(situacaoUf({ eleitos: [{}, {}], confirmados: 1, vagas: 2 }), "projeção");
+  assert.equal(situacaoUf({ eleitos: [], confirmados: 0, vagas: 2 }), "sem votos");
 });

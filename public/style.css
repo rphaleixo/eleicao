@@ -472,3 +472,17 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .chip-exterior { display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 0; padding: 8px 12px; min-height: 40px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--txt); font: inherit; font-size: .85rem; cursor: pointer; }
 .chip-exterior i { width: 12px; height: 12px; border-radius: 3px; } .chip-exterior.sel { border-color: var(--txt); }
 .dica-mapa { text-align: center; margin: 10px 0 0; } .cartao-mapa { margin-top: 12px; }
+.selo-sit.projetado { color: var(--sit-eleito); background: transparent; border-style: dashed; } .selo-sit.projetado i { background: transparent; color: var(--sit-eleito); box-shadow: inset 0 0 0 1.5px var(--sit-eleito); }
+
+/* bancada por estado: cards maiores com os 3 nomes em destaque */
+.bancada-cards { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .bancada-cards { grid-template-columns: repeat(2, 1fr); } } @media (min-width: 1000px) { .bancada-cards { grid-template-columns: repeat(3, 1fr); } }
+.bc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--bg); }
+.bc-topo { display: flex; align-items: center; gap: 10px; } .bc-topo .sigla { width: 38px; height: 38px; font-size: .8rem; border-radius: 10px; } .bc-topo b { flex: 1; font-size: 1.05rem; font-weight: 600; } .bc-apurado { font-variant-numeric: tabular-nums; font-weight: 700; font-size: .9rem; color: var(--muted); }
+.bc-nomes { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bc-linha { display: grid; grid-template-columns: 4px 1fr auto; align-items: center; gap: 10px; padding: 6px 0; }
+.bc-marca { align-self: stretch; border-radius: 2px; background: var(--cor, var(--abst)); min-height: 38px; } .bc-linha.c22 .bc-marca { background: repeating-linear-gradient(0deg, var(--cor) 0 5px, transparent 5px 8px); }
+.bc-quem { display: flex; flex-direction: column; min-width: 0; } .bc-quem small { color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .03em; } .bc-quem b { font-size: 1.02rem; font-weight: 600; overflow-wrap: anywhere; }
+.bc-linha .chip { margin: 0; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bc-linha.ok .bc-quem small { color: var(--sit-eleito); font-weight: 700; } .bc-linha.vazia .bc-marca { background: var(--barra); } .bc-linha.vazia b { color: var(--muted); font-weight: 400; font-size: .9rem; }
+.bc-linha .chip { max-width: 9rem; }

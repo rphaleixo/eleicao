@@ -120,7 +120,8 @@ export function normalizar(json) {
   const temSegundoTurno = String(cargo.cd) !== "5"; // o Senado não tem 2º turno
   for (const c of candidatos) c.sit = /2.\s*turno/i.test(c.situacao) ? (temSegundoTurno ? "segundo" : "") : c.eleito ? "eleito" : ""; // o TSE marca e="s" também em quem vai ao 2º turno
   const vagas = num(cargo.nv) || 1;
-  if (!candidatos.some((c) => c.sit)) {
+  const majoritario = ["1", "3", "5"].includes(String(cargo.cd)); // a definição matemática (md) só existe nas eleições majoritárias
+  if (majoritario && !candidatos.some((c) => c.sit)) {
     const lideres = candidatos.filter((c) => c.votos > 0 && c.elegivel);
     if (md === "e") lideres.slice(0, vagas).forEach((c) => { c.sit = "eleito"; });
     if (md === "s" && temSegundoTurno) lideres.slice(0, 2).forEach((c) => { c.sit = "segundo"; });
