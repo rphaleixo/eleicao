@@ -29,7 +29,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), fEleitos: { ...filtrosVazios(), status: "definida" }, fEleitosGov: { ...filtrosVazios(), status: "definida" }, visaoGov: "estados" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), fEleitos: filtrosVazios(), fEleitosGov: filtrosVazios(), visaoGov: "estados" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -386,8 +386,8 @@ function telaEstados(v) {
 function seletorVisao(atributo, visao, opcoes) {
   return `<div class="seg visao-senado" role="group" aria-label="Visão">${opcoes.map(([k, nome]) => `<button type="button" ${atributo}="${k}" aria-pressed="${k === visao}">${nome}</button>`).join("")}</div>`;
 }
-const seletorSenado = (visao) => seletorVisao("data-visao-senado", visao, [["estados", "Por estado"], ["eleitos", "Eleitos"], ["bancada", "Bancada em 2027"]]);
-const seletorGovernador = (visao) => seletorVisao("data-visao-gov", visao, [["estados", "Por estado"], ["eleitos", "Governadores eleitos"]]);
+const seletorSenado = (visao) => seletorVisao("data-visao-senado", visao, [["estados", "Por estado"], ["eleitos", "Resumo nacional"], ["bancada", "Bancada em 2027"]]);
+const seletorGovernador = (visao) => seletorVisao("data-visao-gov", visao, [["estados", "Por estado"], ["eleitos", "Resumo nacional"]]);
 
 /** Linha de status de um quadro com projeção, a partir do acompanhamento do TSE (arquivo e hora de Brasília). */
 function statusAcompanhamento(ac) {
@@ -432,35 +432,42 @@ function telaCargoPorEstado(v) {
   return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
 }
 
-/** Eleitos em 2026 (senadores ou governadores), com o estado de cada um. Filtros: região, estado e situação da eleição. */
+/** Resumo nacional (senadores ou governadores): uma linha por estado com a situação no momento e o % de urnas apuradas. */
 function telaEleitos(v, cargo) {
   const senador = cargo === "senador", f = senador ? estado.fEleitos : estado.fEleitosGov, escopo = senador ? "fEleitos" : "fEleitosGov";
-  const nomePlural = senador ? "Senadores" : "Governadores", total = senador ? 54 : 27;
-  if (!v.lista) return carregandoEstados(`${nomePlural} eleitos`);
+  const nomePlural = senador ? "Senadores" : "Governadores";
+  if (!v.lista) return carregandoEstados(`Resumo nacional · ${nomePlural}`);
   const dDe = (u) => v.lista.find((x) => x.uf === u)?.d ?? null;
   const todas = Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
   const ufs = filtrarUfs(todas, f, (u) => statusEleicao(dDe(u)));
-  const linhas = ufs.flatMap((uf) => {
-    const d = dDe(uf);
-    if (!d) return [];
+  const nome = (c) => `<b class="link-cand" data-sq="${esc(c.id)}" role="button" tabindex="0" style="--cor:${corPartido(c.partido)}">${esc(c.nome)}</b> <span class="muted">${esc(c.partido)}</span>`;
+  const situacaoDe = (d) => {
     const ordenados = ordenarCandidatos(d.candidatos).filter((c) => c.votos > 0 && c.elegivel);
-    const marcados = ordenados.filter((c) => c.sit);
-    // Eleitos e quem vai ao 2º turno; sem marcação, os mais votados em projeção.
-    const escolhidos = marcados.length ? marcados : ordenados.slice(0, senador ? d.vagas || 2 : 1);
-    return escolhidos.map((c) => ({ uf, c, sit: c.sit || "projecao" }));
-  });
-  const eleitos = linhas.filter((l) => l.sit === "eleito").length, segundo = linhas.filter((l) => l.sit === "segundo").length, projetados = linhas.filter((l) => l.sit === "projecao").length;
-  const selo = (sit, c) => (sit === "eleito" ? seloSit(c) : sit === "segundo" ? seloSit(c) : seloProjetado());
-  const itens = linhas.map(({ uf, c, sit }) => `<li class="se${sit === "eleito" ? " sit-eleito" : sit === "segundo" ? " sit-segundo" : ""}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato" style="--cor:${corPartido(c.partido)}">
-      <span class="sigla">${uf}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
-      <span class="se-quem"><b>${esc(c.nome)}</b><span class="muted">${esc(UFS[uf])}</span></span><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>
-      <span class="se-votos"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)} votos</small></span>${selo(sit, c)}</li>`).join("");
-  const resumo = [`${eleitos} eleito${eleitos === 1 ? "" : "s"} com a eleição definida`, !senador && segundo ? `${segundo} candidato${segundo === 1 ? "" : "s"} no 2º turno` : "", projetados ? `${projetados} na projeção (${senador ? "os mais votados" : "o mais votado"})` : ""].filter(Boolean).join(" · ");
-  return `<section class="card"><div class="titulo-cadeiras"><h2>${nomePlural} eleitos em 2026</h2><span><strong>${eleitos}</strong> <span class="muted">de ${total}</span></span></div>
+    const eleitos = ordenados.filter((c) => c.sit === "eleito"), segundos = ordenados.filter((c) => c.sit === "segundo");
+    if (!ordenados.length) return `<span class="muted">Sem votos apurados</span>`;
+    if (!senador && segundos.length) return `<span class="selo-sit segundo"><i aria-hidden="true">2º</i>2º turno</span> ${segundos.map(nome).join(" × ")}`;
+    if (eleitos.length) {
+      const falta = senador ? (d.vagas || 2) - eleitos.length : 0;
+      const lider = falta > 0 ? ordenados.filter((c) => !c.sit).slice(0, falta) : [];
+      return `<span class="selo-sit eleito"><i aria-hidden="true">✓</i>${eleitos.length > 1 ? "Eleitos" : "Eleito"}</span> ${eleitos.map(nome).join(" e ")}${falta > 0 ? `<br><span class="muted">${falta} vaga${falta > 1 ? "s" : ""} em aberto${lider.length ? ` · à frente: ${lider.map(nome).join(", ")}` : ""}</span>` : ""}`;
+    }
+    const topo = ordenados.slice(0, senador ? d.vagas || 2 : 2);
+    return `<span class="selo-sit projetado"><i aria-hidden="true">…</i>Em aberto</span> ${topo.map((c) => `${nome(c)} <span class="muted">${pct(c.pct)}</span>`).join(senador ? ", " : " × ")}`;
+  };
+  const linhas = ufs.map((uf) => {
+    const d = dDe(uf);
+    if (!d) return "";
+    return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(UFS[uf])}</td><td style="text-align:left;white-space:normal">${situacaoDe(d)}</td>
+      <td><span class="mini-barra"><i style="width:${Math.min(100, d.pctSecoes)}%"></i></span>${pct(d.pctSecoes)}</td></tr>`;
+  }).join("");
+  const contagem = { definida: 0, segundo: 0, aberta: 0 };
+  ufs.forEach((u) => { const d = dDe(u); if (d) contagem[statusEleicao(d)]++; });
+  const resumo = [`${contagem.definida} com eleição definida`, !senador && contagem.segundo ? `${contagem.segundo} com 2º turno` : "", `${contagem.aberta} em aberto`].filter(Boolean).join(" · ");
+  return `<section class="card"><div class="titulo-cadeiras"><h2>Resumo nacional · ${nomePlural}</h2><span class="muted">${ufs.length} estados</span></div>
     ${statusAcompanhamento(v.e)}
     <p class="muted">${resumo}.${senador ? " Cada estado elege 2 senadores." : ""}</p>
     ${barraFiltros(f, { escopo, comSegundo: !senador, statusTodos: "Todas" })}
-    ${itens ? `<ul class="lista-se">${itens}</ul>` : `<p class="muted">Nenhum ${senador ? "senador" : "governador"} com esses filtros.</p>`}</section>`;
+    <div class="tab-scroll"><table><tr><th>Estado</th><th>Situação no momento</th><th>Urnas apuradas</th></tr>${linhas || `<tr><td colspan="3" class="muted" style="text-align:left">Nenhum estado com esses filtros.</td></tr>`}</table></div></section>`;
 }
 
 function telaPresidente(v) {

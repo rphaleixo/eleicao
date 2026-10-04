@@ -520,3 +520,4 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .cc-chips { display: flex; flex-wrap: wrap; gap: 4px; } .cc-chips .chip { margin: 0; } .cc-chips .chip.mais { background: var(--barra); color: var(--txt); text-shadow: none; }
 .status-proj { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 8px 0 4px; } .status-txt { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .hero .status-txt { color: rgba(255,255,255,.8); }
+.link-cand { cursor: pointer; border-bottom: 2px solid var(--cor, currentColor); }
