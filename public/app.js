@@ -6,6 +6,7 @@ import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { statusProjecao } from "./status.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
+import { blocoTop10, cardsMaisVotados } from "./deputadosVotados.js";
 import { seletorAgrupCamara, plenarioCamara, porPartidoCamara, cardsEstadosCamara, tabelaEstadosCamara, lideresCamara, MAIORIA_CAMARA } from "./camara.js";
 import { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO, mapaMunicipal } from "./mapa.js";
 import { lerMalha, carregarMunicipios as carregarVotosMunicipais, lerMun, progresso } from "./municipios.js";
@@ -202,7 +203,7 @@ async function carregarView(rota) {
   // Câmara dos Deputados: os 513 deputados somados dos 27 estados.
   const estados = emSegundoPlano("nacional", CONFIG.atualizarNacionalACadaSegundos * 1000, estadosDepFederal);
   const [ac, h] = await Promise.all([acomp, hist]);
-  return { tipo: "nacional-prop", nacional: estados ? consolidarNacional(estados) : null, ac, h };
+  return { tipo: "nacional-prop", nacional: estados ? consolidarNacional(estados) : null, estados, ac, h };
 }
 
 // ---------- peças de tela ----------
@@ -630,6 +631,12 @@ function telaNacionalProp(v) {
       ${sel ? `<div class="cartao-mapa">${cardsEstadosCamara(n, [sel])}</div>` : `<p class="muted dica-mapa">Toque em um estado para ver a bancada dele.</p>`}`;
   } else if (agrup === "tabela") {
     corpo = `${filtros}${tabelaEstadosCamara(n, ufs)}`;
+  } else if (agrup === "top10") {
+    corpo = blocoTop10(v.estados, statusAcompanhamento(v.ac));
+  } else if (agrup === "votados") {
+    const votFiltros = barraFiltros(f, { comSegundo: false, ordem: estado.ordem === "pct" ? "pct" : "az" });
+    const ufsV = estado.ordem === "pct" ? ufs.slice().sort((a, b) => (n.ufs.find((u) => u.uf === b)?.pct ?? 0) - (n.ufs.find((u) => u.uf === a)?.pct ?? 0)) : ufs;
+    corpo = `${votFiltros}${cardsMaisVotados(v.estados, ufsV)}`;
   } else {
     corpo = porPartidoCamara(n);
   }
@@ -654,7 +661,7 @@ function usaRegiao() {
   const { aba } = estado;
   if (aba === "andamento" || aba === "presidente" || aba === "governadores") return true;
   if (aba === "senadores") return !(estado.visaoSenado === "bancada" && estado.agrupBancada === "partido");
-  if (aba === "camara") return estado.agrupCamara !== "partido";
+  if (aba === "camara") return !["partido", "top10"].includes(estado.agrupCamara);
   return false;
 }
 let navAnterior = "", subAnterior = "";
