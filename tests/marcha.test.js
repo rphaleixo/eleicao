@@ -110,3 +110,11 @@ test("painel da Marcha alterna entre o resumo geral e as barras por região", ()
   const sul = telaMarcha(v, est({ painel: "regioes", regiao: "sul" }));
   assert.ok(sul.includes("% da apuração por estado") && sul.includes("Santa Catarina") && !sul.includes("Acre"));
 });
+
+test("a Marcha mostra os eleitores aptos junto das seções (painel, barras por região e lista)", () => {
+  const geral = telaMarcha(v, est({}));
+  assert.ok(geral.includes("eleitores aptos") && geral.includes("de 270 seções"));
+  assert.ok(geral.includes("de 10 seções · 100 eleitores aptos")); // linha de um estado
+  const reg = telaMarcha(v, est({ painel: "regioes" }));
+  assert.ok(reg.includes("seções · ") && reg.includes("eleitores aptos"));
+});

@@ -76,3 +76,28 @@ test("definição matemática (md) só vale nas majoritárias; deputado não usa
   assert.deepEqual(normalizar(arquivo("1", "s", cands({}, {}))).candidatos.map((c) => c.sit), ["segundo", "segundo"]);
   assert.deepEqual(normalizar(arquivo("6", "e", cands({}, {}), "70")).candidatos.map((c) => c.sit), ["", ""]);
 });
+
+const senadoDF = (est, vap) => ({ v: { vv: "1000" }, e: { te: "2000", est: String(est) }, carg: [{ cd: "5", nv: "2", agr: [{ n: "1", par: [{ sg: "PL", cand: [
+  { n: "22", sqcand: "1", nm: "MICHELLE", vap: String(vap[0]), dvt: "Válido" }, { n: "11", sqcand: "2", nm: "BIA", vap: String(vap[1]), dvt: "Válido" },
+  { n: "13", sqcand: "3", nm: "LEILA", vap: String(vap[2]), dvt: "Válido" }, { n: "50", sqcand: "4", nm: "ERIKA", vap: String(vap[3] ?? 0), dvt: "Válido" }] }] }] }] });
+
+test("Senado: os dois mais votados ficam eleitos quando o 3º não os alcança nem com todos os eleitores que faltam", () => {
+  // faltam 200 eleitores (2000 aptos, 1800 já totalizados); 2º colocado 500 contra 3º com 250: 500 > 250 + 200
+  const d = normalizar(senadoDF(1800, [600, 500, 250]));
+  assert.deepEqual(d.candidatos.map((c) => c.sit), ["eleito", "eleito", "", ""]);
+  assert.equal(situacaoEleicao(d), "eleito");
+  assert.match(faixaDefinicao(d), /Eleição definida[\s\S]*MICHELLE e BIA eleitos/);
+  assert.ok(d.candidatos[0].sitCalculada);
+});
+
+test("Senado: não marca ninguém quando o 3º ainda pode alcançar o 2º", () => {
+  assert.deepEqual(normalizar(senadoDF(1800, [600, 400, 250])).candidatos.map((c) => c.sit), ["", "", "", ""]); // 400 < 250 + 200
+  assert.deepEqual(normalizar(senadoDF(0, [0, 0, 0])).candidatos.map((c) => c.sit), ["", "", "", ""]); // nada apurado
+  assert.deepEqual(normalizar(senadoDF(2000, [600, 500, 499])).candidatos.map((c) => c.sit), ["eleito", "eleito", "", ""]); // tudo totalizado: 500 > 499
+});
+
+test("Senado: um rival sem registro válido ainda conta como ameaça (critério conservador)", () => {
+  const j = senadoDF(1800, [600, 500, 250]);
+  j.carg[0].agr[0].par[0].cand[3] = { n: "50", sqcand: "4", nm: "ERIKA", vap: "400", dvt: "Anulado sub judice" };
+  assert.deepEqual(normalizar(j).candidatos.map((c) => c.sit), ["", "", "", ""]); // 500 < 400 + 200
+});

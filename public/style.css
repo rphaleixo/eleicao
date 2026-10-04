@@ -486,3 +486,4 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .bc-linha .chip { margin: 0; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bc-linha.ok .bc-quem small { color: var(--sit-eleito); font-weight: 700; } .bc-linha.vazia .bc-marca { background: var(--barra); } .bc-linha.vazia b { color: var(--muted); font-weight: 400; font-size: .9rem; }
 .bc-linha .chip { max-width: 9rem; }
+.hero-sec2 { margin: 4px 0 0; } .le-det { display: block; font-size: .74rem; color: var(--muted); margin-bottom: 3px; }

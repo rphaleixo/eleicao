@@ -4,7 +4,7 @@ import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
 import { cardEstado, cardRegiao, gradeCards, linha2022 } from "./cardsEstados.js";
 import { montarBancada, telaBancada } from "./bancada.js";
-import { mapaBrasil, legendaMapa, contarLideres } from "./mapa.js";
+import { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO } from "./mapa.js";
 import { ordenarCandidatos } from "./ranking.js";
 import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao, seloSit, seloProjetado, rotuloEleito } from "./situacao.js";
 import { cartoesVotacao } from "./votacao.js";
@@ -359,7 +359,7 @@ function telaCargoPorEstado(v) {
   const ufs = (regiao && REGIOES[regiao] ? REGIOES[regiao].ufs : Object.keys(UFS)).slice();
   const de2022 = new Map((v.mandatos?.senadores ?? []).map((x) => [x.uf, x]));
   const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
-  const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, extra,
+  const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra,
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
   return `${governador ? "" : seletorSenado("estados")}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
 }
@@ -397,12 +397,19 @@ function telaPresidente(v) {
     <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${d ? cartoesVotacao(d) : ""}${grafico}${quadroPorRegiao(v, uf)}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
 }
 
-/** Líder (cor e nome) de cada estado, para colorir o mapa. */
-function lideresPorUf(lista, porPartido) {
+/**
+ * Líder (cor e nome) de cada estado, para colorir o mapa.
+ * Com `maioria` (governador), o estado só ganha a cor do partido se o líder tiver mais da metade dos votos válidos (50% + 1);
+ * senão a cor é a do 2º turno.
+ */
+function lideresPorUf(lista, porPartido, maioria = false) {
   const out = {};
   for (const { uf, d } of lista ?? []) {
     const topo = d ? ordenarCandidatos(d.candidatos)[0] : null;
-    out[uf] = topo && topo.votos > 0 ? { cor: corPartido(topo.partido), quem: porPartido ? topo.partido : topo.nome } : null;
+    if (!topo || topo.votos <= 0) { out[uf] = null; continue; }
+    out[uf] = maioria && topo.votos * 2 <= d.votosValidos
+      ? { cor: COR_SEGUNDO_TURNO, quem: "Segundo turno", segundo: true }
+      : { cor: corPartido(topo.partido), quem: porPartido ? topo.partido : topo.nome };
   }
   return out;
 }
@@ -411,7 +418,7 @@ function lideresPorUf(lista, porPartido) {
  * Seção "por estado" das abas Presidente, Governadores e Senadores: cards ou mapa, com ordenação e filtro por região.
  * @param {{titulo:string, cargo:string, lista:object[]|null, ac:object, ufs:string[], regiao:string, porPartido?:boolean, extra?:(uf:string)=>string, nota?:string, comRegioes?:boolean, exterior?:boolean}} o
  */
-function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = false, extra = () => "", nota = "", comRegioes = false, exterior = false }) {
+function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = false, maioria = false, extra = () => "", nota = "", comRegioes = false, exterior = false }) {
   const visao = estado.visaoEstados;
   const seg = (attr, valor, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === valor}">${n}</button>`).join("")}</div>`;
   const chips = comRegioes ? `<div class="chips filtro-regioes" role="group" aria-label="Filtrar por região">${[["", "Todas"], ...Object.entries(REGIOES).map(([k, r]) => [k, r.nome]), ...(exterior ? [["exterior", "Exterior"]] : [])]
@@ -422,15 +429,17 @@ function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = fa
   const dDe = (u) => lista.find((x) => x.uf === u)?.d ?? null;
   const apurado = (u) => ac.ufs[u.toLowerCase()]?.pct ?? 0;
   if (visao === "mapa") {
-    const lideres = lideresPorUf(lista, porPartido);
+    const lideres = lideresPorUf(lista, porPartido, maioria);
     const dentro = new Set(ufs);
     const sel = estado.mapaUf && (dentro.has(estado.mapaUf) || estado.mapaUf === "ZZ") ? estado.mapaUf : "";
-    const contagem = contarLideres(Object.fromEntries(Object.entries(lideres).filter(([u]) => dentro.has(u))));
+    const dosEstados = Object.fromEntries(Object.entries(lideres).filter(([u]) => dentro.has(u)));
+    const contagem = contarLideres(dosEstados);
+    const semVotos = Object.values(dosEstados).filter((l) => !l).length + [...dentro].filter((u) => !(u in lideres)).length;
     const exteriorChip = exterior && ac.ufs.zz && lideres.ZZ !== undefined
       ? `<button type="button" class="chip-exterior${sel === "ZZ" ? " sel" : ""}" data-mapa-uf="ZZ"><i style="background:${lideres.ZZ?.cor ?? "var(--barra)"}"></i>Exterior${lideres.ZZ ? ` · ${esc(lideres.ZZ.quem)}` : ""}</button>` : "";
     const cartao = sel ? `<ul class="cards-estados cartao-mapa">${cardEstado(sel, dDe(sel), ac.ufs[sel.toLowerCase()], cargo, 5, extra(sel))}</ul>` : `<p class="muted dica-mapa">Toque em um estado para ver o resultado.</p>`;
     return `<section class="card">${controles}<div class="mapa-area">${mapaBrasil(lideres, { selecionado: sel, destaque: regiao && regiao !== "exterior" ? dentro : null })}</div>${exteriorChip}
-      ${legendaMapa(contagem)}${cartao}${nota ? `<p class="muted nota">${nota}</p>` : ""}</section>`;
+      ${legendaMapa(contagem, { semVotos, nota: maioria ? "Cada estado ganha a cor do partido quando um candidato tem mais de 50% dos votos válidos. Sem essa maioria, a disputa vai ao 2º turno." : "" })}${cartao}${nota ? `<p class="muted nota">${nota}</p>` : ""}</section>`;
   }
   const ordenados = ufs.slice().sort(estado.ordem === "pct" ? (a, b) => apurado(b) - apurado(a) : (a, b) => (a === "ZZ") - (b === "ZZ") || (UFS[a] ?? "").localeCompare(UFS[b] ?? "", "pt-BR"));
   return `<section class="card">${controles}${gradeCards(ordenados.map((u) => cardEstado(u, dDe(u), ac.ufs[u.toLowerCase()], cargo, 5, extra(u))))}${nota ? `<p class="muted nota">${nota}</p>` : ""}</section>`;

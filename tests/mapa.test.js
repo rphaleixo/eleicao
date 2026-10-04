@@ -1,7 +1,7 @@
 globalThis.location = { search: "" };
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { mapaBrasil, legendaMapa, contarLideres } = await import("../public/mapa.js");
+const { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO } = await import("../public/mapa.js");
 const { ESTADOS } = await import("../public/mapa-brasil.js");
 const { UFS } = await import("../public/config.js");
 
@@ -30,4 +30,12 @@ test("legenda conta em quantos estados cada líder está na frente", () => {
   const h = legendaMapa(itens);
   assert.ok(h.indexOf("LULA") < h.indexOf("FLAVIO") && h.includes("2 estados") && h.includes("1 estado<"));
   assert.ok(legendaMapa([]).includes("Nenhum estado"));
+});
+
+test("legenda com partidos, 2º turno e sem votos, nessa ordem", () => {
+  const itens = contarLideres({ RJ: { cor: "#d00", quem: "PT" }, BA: { cor: "#d00", quem: "PT" }, SP: { cor: COR_SEGUNDO_TURNO, quem: "Segundo turno", segundo: true }, MG: { cor: "#00d", quem: "PL" } });
+  const h = legendaMapa(itens, { semVotos: 3, nota: "regra" });
+  assert.ok(h.indexOf("PT") < h.indexOf("PL") && h.indexOf("PL") < h.indexOf("2º turno") && h.indexOf("2º turno") < h.indexOf("Sem votos apurados"));
+  assert.ok(h.includes("2 estados") && h.includes("3 estados") && h.includes("leg-segundo") && h.includes("regra"));
+  assert.ok(legendaMapa([], { semVotos: 2 }).includes("Sem votos apurados"));
 });

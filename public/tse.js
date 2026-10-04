@@ -126,6 +126,18 @@ export function normalizar(json) {
     if (md === "e") lideres.slice(0, vagas).forEach((c) => { c.sit = "eleito"; });
     if (md === "s" && temSegundoTurno) lideres.slice(0, 2).forEach((c) => { c.sit = "segundo"; });
   }
+  // Senado: o TSE não publica a "definição matemática". Calculamos: os mais votados (nas vagas) estão eleitos quando o último deles
+  // tem mais votos do que qualquer outro candidato somado a todos os eleitores aptos das seções ainda não totalizadas
+  // (limite máximo do que o rival poderia ganhar). É um critério conservador: nunca marca um eleito que ainda possa perder.
+  if (String(cargo.cd) === "5" && !candidatos.some((c) => c.sit) && num(json.e?.est) > 0) {
+    const restantes = Math.max(0, num(json.e?.te) - num(json.e?.est));
+    const lideres = candidatos.filter((c) => c.votos > 0 && c.elegivel).slice(0, vagas);
+    const rivais = candidatos.filter((c) => !lideres.includes(c));
+    const maiorRival = rivais.reduce((m, c) => Math.max(m, c.votos), 0);
+    if (lideres.length === vagas && lideres[vagas - 1].votos > maiorRival + restantes) {
+      for (const c of lideres) { c.sit = "eleito"; c.sitCalculada = true; }
+    }
+  }
   // Em todo o site o % do candidato é votos no candidato ÷ votos válidos.
   const validos = num(v.vv);
   if (validos > 0) for (const c of candidatos) c.pct = (c.votos / validos) * 100;
