@@ -1,3 +1,4 @@
+import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS } from "./config.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlFoto,
@@ -157,9 +158,12 @@ function blocoEvolucao(titulo, hist, serie, chave) {
     <p class="muted">% de seções apuradas ao longo do tempo (registro a cada minuto).</p></section>`;
 }
 
-function itemCandidato({ pos, nome, sub, partido, votos, pctVotos, max, badge = "", foto = "", eleito = false }) {
+const fotoDe = (aba, uf, c) => `<img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" style="--cor:${corPartido(c.partido)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">`;
+
+function itemCandidato({ pos, nome, sub, partido, votos, pctVotos, max, badge = "", foto = "", eleito = false, sq = "" }) {
   const cor = corPartido(partido);
-  return `<div class="rank-item ${foto === null ? "sf" : ""} ${eleito ? "eleito" : ""}" style="--cor:${cor}">
+  const ficha = sq ? ` data-sq="${esc(sq)}" role="button" tabindex="0" title="Ver ficha do candidato"` : "";
+  return `<div class="rank-item ${foto === null ? "sf" : ""} ${eleito ? "eleito" : ""}" style="--cor:${cor}"${ficha}>
     <span class="pos">${pos}</span>${foto === null ? "" : foto}
     <div><div class="cand-nome">${esc(nome)}${badge}</div><div class="cand-sub"><span class="chip">${esc(partido)}</span>${esc(sub)}</div></div>
     <div class="cand-votos"><strong>${fmt(votos)}</strong><span class="muted">${pctVotos == null ? "" : pct(pctVotos)}</span></div>
@@ -175,7 +179,7 @@ function listaMajoritaria(d, aba, uf, { limite = 40 } = {}) {
       : c.situacao === "2º turno" ? `<span class="badge">2º turno</span>`
       : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
     const foto = `<img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" style="--cor:${corPartido(c.partido)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">`;
-    html += itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: c.pct, max, badge, foto, eleito: c.eleito });
+    html += itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: c.pct, max, badge, foto, eleito: c.eleito, sq: c.id });
     if (aba === "senador" && vagas > 1 && i === vagas - 1 && d.candidatos.length > vagas) {
       html += `<div class="linha-corte">posição de eleito (${vagas} vagas)</div>`;
     }
@@ -217,17 +221,17 @@ function listaEleitos(d, dist) {
   const oficiais = d.candidatos.filter((c) => c.eleito);
   const usaOficial = d.totalizacaoFinal && oficiais.length > 0;
   const base = usaOficial
-    ? oficiais.map((c) => ({ nome: c.nome, partido: c.partido, votos: c.votos, sub: ` ${c.situacao}` }))
-    : [...dist.eleitos].sort((a, b) => b.votos - a.votos).map((e) => ({ nome: e.nome, partido: e.partido, votos: e.votos, sub: e.via === "quociente" ? " · quociente" : e.via === "art. 111" ? " · art. 111" : ` · sobra (${e.rodada ?? 1}ª rodada)` }));
+    ? oficiais.map((c) => ({ sq: c.id, foto: fotoDe(estado.aba, estado.uf, c), nome: c.nome, partido: c.partido, votos: c.votos, sub: ` ${c.situacao}` }))
+    : [...dist.eleitos].sort((a, b) => b.votos - a.votos).map((e) => ({ sq: e.id, foto: fotoDe(estado.aba, estado.uf, { id: e.id, partido: e.partido }), nome: e.nome, partido: e.partido, votos: e.votos, sub: e.via === "quociente" ? " · quociente" : e.via === "art. 111" ? " · art. 111" : ` · sobra (${e.rodada ?? 1}ª rodada)` }));
   const max = Math.max(1, ...base.map((b) => b.votos));
-  const itens = base.map((b, i) => itemCandidato({ pos: i + 1, ...b, pctVotos: null, max, foto: null, eleito: true })).join("");
+  const itens = base.map((b, i) => itemCandidato({ pos: i + 1, ...b, pctVotos: null, max, eleito: true })).join("");
   return { titulo: usaOficial ? `Eleitos, resultado oficial do TSE (${base.length} de ${dist.vagas})` : `Eleitos, projeção (${base.length} de ${dist.vagas})`, itens };
 }
 
 function maisVotados(d, rotulo = "Candidatos por votos") {
   const max = Math.max(1, d.candidatos[0]?.votos ?? 1);
   const itens = d.candidatos.slice(0, estado.mostrar).map((c, i) =>
-    itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: null, max, foto: null,
+    itemCandidato({ pos: i + 1, nome: c.nome, sub: ` ${c.numero}`, partido: c.partido, votos: c.votos, pctVotos: null, max, foto: fotoDe(estado.aba, estado.uf, c), sq: c.id,
       badge: c.eleito ? `<span class="badge">${esc(c.situacao || "Eleito")}</span>` : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "", eleito: c.eleito })).join("");
   const mais = d.candidatos.length > estado.mostrar ? `<button class="mais" data-mais>Ver mais (${fmt(d.candidatos.length - estado.mostrar)} candidatos)</button>` : "";
   return `<section class="card"><h2>${esc(rotulo)} (${fmt(d.candidatos.length)})</h2>${itens}${mais}</section>`;
@@ -385,7 +389,18 @@ async function carregarMunicipios() {
 $("abas").addEventListener("click", (e) => { const b = e.target.closest("[data-aba]"); if (b) navegar({ aba: b.dataset.aba, mun: "" }); });
 $("uf").addEventListener("change", () => navegar({ uf: $("uf").value, mun: "" }));
 $("mun").addEventListener("change", () => navegar({ mun: $("mun").value }));
+iniciarFicha();
+function apuracaoDe(sq) {
+  const c = estado.view?.d?.candidatos?.find((x) => x.id === String(sq));
+  return c ? { votos: c.votos, pct: c.pct, situacao: c.eleito ? c.situacao || "Eleito" : !c.elegivel ? c.situacaoVoto : null } : null;
+}
+$("conteudo").addEventListener("keydown", (e) => {
+  const it = e.target.closest?.("[data-sq]");
+  if (it && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); }
+});
 $("conteudo").addEventListener("click", (e) => {
+  const it = e.target.closest("[data-sq]");
+  if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   if (e.target.closest("[data-mais]")) { estado.mostrar += 50; render(); return; }
   const tr = e.target.closest("tr[data-uf]");
   if (tr) {

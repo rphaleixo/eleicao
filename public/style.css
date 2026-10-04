@@ -116,3 +116,16 @@ details.como ol { padding-left: 20px; margin: 8px 0 0; } details.como li { margi
 }
 .rank-item.sf { grid-template-columns: 26px 1fr auto; }
 .rank-item.sf .cand-barra { grid-column: 2 / -1; }
+
+/* ficha do candidato (modal) */
+.rank-item[data-sq] { cursor: pointer; } .rank-item[data-sq]:hover .cand-nome, .rank-item[data-sq]:focus-visible .cand-nome { color: var(--acento); }
+dialog#ficha { width: min(720px, 100vw - 24px); max-height: 90vh; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--txt); overflow: auto; }
+dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
+.ficha-fechar { position: sticky; top: 0; float: right; border: 0; background: var(--bg); color: var(--txt); width: 34px; height: 34px; border-radius: 8px; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.ficha-topo { display: flex; gap: 14px; align-items: center; margin-bottom: 6px; }
+.ficha-topo h2 { margin: 0; } .ficha-topo p { margin: 3px 0; }
+.ficha-foto { width: 96px; height: 96px; flex: none; }
+.ficha-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 16px; margin: 0; }
+.ficha-campos dt { font-size: .76rem; color: var(--muted); } .ficha-campos dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.ficha-total { margin: 4px 0 8px; }
+@media (max-width: 520px) { .ficha-foto { width: 72px; height: 72px; } }

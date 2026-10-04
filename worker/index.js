@@ -3,6 +3,7 @@
 // então vai ao TSE. Assim o TSE recebe poucas consultas, não importa quantas pessoas
 // estejam no site. Também registra o histórico da apuração (rotina agendada).
 
+import { fichaDoCandidato } from "./candidato.js";
 import { carregarSeed } from "./carga.js";
 import { acrescentar, pontoDeAcompanhamento } from "./historico.js";
 
@@ -35,6 +36,9 @@ export default {
 
     if (url.pathname === "/api/historico") return historico(request, env, ctx);
 
+    const mCand = /^\/api\/candidato\/(\d{1,15})$/.exec(url.pathname);
+    if (mCand) return candidato(env, Number(mCand[1]));
+
     const caminho = url.pathname.slice("/api/".length);
     if (!CAMINHO_VALIDO.test(caminho)) return new Response("Caminho inválido", { status: 400 });
 
@@ -63,6 +67,15 @@ export default {
     ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
   },
 };
+
+async function candidato(env, sq) {
+  if (!env.DB) return new Response("Banco indisponível", { status: 503 });
+  const ficha = await fichaDoCandidato(env.DB, sq);
+  if (!ficha) return new Response(JSON.stringify({ erro: "Candidato não encontrado" }), { status: 404, headers: { "Content-Type": "application/json; charset=utf-8" } });
+  return new Response(JSON.stringify(ficha), {
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=3600" },
+  });
+}
 
 async function buscarAcompanhamento(eleicao) {
   const r = await fetch(`${ORIGEM_TSE}ele${ANO}/${eleicao}/dados/br/br-e00${eleicao}-ab.json`);
