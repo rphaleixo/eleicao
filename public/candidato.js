@@ -26,17 +26,19 @@ export function htmlFicha(f, apuracao) {
     : `<section><h3>Candidaturas anteriores</h3><p class="muted">Sem candidaturas anteriores registradas.</p></section>`;
   const outras = f.outrasCandidaturas.length
     ? `<p class="muted">Esta pessoa tem outra(s) candidatura(s) em 2026: ${f.outrasCandidaturas.map((o) => `${esc(o.cargoNome)} (${esc(o.uf)})`).join(", ")}.</p>` : "";
+  const candidatura = `<section><h3>Candidatura</h3><dl class="ficha-campos">
+      ${campo("Partido", f.partido)}${campo("Federação", f.federacao)}${campo("Tipo", agr?.tipo)}${campo("Composição", agr?.composicao)}
+      ${campo("Registro", f.julgamento)}${campo("Destino dos votos", f.destinacaoVotos)}${campo("Reeleição", f.reeleicao === "S" ? "Sim" : f.reeleicao === "N" ? "Não" : null)}
+      ${campo("Teto de gastos", f.tetoGastos != null ? brl(f.tetoGastos) : null)}</dl>${outras}</section>`;
+  const pessoal = `<section><h3>Dados pessoais</h3><dl class="ficha-campos">
+      ${campo("Idade", idade)}${campo("Gênero", p.genero)}${campo("Cor/raça", p.corRaca)}${campo("Instrução", p.instrucao)}${campo("Ocupação", p.ocupacao)}${campo("Naturalidade", naturalidade)}</dl></section>`;
+  const painel = (id, conteudo, ativo = false) => `<div class="ficha-painel" role="tabpanel" id="fp-${id}" aria-labelledby="ft-${id}"${ativo ? "" : " hidden"}>${conteudo}</div>`;
+  const aba = (id, nome, ativo = false) => `<button type="button" role="tab" class="ficha-aba" id="ft-${id}" data-aba="${id}" aria-controls="fp-${id}" aria-selected="${ativo}" tabindex="${ativo ? 0 : -1}">${nome}</button>`;
   return `<header class="ficha-topo"><img class="foto ficha-foto" alt="" src="${urlFotoFicha(f)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
       <div><h2 id="ficha-titulo">${esc(f.nomeUrna)}</h2><p class="muted">${esc(f.nome)}</p>
       <p><span class="chip">${esc(f.federacao || f.partido || "–")}</span> ${esc(f.cargoNome)} · ${f.uf === "BR" ? "Brasil" : esc(f.uf)} · nº ${esc(f.numero)}</p></div></header>
-    ${votos}
-    <section><h3>Candidatura</h3><dl class="ficha-campos">
-      ${campo("Partido", f.partido)}${campo("Federação", f.federacao)}${campo("Tipo", agr?.tipo)}${campo("Composição", agr?.composicao)}
-      ${campo("Registro", f.julgamento)}${campo("Destino dos votos", f.destinacaoVotos)}${campo("Reeleição", f.reeleicao === "S" ? "Sim" : f.reeleicao === "N" ? "Não" : null)}
-      ${campo("Teto de gastos", f.tetoGastos != null ? brl(f.tetoGastos) : null)}</dl>${outras}</section>
-    <section><h3>Dados pessoais</h3><dl class="ficha-campos">
-      ${campo("Idade", idade)}${campo("Gênero", p.genero)}${campo("Cor/raça", p.corRaca)}${campo("Instrução", p.instrucao)}${campo("Ocupação", p.ocupacao)}${campo("Naturalidade", naturalidade)}</dl></section>
-    ${bens}${hist}
+    <div class="ficha-abas" role="tablist" aria-label="Seções da ficha">${aba("resumo", "Resumo", true)}${aba("perfil", "Perfil")}${aba("bens", `Patrimônio (${f.bens.itens.length})`)}${aba("hist", `Trajetória (${f.historico.length})`)}</div>
+    ${painel("resumo", votos + candidatura, true)}${painel("perfil", pessoal)}${painel("bens", bens)}${painel("hist", hist)}
     <p class="muted">Fonte: cadastro de candidaturas do TSE (DivulgaCandContas). Dados do registro, que podem mudar até a diplomação.</p>`;
 }
 
@@ -54,8 +56,26 @@ export async function abrirFicha(sq, apuracao) {
   }
 }
 
+function selecionarAba(id) {
+  for (const b of document.querySelectorAll("#ficha .ficha-aba")) {
+    const on = b.dataset.aba === id;
+    b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1;
+    if (on) b.focus({ preventScroll: true });
+  }
+  for (const p of document.querySelectorAll("#ficha .ficha-painel")) p.hidden = p.id !== `fp-${id}`;
+}
+
 export function iniciarFicha() {
   const dlg = document.getElementById("ficha");
+  const corpo = document.getElementById("ficha-corpo");
+  corpo.addEventListener("click", (e) => { const b = e.target.closest(".ficha-aba"); if (b) selecionarAba(b.dataset.aba); });
+  corpo.addEventListener("keydown", (e) => {
+    const abas = [...corpo.querySelectorAll(".ficha-aba")]; const i = abas.indexOf(document.activeElement);
+    if (i < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    e.preventDefault();
+    const j = e.key === "Home" ? 0 : e.key === "End" ? abas.length - 1 : (i + (e.key === "ArrowRight" ? 1 : -1) + abas.length) % abas.length;
+    selecionarAba(abas[j].dataset.aba);
+  });
   document.getElementById("ficha-fechar").addEventListener("click", () => dlg.close());
   dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
 }
