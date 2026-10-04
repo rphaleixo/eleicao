@@ -12,7 +12,7 @@ test("imports do site apontam para exports que existem", async () => {
     const src = fs.readFileSync(new URL(arq, dir), "utf8");
     for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*"\.\/([^"]+)"/g)) {
       const mod = await import(new URL(m[2], dir));
-      for (const nome of m[1].split(",").map((x) => x.trim()).filter(Boolean)) {
+      for (const nome of m[1].split(",").map((x) => x.trim().split(/\s+as\s+/)[0]).filter(Boolean)) { // "a as b": vale o nome original
         assert.ok(nome in mod, `${arq}: "${nome}" não é exportado por ${m[2]}`);
       }
     }

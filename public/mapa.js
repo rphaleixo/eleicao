@@ -27,9 +27,9 @@ export const COR_SEGUNDO_TURNO = "var(--sit-segundo)";
  * @param {{cor:string, quem:string, n:number, segundo?:boolean}[]} itens
  * @param {{semVotos?:number, nota?:string}} extra
  */
-export function legendaMapa(itens, { semVotos = 0, nota = "" } = {}) {
+export function legendaMapa(itens, { semVotos = 0, nota = "", unidade = ["estado", "estados"] } = {}) {
   if (!itens.length && !semVotos) return `<p class="muted">Nenhum estado com votos apurados ainda.</p>`;
-  const item = (cor, nome, n, extraClasse = "") => `<li class="${extraClasse}"><i style="background:${cor}"></i><span>${esc(nome)}</span><b>${n} ${n === 1 ? "estado" : "estados"}</b></li>`;
+  const item = (cor, nome, n, extraClasse = "") => `<li class="${extraClasse}"><i style="background:${cor}"></i><span>${esc(nome)}</span><b>${n} ${n === 1 ? unidade[0] : unidade[1]}</b></li>`;
   const partidos = itens.filter((i) => !i.segundo).sort((a, b) => b.n - a.n || a.quem.localeCompare(b.quem, "pt-BR"));
   const segundo = itens.find((i) => i.segundo);
   return `<ul class="legenda-mapa">${partidos.map((i) => item(i.cor, i.quem, i.n)).join("")}${segundo ? item(segundo.cor, "2º turno", segundo.n, "leg-segundo") : ""}${semVotos ? item(SEM_LIDER, "Sem votos apurados", semVotos) : ""}</ul>${nota ? `<p class="muted nota">${nota}</p>` : ""}`;
@@ -44,4 +44,19 @@ export function contarLideres(lideres) {
     m.n++; mapa.set(l.quem, m);
   }
   return [...mapa.values()];
+}
+
+/**
+ * Mapa dos municípios de um estado, colorido por quem lidera em cada um.
+ * @param {{viewBox:string, caminhos:Map<string,string>}} malha desenho do IBGE
+ * @param {Map<string,{cor:string, quem:string, nome:string}>} lideres líder de cada município, pelo código do IBGE
+ * @param {Map<string,string>} nomes nome de cada município, pelo código do IBGE
+ */
+export function mapaMunicipal(malha, lideres, nomes, selecionado = "") {
+  const caminhos = [...malha.caminhos].map(([ibge, d]) => {
+    const l = lideres.get(ibge), nome = nomes.get(ibge) ?? ibge;
+    return `<path class="mun${ibge === selecionado ? " sel" : ""}" data-mun-ibge="${ibge}" d="${d}" style="fill:${l?.cor ?? SEM_LIDER}" tabindex="0" role="button"
+      aria-label="${esc(nome)}${l ? `: ${esc(l.quem)} na frente` : ": sem votos apurados"}"><title>${esc(nome)}${l ? ` · ${esc(l.quem)}` : ""}</title></path>`;
+  }).join("");
+  return `<svg class="mapa-mun" viewBox="${malha.viewBox}" role="group" aria-label="Mapa dos municípios"><g transform="scale(0.0001,-0.0001)">${caminhos}</g></svg>`;
 }

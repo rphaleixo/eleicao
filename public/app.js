@@ -2,10 +2,11 @@ import { telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao,
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
-import { cardEstado, cardRegiao, gradeCards, linha2022 } from "./cardsEstados.js";
+import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./cardsEstados.js";
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
-import { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO } from "./mapa.js";
+import { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO, mapaMunicipal } from "./mapa.js";
+import { lerMalha, carregarMunicipios as carregarVotosMunicipais, lerMun, progresso } from "./municipios.js";
 import { ordenarCandidatos } from "./ranking.js";
 import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao, seloSit, seloProjetado, rotuloEleito } from "./situacao.js";
 import { cartoesVotacao } from "./votacao.js";
@@ -26,7 +27,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", visaoEstados: "cards", mapaUf: "", filtros: filtrosVazios(), fEleitos: { ...filtrosVazios(), status: "definida" } };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), fEleitos: { ...filtrosVazios(), status: "definida" } };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -52,7 +53,7 @@ function montarControles() {
   $("mun").value = estado.mun;
 }
 
-const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "presidente" ? "/" + estado.regiao : ""}${estado.aba === "senadores" ? "/" + estado.visaoSenado : ""}`; // na aba Presidente a região também muda a carga
+const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "presidente" ? "/" + estado.regiao : ""}${estado.aba === "senadores" ? "/" + estado.visaoSenado : ""}${estado.aba === "estados" && estado.cargo === "mapa" ? "/" + estado.mapaCargo : ""}`; // na aba Presidente a região também muda a carga
 const cacheViews = new Map(); // última resposta de cada tela: aparece na hora, e é atualizada em seguida
 
 function mostrarCarregando() {
@@ -69,6 +70,7 @@ function navegar(mudanca) {
   if (mudanca.aba || mudanca.uf || mudanca.cargo) estado.mun = mudanca.mun ?? "";
   if (estado.aba === "estados") { guardarUf(estado.uf); estado.ufPadrao = estado.uf; }
   estado.mostrar = 50; estado.pagEleitos = 0;
+  if (mudanca.uf || mudanca.cargo || mudanca.aba) estado.munSel = "";
   gravarHash(); montarControles();
   const guardada = cacheViews.get(chaveRota());
   if (guardada) { estado.view = guardada; render(); } // já vista: mostra na hora e atualiza em seguida
@@ -84,6 +86,16 @@ async function obter(cargo, uf, mun) {
   return normalizar(json);
 }
 const obterAcompanhamento = async (cargo) => lerAcompanhamento(await buscarJson(urlAcompanhamento(cargo)));
+
+const malhas = new Map();
+async function obterMalha(uf) {
+  if (!malhas.has(uf)) {
+    const r = await fetch(`/api/malha/${uf}`);
+    if (!r.ok) throw new Error(`Não foi possível carregar o desenho dos municípios (HTTP ${r.status}).`);
+    malhas.set(uf, lerMalha(await r.text()));
+  }
+  return malhas.get(uf);
+}
 
 const memoMandatos = { t: 0, dados: null };
 async function obterMandatos() {
@@ -153,6 +165,12 @@ async function carregarView(rota) {
     const { cargo } = rota;
     const [f, e] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador")]);
     const base = { tipo: "estados", uf, cargo, f, e };
+    if (cargo === "mapa") {
+      // Desenho dos municípios + votação de cada um (um arquivo por município, carregados aos poucos, sem travar a tela).
+      const municipios = estado.municipios[uf] ?? [], cargoMapa = rota.mapaCargo, chave = chaveRota();
+      carregarVotosMunicipais({ cargo: cargoMapa, uf, municipios, buscar: (c, u, cod) => obter(c, u, cod), aoProgresso: () => { if (chave === chaveRota()) render(); } });
+      return { ...base, malha: await obterMalha(uf).catch((err) => ({ erro: err.message })), cargoMapa };
+    }
     if (cargo === "resumo") return { ...base, detalhe: emSegundoPlano("detx-" + uf, 9000, () => detalhesEstado(uf, true)) ?? {} };
     if (CARGOS[cargo].proporcional) { const d = await obter(cargo, uf); return { ...base, d, dist: distribuirEstado(d) }; }
     const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente(locaisResultado(uf, "")) : null]);
@@ -334,7 +352,34 @@ function resumoEstado(v) {
     <p class="muted nota-estado">Deslize para ver todas as eleições. Porcentagens de candidatos: votos no candidato ÷ votos válidos.</p>`;
 }
 
+function telaMapaMunicipal(v) {
+  const { uf } = estado, cargo = v.cargoMapa ?? estado.mapaCargo;
+  const seg = `<div class="seg visao-mapa" role="group" aria-label="Eleição no mapa">${[["governador", "Governador"], ["presidente", "Presidente"], ["senador", "Senador"]].map(([k, n]) => `<button type="button" data-mapa-cargo="${k}" aria-pressed="${k === cargo}">${n}</button>`).join("")}</div>`;
+  if (v.malha?.erro) return `${seg}<section class="card">${aviso(v.malha.erro)}</section>`;
+  const municipios = estado.municipios[uf] ?? [];
+  if (!municipios.length) return `${seg}<section class="card"><p class="muted">A lista de municípios ainda não foi carregada. Tente de novo em instantes.</p></section>`;
+  const nomes = new Map(municipios.map((m) => [m.ibge, m.nome]));
+  const porIbge = new Map(municipios.map((m) => [m.ibge, m]));
+  const lideres = new Map(), contagem = {};
+  let semVotos = 0;
+  for (const m of municipios) {
+    const d = lerMun(cargo, uf, m.cod);
+    const topo = d ? ordenarCandidatos(d.candidatos)[0] : null;
+    if (!topo || topo.votos <= 0) { semVotos++; continue; }
+    const l = { cor: corPartido(topo.partido), quem: `${topo.nome} (${topo.partido})` };
+    lideres.set(m.ibge, l); contagem[m.cod] = l;
+  }
+  const feitos = progresso(cargo, uf, municipios);
+  const barra = feitos < municipios.length ? `<div class="progresso-mun"><span>Carregando municípios: ${fmt(feitos)} de ${fmt(municipios.length)}</span><div class="barra-prog"><i style="width:${(feitos / municipios.length) * 100}%"></i></div></div>` : "";
+  const sel = estado.munSel && porIbge.has(estado.munSel) ? porIbge.get(estado.munSel) : null;
+  const cartao = sel ? `<ul class="cards-estados cartao-mapa">${cardMunicipio(sel.cod, sel.nome, uf, lerMun(cargo, uf, sel.cod) ?? null, cargo)}</ul>` : `<p class="muted dica-mapa">Toque em um município para ver o resultado.</p>`;
+  return `${seg}<section class="card"><h2>${esc(CARGOS[cargo].nome)} por município · ${esc(UFS[uf])}</h2>${barra}
+    <div class="mapa-area mapa-area-mun">${mapaMunicipal(v.malha, lideres, nomes, estado.munSel)}</div>
+    ${legendaMapa(contarLideres(contagem), { semVotos, unidade: ["município", "municípios"], nota: "Cada município tem a cor de quem lidera nele. Os dados chegam município a município e se atualizam a cada minuto." })}${cartao}</section>`;
+}
+
 function telaEstados(v) {
+  if (estado.cargo === "mapa") return telaMapaMunicipal(v);
   if (estado.cargo === "resumo") return resumoEstado(v);
   if (CARGOS[estado.cargo].proporcional) return telaProporcionalUF(v);
   return telaMajoritaria(v);
@@ -679,6 +724,8 @@ $("conteudo").addEventListener("change", (e) => {
   if (sel) { const alvo = estado[sel.dataset.fEscopo]; alvo.uf = sel.value; if (sel.value) alvo.regiao = regiaoDe(sel.value); render(); }
 });
 $("conteudo").addEventListener("keydown", (e) => {
+  const mm = e.target.closest?.("[data-mun-ibge]");
+  if (mm && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); estado.munSel = estado.munSel === mm.dataset.munIbge ? "" : mm.dataset.munIbge; render(); return; }
   const mp = e.target.closest?.("[data-mapa-uf]");
   if (mp && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); estado.mapaUf = estado.mapaUf === mp.dataset.mapaUf ? "" : mp.dataset.mapaUf; render(); return; }
   const it = e.target.closest?.("[data-sq]");
@@ -697,6 +744,12 @@ $("conteudo").addEventListener("click", (e) => {
     if (fs) alvo.status = fs.dataset.fStatus;
     render(); return;
   }
+  const mc = e.target.closest("[data-mapa-cargo]");
+  if (mc) { estado.mapaCargo = mc.dataset.mapaCargo; estado.munSel = ""; navegar({}); return; }
+  const munSel = e.target.closest("[data-mun-ibge]");
+  if (munSel) { estado.munSel = estado.munSel === munSel.dataset.munIbge ? "" : munSel.dataset.munIbge; render(); return; }
+  const verMun = e.target.closest("[data-ver-mun]");
+  if (verMun) { navegar({ cargo: estado.mapaCargo, mun: verMun.dataset.verMun }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   const vis = e.target.closest("[data-visao-estados]");
   if (vis) { estado.visaoEstados = vis.dataset.visaoEstados; render(); return; }
   const filtro = e.target.closest("[data-filtro-regiao]");

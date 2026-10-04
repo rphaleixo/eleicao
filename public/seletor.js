@@ -3,7 +3,7 @@ import { UFS } from "./config.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const semAcento = (t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-export const CARGOS_BARRA = [["resumo", "Resumo"], ["governador", "Governador"], ["senador", "Senador"], ["dep-federal", "Dep. Federal"], ["dep-estadual", "Dep. Estadual"], ["presidente", "Presidente"]];
+export const CARGOS_BARRA = [["resumo", "Resumo"], ["governador", "Governador"], ["senador", "Senador"], ["dep-federal", "Dep. Federal"], ["dep-estadual", "Dep. Estadual"], ["presidente", "Presidente"], ["mapa", "Mapa"]];
 
 /** Estados cujo nome ou sigla começa com o texto digitado (sem acento, sem maiúsculas). */
 export function filtrarEstados(texto) {

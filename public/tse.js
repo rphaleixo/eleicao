@@ -178,7 +178,7 @@ export function lerMunicipios(json) {
   const out = {};
   for (const a of json.abr ?? []) {
     out[String(a.cd).toUpperCase()] = (a.mu ?? [])
-      .map((m) => ({ cod: String(m.cd), nome: m.nm }))
+      .map((m) => ({ cod: String(m.cd), nome: m.nm, ibge: m.cdi ? String(m.cdi) : "" }))
       .sort((x, y) => x.nome.localeCompare(y.nome, "pt-BR"));
   }
   return out;

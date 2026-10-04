@@ -33,6 +33,11 @@ export function cardRegiao(id, nome, sigla, d, u, cargo = "presidente", total = 
   return cardBase({ chave: `data-regiao="${id}"`, sigla, nome, uf: "BR", d, u, cargo, total });
 }
 
+/** Card de um município: o mesmo formato do de estado; "Ver apuração completa" abre o município na aba do cargo. */
+export function cardMunicipio(cod, nome, uf, d, cargo) {
+  return cardBase({ chave: `data-ver-mun="${cod}"`, sigla: "", nome, uf, d, u: undefined, cargo, total: 5 });
+}
+
 function cardBase({ chave, sigla, nome, uf, d, u, cargo, total, extra = "" }) {
   // Os números do card vêm do mesmo arquivo dos votos mostrados (o do cargo); o acompanhamento só entra se ele faltar.
   const doCargo = d && d.secoesTotal > 0;

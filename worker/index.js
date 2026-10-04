@@ -28,6 +28,8 @@ export const CAMINHO_VALIDO = new RegExp(
 
 const INICIO_APURACAO = Date.parse("2026-10-04T17:00:00-03:00") / 1000; // histórico anterior a 17h (Brasília) é descartado
 const CACHE_JSON = 10; // segundos
+const CACHE_MUNICIPIO = 60; // um arquivo por município: cache maior, para não sobrecarregar o TSE
+const CODIGO_IBGE = { RO: 11, AC: 12, AM: 13, RR: 14, PA: 15, AP: 16, TO: 17, MA: 21, PI: 22, CE: 23, RN: 24, PB: 25, PE: 26, AL: 27, SE: 28, BA: 29, MG: 31, ES: 32, RJ: 33, SP: 35, PR: 41, SC: 42, RS: 43, MS: 50, MT: 51, GO: 52, DF: 53 };
 const CACHE_FOTO = 86400;
 
 export default {
@@ -42,6 +44,8 @@ export default {
       return new Response(JSON.stringify({ uf: /^[A-Z]{2}$/.test(uf) ? uf : null }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-store" } });
     }
     if (url.pathname === "/api/senadores-mandato") return senadoresMandato();
+    const mMalha = /^\/api\/malha\/([A-Za-z]{2})$/.exec(url.pathname);
+    if (mMalha) return malhaDoEstado(CODIGO_IBGE[mMalha[1].toUpperCase()]);
     if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] });
     if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] }, url.searchParams.get("local"));
 
@@ -52,7 +56,7 @@ export default {
     if (!CAMINHO_VALIDO.test(caminho)) return new Response("Caminho inválido", { status: 400 });
 
     const foto = caminho.endsWith(".jpeg");
-    const ttl = foto ? CACHE_FOTO : CACHE_JSON;
+    const ttl = foto ? CACHE_FOTO : /^ele\d{4}\/\d+\/dados\/[a-z]{2}\/[a-z]{2}\d{5}-/.test(caminho) ? CACHE_MUNICIPIO : CACHE_JSON;
     const resposta = await fetch(ORIGEM_TSE + caminho, {
       cf: {
         cacheEverything: true,
@@ -77,6 +81,14 @@ export default {
     ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
   },
 };
+
+// Desenho dos municípios de um estado (malha do IBGE). Quase nunca muda: guardamos por 7 dias.
+async function malhaDoEstado(codigo) {
+  if (!codigo) return new Response("Estado inválido", { status: 400 });
+  const r = await fetch(`https://servicodados.ibge.gov.br/api/v3/malhas/estados/${codigo}?formato=image/svg%2Bxml&qualidade=minima&intrarregiao=municipio`, { cf: { cacheEverything: true, cacheTtl: 604800 } });
+  if (!r.ok) return new Response("Malha indisponível", { status: 502 });
+  return new Response(await r.text(), { headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=86400" } });
+}
 
 // Os 27 senadores com mandato até 2031. A lista do Senado muda pouco: guardamos por 1 hora.
 async function senadoresMandato() {

@@ -1,6 +1,6 @@
 // Endereço da página (#/aba/estado/...), com a leitura e a montagem em um só lugar.
 export const ABAS_IDS = ["andamento", "presidente", "governadores", "senadores", "eleitos", "camara", "estados"];
-export const CARGOS_ESTADO = ["resumo", "governador", "senador", "dep-federal", "dep-estadual", "presidente"];
+export const CARGOS_ESTADO = ["resumo", "governador", "senador", "dep-federal", "dep-estadual", "presidente", "mapa"];
 const COM_MUNICIPIO = ["governador", "senador", "presidente"];
 
 /** Lê o endereço. Aceita os endereços antigos (#/governador/SP, #/dep-federal/BR). */

@@ -39,3 +39,8 @@ test("legenda com partidos, 2º turno e sem votos, nessa ordem", () => {
   assert.ok(h.includes("2 estados") && h.includes("3 estados") && h.includes("leg-segundo") && h.includes("regra"));
   assert.ok(legendaMapa([], { semVotos: 2 }).includes("Sem votos apurados"));
 });
+
+test("legenda do mapa por município fala em municípios", () => {
+  const h = legendaMapa([{ cor: "#d00", quem: "ANA (PT)", n: 238 }], { semVotos: 1, unidade: ["município", "municípios"] });
+  assert.ok(h.includes("238 municípios") && h.includes("1 município<") && !h.includes("estados"));
+});
