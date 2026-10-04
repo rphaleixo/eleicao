@@ -35,6 +35,10 @@ export default {
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     if (request.method !== "GET") return new Response("Método não permitido", { status: 405 });
 
+    if (url.pathname === "/api/meu-estado") { // estado de quem acessa, para abrir a visão por estado já no lugar certo
+      const uf = request.cf?.country === "BR" ? String(request.cf.regionCode || "").toUpperCase() : "";
+      return new Response(JSON.stringify({ uf: /^[A-Z]{2}$/.test(uf) ? uf : null }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-store" } });
+    }
     if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] });
     if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] });
 

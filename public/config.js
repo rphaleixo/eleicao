@@ -30,10 +30,8 @@ export const CARGOS = {
 export const ABAS = [
   { id: "andamento", nome: "Marcha da apuração" },
   { id: "presidente", nome: "Presidente" },
-  { id: "governador", nome: "Governador" },
-  { id: "senador", nome: "Senador" },
-  { id: "dep-federal", nome: "Dep. Federal" },
-  { id: "dep-estadual", nome: "Dep. Estadual" },
+  { id: "camara", nome: "Câmara (513)" },
+  { id: "estados", nome: "Estados" },
 ];
 
 export const UFS = {

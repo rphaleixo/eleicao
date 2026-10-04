@@ -138,6 +138,19 @@ export function cardCargo({ titulo, aba, uf, d }) {
     <ol class="cc-lista">${itens}</ol>${blocoVotos(d)}<button type="button" class="link" data-ir="${aba}">Ver completo ›</button></article>`;
 }
 
+/** Cartão da bancada de deputados de um estado: partidos/federações com mais cadeiras. */
+export function cardBancada({ titulo, cargo, d, dist }) {
+  if (d === undefined) return `<article class="card-cargo"><h3>${esc(titulo)}</h3><p class="muted">Carregando…</p></article>`;
+  if (!d || !dist) return `<article class="card-cargo"><h3>${esc(titulo)}</h3><p class="muted">Dados indisponíveis no momento.</p></article>`;
+  const linhas = dist.linhas.filter((l) => l.vagas > 0).sort((a, b) => b.vagas - a.vagas || b.votos - a.votos).slice(0, 5);
+  const ocupadas = dist.linhas.reduce((t, l) => t + l.vagas, 0);
+  const itens = linhas.length
+    ? linhas.map((l) => `<li><span class="cc-nome"><span class="chip" style="--cor:${corPartido(l.sigla)}">${esc(l.sigla)}</span></span><span class="cc-votos"><strong>${l.vagas} ${l.vagas === 1 ? "cadeira" : "cadeiras"}</strong><small>${pct(l.pctVotos)} dos votos</small></span></li>`).join("")
+    : `<li class="vazio muted">Nenhuma cadeira distribuída ainda.</li>`;
+  return `<article class="card-cargo card-bancada"><div class="cc-topo"><h3>${esc(titulo)}</h3><span class="muted">${pct(d.pctSecoes)} apurado</span></div>
+    <ol class="cc-lista cc-bancada">${itens}</ol><p class="muted cc-rodape">${ocupadas} de ${dist.vagas} vagas ${dist.oficial ? "(resultado oficial)" : "(projeção)"}</p><button type="button" class="link" data-ir="${cargo}">Ver completo ›</button></article>`;
+}
+
 export function painelEstado(v, uf) {
   const k = uf.toLowerCase(), u = v.f.ufs[k], a = doEstado(u) ?? agregar([]);
   const est = v.e.ufs[k];
@@ -148,7 +161,8 @@ export function painelEstado(v, uf) {
   return `<div class="expandido">
     <div class="resumo-estado">${celula("Eleitores aptos", fmt(a.eleitores))}${celula("Compareceram", fmt(a.comparecimento), a.temPresenca ? `${pct(a.pctComp)} dos apurados` : "")}
       ${celula("Abstenções", fmt(a.abstencao), a.temPresenca ? `${pct(a.pctAbst)} dos apurados` : "")}${celula("Seções", `${fmt(a.st)} de ${fmt(a.ts)}`, est && uf !== "ZZ" ? `Estaduais: ${pct(est.pct)}` : "")}</div>
-    <div class="carrossel" role="region" aria-label="Resumo das eleições em ${esc(nomeEstado(uf))}">${cargos.map(([titulo, aba, dd]) => cardCargo({ titulo, aba, uf, d: dd })).join("")}</div></div>`;
+    <div class="carrossel" role="region" aria-label="Resumo das eleições em ${esc(nomeEstado(uf))}">${cargos.map(([titulo, aba, dd]) => cardCargo({ titulo, aba, uf, d: dd })).join("")}</div>
+    ${uf === "ZZ" ? "" : `<button type="button" class="link" data-abrir-estado="${uf}">Ver todas as eleições em ${esc(nomeEstado(uf))} ›</button>`}</div>`;
 }
 
 function listaOrdenada(v, estado) {
