@@ -1,7 +1,7 @@
 import { CONFIG, CARGOS, UFS, VAGAS_FEDERAIS } from "./config.js";
 import { urlsResultado, urlMunicipios, buscarJson, buscarPrimeiro, normalizar, lerMunicipios } from "./tse.js";
 import {
-  distribuirCadeiras, vagasEstaduais, REGRAS_STF_2024, REGRAS_CODIGO_LITERAL,
+  distribuirCadeiras, vagasEstaduais, REGRAS_STF_2024, REGRAS_CODIGO_LITERAL, REGRAS_2026,
 } from "./quociente.js";
 
 const $ = (id) => document.getElementById(id);
@@ -9,7 +9,7 @@ const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
 const pct = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-const estado = { cargo: "presidente", uf: "BR", mun: "", municipios: {}, modoRegras: "codigo", vagasManual: {} };
+const estado = { cargo: "presidente", uf: "BR", mun: "", municipios: {}, modoRegras: "2026", vagasManual: {} };
 let timer;
 
 // ---------- navegação (guardada na URL, ex.: #/governador/SP/71072) ----------
@@ -98,7 +98,7 @@ function vagasDoEstado(d) {
 
 function telaProporcional(d) {
   const vagas = vagasDoEstado(d);
-  const regras = estado.modoRegras === "stf" ? REGRAS_STF_2024 : REGRAS_CODIGO_LITERAL;
+  const regras = estado.modoRegras === "stf" ? REGRAS_STF_2024 : estado.modoRegras === "codigo" ? REGRAS_CODIGO_LITERAL : REGRAS_2026;
 
   let partidos = d.partidos.map((p) => ({
     id: p.id, nome: p.nome, votos: p.votos, votosLegenda: p.votosLegenda,
@@ -115,8 +115,8 @@ function telaProporcional(d) {
       <label>Vagas em disputa<input type="number" id="vagas" min="1" value="${vagas}"></label>
       <label>Regra das sobras
         <select id="modo">
-          <option value="codigo" ${estado.modoRegras === "codigo" ? "selected" : ""}>Regra aplicada pelo TSE em 2022 e 2024 (80% partido, 20% candidato)</option>
-          <option value="stf" ${estado.modoRegras === "stf" ? "selected" : ""}>Variante: todos os partidos e candidatos disputam as sobras</option>
+          <option value="2026" ${estado.modoRegras === "2026" ? "selected" : ""}>Regra de 2026 (sobras em 2 rodadas; a última sem exigência de 80% e 20%)</option>
+          <option value="codigo" ${estado.modoRegras === "codigo" ? "selected" : ""}>Regra de 2022 (80% do partido e 20% do candidato nas sobras)</option>
         </select>
       </label>
     </div>`;

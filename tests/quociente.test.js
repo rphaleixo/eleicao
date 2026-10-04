@@ -76,3 +76,34 @@ test("art. 111: nenhum partido alcança o quociente, elegem-se os mais votados",
   assert.ok(r.eleitos.every((e) => e.via === "art. 111"));
   assert.deepEqual(r.eleitos.map((e) => e.votos), [60, 59, 58, 57, 56, 55, 54, 53, 52, 51]);
 });
+
+test("regra de 2026: sobras em duas rodadas (a última é livre das exigências de 80% e 20%)", async () => {
+  const { REGRAS_2026 } = await import("../public/quociente.js");
+  // QE = 100, 3 vagas. A tem 160 votos (QP 1, um só candidato). B (79) e C (61) não chegam a 80% do QE.
+  const partidos = [
+    { id: "A", nome: "A", candidatos: cands(160) },
+    { id: "B", nome: "B", candidatos: cands(79) },
+    { id: "C", nome: "C", candidatos: cands(61) },
+  ];
+  const antiga = distribuirCadeiras(3, partidos, REGRAS_CODIGO_LITERAL);
+  assert.equal(antiga.eleitos.length, 1, "sem a última rodada, só A é eleito");
+  const nova = distribuirCadeiras(3, partidos, REGRAS_2026);
+  assert.equal(nova.eleitos.length, 3);
+  const rodadas = nova.eleitos.map((e) => [e.partido, e.via, e.rodada ?? 0]);
+  assert.deepEqual(rodadas, [["A", "quociente", 0], ["B", "sobra", 2], ["C", "sobra", 2]]);
+});
+
+test("regra de 2026: a 1ª rodada das sobras vai para a maior média entre quem tem 80% do QE", () => {
+  // QE = 100, 4 vagas. A: 280 votos (QP 2); B: 120 votos (QP 1, um candidato só).
+  const partidos = [
+    { id: "A", nome: "A", candidatos: cands(120, 100, 60) },
+    { id: "B", nome: "B", candidatos: cands(120) },
+  ];
+  const r = distribuirCadeiras(4, partidos);
+  assert.equal(r.qe, 100);
+  const por = Object.fromEntries(r.partidos.map((p) => [p.id, p.eleitos.length]));
+  assert.deepEqual(por, { A: 3, B: 1 });
+  const sobra = r.eleitos.find((e) => e.via === "sobra");
+  assert.equal(sobra.rodada, 1);
+  assert.equal(sobra.partido, "A");
+});

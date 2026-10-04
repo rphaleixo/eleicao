@@ -6,5 +6,9 @@
     "directory": "./public",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
-  }
+  },
+  "kv_namespaces": [
+    { "binding": "HIST", "id": "cc2ee1f18cc844a1ac57ae8ed456c371" }
+  ],
+  "triggers": { "crons": ["* * * * *"] }
 }
