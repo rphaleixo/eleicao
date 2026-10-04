@@ -436,3 +436,23 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .legenda-plenario i.pl-mantem { background: transparent; box-shadow: inset 0 0 0 2.5px var(--acento); } .legenda-plenario i.pl-vaga { background: transparent; border: 1px dashed var(--muted); }
 .resumo-lista { cursor: pointer; list-style: none; } .resumo-lista h2 { display: inline; margin: 0; } .resumo-lista::after { content: " ▾"; color: var(--muted); }
 .mantem-grupo { margin-top: 14px; } .mantem-grupo h4 { margin: 0 0 6px; } .mantem-grupo ul { list-style: none; margin: 0; padding: 0; } .mantem-grupo li { padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; }
+
+/* bancada compacta e linha "eleito em 2022" */
+.plenario { grid-template-columns: repeat(27, 1fr); gap: 3px; margin: 10px 0 8px; } .plenario i { border-radius: 3px; } .plenario i.pl-mantem { box-shadow: inset 0 0 0 2px var(--cor, var(--abst)); }
+.bancada-topo { display: flex; justify-content: flex-end; margin: 8px 0 4px; }
+.bancada-partidos { list-style: none; margin: 4px 0 0; padding: 0; }
+.bancada-partidos li { display: grid; grid-template-columns: minmax(70px, 34%) 1fr 54px; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.bancada-partidos .chip { margin: 0; justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-barra { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--barra); } .bp-barra i { display: block; height: 100%; }
+.bp-barra .e26, .bp-leg.e26 { background: var(--cor, var(--acento)); } .bp-barra .e22, .bp-leg.e22 { background: color-mix(in srgb, var(--cor, var(--acento)) 38%, transparent); }
+.bp-leg { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; } .bp-leg.e26 { --cor: var(--acento); } .bp-leg.e22 { --cor: var(--acento); }
+.bp-total { text-align: right; line-height: 1.1; } .bp-total strong { display: block; } .bp-total small { color: var(--muted); font-size: .68rem; }
+.bancada-estados { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+.bancada-estados li { display: grid; grid-template-columns: 34px 1fr; grid-template-areas: "s c" "n n"; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); min-width: 0; }
+.bancada-estados .sigla { grid-area: s; width: 34px; height: 34px; font-size: .75rem; border-radius: 9px; } .be-chips { grid-area: c; display: flex; gap: 4px; min-width: 0; }
+.bancada-estados .chip { margin: 0; flex: 0 1 auto; min-width: 0; max-width: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .62rem; padding: 1px 5px; }
+.chip.c22 { background: transparent; color: var(--txt); box-shadow: inset 0 0 0 2px var(--cor); text-shadow: none; } .chip.c26.ok { box-shadow: 0 0 0 2px var(--sit-eleito); } .chip.vazio { background: transparent; border: 1px dashed var(--muted); color: var(--muted); text-shadow: none; }
+.nomes-uf { grid-area: n; color: var(--muted); font-size: .68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 700px) { .bancada-estados { grid-template-columns: repeat(3, 1fr); } }
+.cu-2022 { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--acento) 8%, transparent); }
+.cu-2022 > small { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; } .cu-2022-corpo { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; } .cu-2022-corpo b { font-weight: 600; font-size: .9rem; } .cu-2022-corpo .chip { margin: 0; }

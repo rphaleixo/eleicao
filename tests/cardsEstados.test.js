@@ -1,7 +1,7 @@
 globalThis.location = { search: "" };
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { cardEstado, cardRegiao, abstencaoDe, gradeCards } = await import("../public/cardsEstados.js");
+const { cardEstado, cardRegiao, abstencaoDe, gradeCards, linha2022 } = await import("../public/cardsEstados.js");
 
 const c = (nome, partido, votos, pct) => ({ id: nome, nome, partido, votos, pct, numero: "1" });
 const d = { candidatos: [c("Bia", "PT", 100, 40), c("Ana", "PL", 300, 60), c("Cid", "PSD", 50, 20)], definido: "", andamento: "p", pctSecoes: 50, votosValidos: 450 };
@@ -53,4 +53,12 @@ test("card de região: filtra pela região ao tocar e mostra 3 candidatos", () =
   const h = cardRegiao("sul", "Sul", "S", seis, { pct: 40, andamento: "p", eleitores: 5000, comparecimento: 100, abstencao: 20 });
   assert.ok(h.includes('data-regiao="sul"') && !h.includes("data-uf") && h.includes(">S<") && h.includes("Sul"));
   assert.equal((h.match(/class="cu-dest/g) || []).length + (h.match(/class="cu-menor/g) || []).length, 3);
+});
+
+test("card do Senado mostra quem foi eleito em 2022", () => {
+  const sen = { nome: "Ana Lima", partido: "PT", participacao: "1º Suplente", titular: "Dino" };
+  const h = cardEstado("PI", d, u, "senador", 5, linha2022(sen));
+  assert.ok(h.includes("Eleito em 2022") && h.includes("Ana Lima") && h.includes("1º Suplente de Dino"));
+  assert.equal(linha2022(null), "");
+  assert.ok(!cardEstado("PI", d, u, "governador").includes("Eleito em 2022"));
 });

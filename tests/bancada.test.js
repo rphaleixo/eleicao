@@ -37,13 +37,18 @@ test("partidos de uma federação entram juntos, e os 2 mais votados de cada est
   assert.equal(b.linhas[0].rotulo, "PT / PC do B / PV"); // ordenado por total
 });
 
-test("plenário tem sempre 81 lugares e a tela mostra totais", () => {
+test("plenário tem sempre 81 lugares e a tela, por partido ou por estado, é compacta", () => {
   const b = montarBancada({ mandatos, resultados: [{ uf: "RJ", d: d([cand("1", "X", "PT", 500, "eleito"), cand("2", "Y", "PL", 400)], [fed]) }] });
   const p = plenario(b);
   assert.equal((p.match(/<i class="pl-/g) || []).length, 81);
   assert.equal((p.match(/pl-eleito/g) || []).length, 2);
   assert.equal((p.match(/pl-mantem/g) || []).length, 4);
-  const h = telaBancada(b, { versao: "v1" });
-  for (const t of ["Bancada do Senado em 2027", "Maioria absoluta: 41", "Mandato até 2031", "1 ✓", "Dono", "Sem partido"]) assert.ok(h.includes(t), t);
+  const porPartido = telaBancada(b, { versao: "v1", agrupamento: "partido" });
+  for (const t of ["Bancada em 2027", "Maioria: 41", "bancada-partidos", "Sem partido", 'data-agrup-bancada="partido" aria-pressed="true"', "Eleitos em 2022"]) assert.ok(porPartido.includes(t), t);
+  assert.ok(!porPartido.includes("<table"));
+  const porEstado = telaBancada(b, { agrupamento: "estado" });
+  assert.ok(porEstado.includes("bancada-estados") && porEstado.includes('data-agrup-bancada="estado" aria-pressed="true"') && !porEstado.includes("bancada-partidos"));
+  assert.equal((porEstado.match(/<li><span class="sigla">/g) || []).length, 3); // RJ, SP e BA têm alguém
+  assert.ok(porEstado.includes("Romário") || porEstado.includes("Rom"));
   assert.ok(telaBancada(b, { carregando: true }).includes("Carregando"));
 });

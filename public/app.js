@@ -2,7 +2,7 @@ import { telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao,
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
-import { cardEstado, cardRegiao, gradeCards } from "./cardsEstados.js";
+import { cardEstado, cardRegiao, gradeCards, linha2022 } from "./cardsEstados.js";
 import { montarBancada, telaBancada } from "./bancada.js";
 import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao } from "./situacao.js";
 import { cartoesVotacao } from "./votacao.js";
@@ -23,7 +23,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -158,7 +158,7 @@ async function carregarView(rota) {
   if (aba === "governadores" || aba === "senadores") {
     const cargo = aba === "governadores" ? "governador" : "senador";
     const lista = emSegundoPlano("pan-" + cargo, CONFIG.atualizarACadaSegundos * 900, () => panorama(cargo));
-    const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" && rota.visaoSenado === "bancada" ? obterMandatos() : null]);
+    const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" ? obterMandatos() : null]);
     return { tipo: "cargo-por-estado", cargo, e, lista, mandatos, visao: rota.visaoSenado };
   }
   const acomp = obterAcompanhamento(aba === "camara" ? "dep-federal" : aba);
@@ -340,28 +340,30 @@ function telaBancadaSenado(v) {
   if (!v.lista || (v.mandatos === null)) return `${seletorSenado("bancada")}${telaBancada(null, { carregando: true })}`;
   if (!v.mandatos?.senadores) return `${seletorSenado("bancada")}<section class="card">${aviso("Não foi possível carregar a lista de senadores em exercício. Tentaremos de novo automaticamente.")}</section>`;
   const b = montarBancada({ mandatos: v.mandatos.senadores, resultados: v.lista });
-  return `${seletorSenado("bancada")}${telaBancada(b, { versao: v.mandatos.versao })}`;
+  return `${seletorSenado("bancada")}${telaBancada(b, { versao: v.mandatos.versao, agrupamento: estado.agrupBancada })}`;
 }
 
 function telaCargoPorEstado(v) {
   if (v.cargo === "senador" && estado.visaoSenado === "bancada") return telaBancadaSenado(v);
   const { regiao } = estado, cargo = v.cargo, governador = cargo === "governador";
   const plural = governador ? "Governadores" : "Senadores", singular = governador ? "governador" : "senador";
-  const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, regiao === "exterior" ? "" : regiao, "BR");
   const ds = v.lista ? v.lista.map((x) => x.d).filter(Boolean) : [];
   const definidas = ds.filter((d) => situacaoEleicao(d) === "eleito").length, segundoTurno = ds.filter((d) => situacaoEleicao(d) === "segundo").length;
   const resumo = governador ? `${definidas} definido${definidas === 1 ? "" : "s"} · ${segundoTurno} no 2º turno` : `${definidas} eleição${definidas === 1 ? "" : "ões"} definida${definidas === 1 ? "" : "s"}`;
-  const extra = v.lista ? `<p class="hero-sub">${resumo}</p>` : "";
-  const hero = heroApuracao({ ...p, titulo: regiao ? p.titulo : plural, subtitulo: regiao ? p.subtitulo : governador ? "Eleições em 27 estados" : "2 vagas por estado, 54 no total", extra, grafico: false, hist: [] });
+  // Governadores: só os cards. Senadores: o painel geral continua.
+  const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, regiao === "exterior" ? "" : regiao, "BR");
+  const hero = governador ? "" : heroApuracao({ ...p, titulo: regiao ? p.titulo : plural, subtitulo: regiao ? p.subtitulo : "2 vagas por estado, 54 no total", extra: v.lista ? `<p class="hero-sub">${resumo}</p>` : "", grafico: false, hist: [] });
   const ufs = (regiao && REGIOES[regiao] ? REGIOES[regiao].ufs : Object.keys(UFS)).slice();
   const apurado = (u) => v.e.ufs[u.toLowerCase()]?.pct ?? 0;
   ufs.sort(estado.ordem === "pct" ? (a, b) => apurado(b) - apurado(a) : (a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
-  const cards = v.lista ? ufs.map((u) => cardEstado(u, v.lista.find((x) => x.uf === u)?.d ?? null, v.e.ufs[u.toLowerCase()], cargo)) : null;
-  return `${governador ? "" : seletorSenado("estados")}${hero}<section class="card"><div class="estados-topo"><h2>${plural.slice(0, -2)}or por estado</h2>
+  const de2022 = new Map((v.mandatos?.senadores ?? []).map((x) => [x.uf, x]));
+  const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
+  const cards = v.lista ? ufs.map((u) => cardEstado(u, v.lista.find((x) => x.uf === u)?.d ?? null, v.e.ufs[u.toLowerCase()], cargo, 5, extra(u))) : null;
+  return `${governador ? "" : seletorSenado("estados")}${hero}<section class="card"><div class="estados-topo"><h2>${governador ? "Governador" : "Senador"} por estado</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
-    ${legendaSituacao(governador)}
+    ${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}
     ${cards ? gradeCards(cards) : `<p class="muted">Carregando os 27 estados…</p>`}
-    <p class="muted nota">Toque em um estado para ver a disputa completa de ${singular}. Abstenção sobre as seções já apuradas.</p></section>`;
+    <p class="muted nota">Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.</p></section>`;
 }
 
 function telaPresidente(v) {
@@ -588,6 +590,8 @@ $("conteudo").addEventListener("click", (e) => {
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   if (e.target.closest("[data-tentar]")) { atualizar(); return; }
+  const agrup = e.target.closest("[data-agrup-bancada]");
+  if (agrup) { estado.agrupBancada = agrup.dataset.agrupBancada; render(); return; }
   const visao = e.target.closest("[data-visao-senado]");
   if (visao) { estado.visaoSenado = visao.dataset.visaoSenado; navegar({}); return; }
   const painel = e.target.closest("[data-painel]");

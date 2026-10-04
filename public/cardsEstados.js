@@ -24,8 +24,8 @@ export function abstencaoDe(u) {
  * @param {string} cargo cargo mostrado (define a pasta das fotos): "governador", "senador" ou "presidente"
  * @param {number} total quantos candidatos mostrar (os 2 primeiros em destaque, os demais em linhas compactas)
  */
-export function cardEstado(uf, d, u, cargo = "governador", total = 5) {
-  return cardBase({ chave: `data-uf="${uf}"`, sigla: uf === "ZZ" ? "EX" : uf, nome: nomeLocal(uf), uf, d, u, cargo, total });
+export function cardEstado(uf, d, u, cargo = "governador", total = 5, extra = "") {
+  return cardBase({ chave: `data-uf="${uf}"`, sigla: uf === "ZZ" ? "EX" : uf, nome: nomeLocal(uf), uf, d, u, cargo, total, extra });
 }
 
 /** Mesmo card, para uma região (Norte, Nordeste...): clicar filtra a tela pela região. */
@@ -33,7 +33,7 @@ export function cardRegiao(id, nome, sigla, d, u, cargo = "presidente", total = 
   return cardBase({ chave: `data-regiao="${id}"`, sigla, nome, uf: "BR", d, u, cargo, total });
 }
 
-function cardBase({ chave, sigla, nome, uf, d, u, cargo, total }) {
+function cardBase({ chave, sigla, nome, uf, d, u, cargo, total, extra = "" }) {
   const apurado = u?.pct ?? d?.pctSecoes ?? 0;
   const abst = abstencaoDe(u);
   const todos = d ? ordenarCandidatos(d.candidatos) : [];
@@ -58,7 +58,15 @@ function cardBase({ chave, sigla, nome, uf, d, u, cargo, total }) {
     <span class="cu-topo"><span class="sigla">${esc(sigla)}</span><span class="cu-nome-uf"><b>${esc(nome)}</b>${seloEleicao(d)}</span>
       <span class="cu-pilula ${and}" title="${TEXTO[and] ?? TEXTO.n}"><i class="ponto ${and === "f" ? "f" : and === "p" ? "p" : "n"}"></i>${pct(apurado)}</span></span>
     ${corpo}
+    ${extra}
     <span class="cu-rodape"><small>${metricas}</small><span class="cu-ver">Ver apuração completa <i aria-hidden="true">→</i></span></span></button></li>`;
 }
 
 export const gradeCards = (cards) => `<ul class="cards-estados">${cards.join("")}</ul>`;
+
+/** Linha "Eleito em 2022" do card do Senado: o senador do estado que não está em disputa hoje. */
+export function linha2022(senador) {
+  if (!senador) return "";
+  const suplente = senador.participacao && senador.participacao !== "Titular" ? ` <small class="muted">(${esc(senador.participacao)}${senador.titular ? ` de ${esc(senador.titular)}` : ""})</small>` : "";
+  return `<span class="cu-2022"><small>Eleito em 2022</small><span class="cu-2022-corpo"><b>${esc(senador.nome)}</b><span class="chip" style="--cor:${corPartido(senador.partido)}">${esc(senador.partido)}</span>${suplente}</span></span>`;
+}
