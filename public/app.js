@@ -16,7 +16,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "presidente", uf: "BR", mun: "", municipios: {}, mostrar: 50, view: null, serie: "f", regiao: "" };
+const estado = { aba: "presidente", uf: "BR", mun: "", municipios: {}, mostrar: 50, view: null, serie: "f", regiao: "", ordem: "az" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "", carregando: false, pendente: false };
 
 // ---------- navegação (guardada na URL: #/governador/SP/71072) ----------
@@ -24,7 +24,7 @@ function lerHash() {
   const [, aba, uf, mun] = location.hash.split("/");
   estado.aba = ABAS.some((a) => a.id === aba) ? aba : "presidente";
   const u = (uf || "BR").toUpperCase();
-  estado.uf = u === "BR" || UFS[u] || (u === "ZZ" && estado.aba === "presidente") ? u : "BR"; // ZZ = voto no exterior (só Presidente)
+  estado.uf = u === "BR" || UFS[u] || (u === "ZZ" && (estado.aba === "presidente" || estado.aba === "andamento")) ? u : "BR"; // ZZ = voto no exterior (só Presidente)
   estado.mun = /^\d{5}$/.test(mun || "") && estado.uf !== "BR" ? mun : "";
 }
 const gravarHash = () => history.replaceState(null, "", "#/" + [estado.aba, estado.uf, estado.mun].filter(Boolean).join("/"));
@@ -35,6 +35,7 @@ function montarControles() {
   $("uf").innerHTML = `<option value="BR">Brasil</option>` + Object.entries(UFS).map(([s, n]) => `<option value="${s}">${n}</option>`).join("") +
     (estado.aba === "presidente" ? `<option value="ZZ">Exterior</option>` : "");
   $("uf").value = estado.uf;
+  document.querySelector(".filtros").hidden = estado.aba === "andamento"; // na Marcha a navegação é pela lista de estados
   $("lbl-mun").hidden = !permiteMun();
   const lista = estado.municipios[estado.uf] || [];
   $("mun").innerHTML = `<option value="">Todo o estado</option>` + lista.map((m) => `<option value="${m.cod}">${esc(m.nome)}</option>`).join("");
@@ -43,9 +44,10 @@ function montarControles() {
 
 function navegar(mudanca) {
   Object.assign(estado, mudanca);
-  if (estado.uf === "ZZ" && estado.aba !== "presidente") estado.uf = "BR";
+  if (estado.uf === "ZZ" && estado.aba !== "presidente" && estado.aba !== "andamento") estado.uf = "BR";
   if (mudanca.aba || mudanca.uf) estado.mun = mudanca.mun ?? "";
   estado.mostrar = 50;
+  if (estado.aba === "andamento" && estado.view?.tipo === "andamento") { estado.view = { ...estado.view, detalhe: {} }; render(); } // o painel já tem os dados: mostra na hora, os líderes chegam depois
   gravarHash(); montarControles(); atualizar();
 }
 
@@ -90,7 +92,7 @@ async function carregarView() {
   const { aba, uf, mun } = estado;
   const hist = obterHistorico();
   if (aba === "andamento") {
-    const talvez = (cargo) => (uf === "BR" ? null : obter(cargo, uf).catch(() => null));
+    const talvez = (cargo) => (uf === "BR" || (uf === "ZZ" && cargo !== "presidente") ? null : obter(cargo, uf).catch(() => null));
     const [f, e, h, pres, gov, sen] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist, talvez("presidente"), talvez("governador"), talvez("senador")]);
     return { tipo: "andamento", f, e, h, detalhe: { pres, gov, sen } };
   }
@@ -383,12 +385,14 @@ $("conteudo").addEventListener("click", (e) => {
   const serie = e.target.closest("[data-serie]");
   if (serie) { estado.serie = serie.dataset.serie; render(); return; }
   const reg = e.target.closest("[data-regiao]");
-  if (reg) { estado.regiao = estado.regiao === reg.dataset.regiao ? "" : reg.dataset.regiao; render(); return; }
+  if (reg) { estado.regiao = reg.dataset.regiao; render(); return; }
+  const ord = e.target.closest("[data-ordem]");
+  if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   if (e.target.closest("[data-voltar]")) { navegar({ uf: "BR", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   const ir = e.target.closest("[data-ir]");
-  if (ir) { navegar({ aba: ir.dataset.ir, ...(ir.dataset.irUf ? { uf: ir.dataset.irUf } : {}), mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (ir) { navegar({ aba: ir.dataset.ir, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (e.target.closest("[data-mais]")) { estado.mostrar += 50; render(); return; }
-  const tr = e.target.closest("tr[data-uf]");
+  const tr = e.target.closest("[data-uf]");
   if (tr) {
     const aba = estado.aba === "andamento" ? "andamento" : estado.aba;
     navegar({ aba: aba === "dep-estadual" || aba === "dep-federal" || aba === "andamento" || aba === "presidente" || aba === "governador" || aba === "senador" ? aba : "presidente", uf: tr.dataset.uf, mun: "" });

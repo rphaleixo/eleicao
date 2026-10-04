@@ -1,4 +1,5 @@
-// Aba "Marcha da apuração": andamento da contagem, comparecimento e abstenção, regiões e estados.
+// Aba "Marcha da apuração": painel único com o andamento do Brasil e a lista de estados.
+// Os componentes (heroApuracao, linhaEstado, chipsRegiao...) são reaproveitados nas outras abas.
 import { UFS } from "./config.js";
 import { linhaEvolucao } from "./graficos.js";
 import { corPartido } from "./cores.js";
@@ -6,6 +7,7 @@ import { corPartido } from "./cores.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
 const pct = (n, c = 1) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c }) + "%";
+export const mi = (n) => (n >= 1e6 ? `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : fmt(n));
 
 export const REGIOES = {
   norte: { nome: "Norte", ufs: ["AC", "AP", "AM", "PA", "RO", "RR", "TO"] },
@@ -15,6 +17,7 @@ export const REGIOES = {
   sul: { nome: "Sul", ufs: ["PR", "RS", "SC"] },
 };
 export const SERIES = { f: "Presidente", e: "Estaduais" };
+export const nomeEstado = (uf) => (uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 const TEXTO_SITUACAO = { n: "Não iniciada", p: "Em andamento", f: "Finalizada" };
 
 /** Soma as seções e o eleitorado de vários estados (ou usa o próprio estado). */
@@ -25,111 +28,97 @@ export function agregar(itens) {
     t.ts += u.ts; t.st += u.st; t.eleitores += u.eleitores; t.comparecimento += u.comparecimento; t.abstencao += u.abstencao;
   }
   const votantes = t.comparecimento + t.abstencao;
-  return { ...t, pct: t.ts ? (t.st / t.ts) * 100 : 0, pctComp: votantes ? (t.comparecimento / votantes) * 100 : 0, pctAbst: votantes ? (t.abstencao / votantes) * 100 : 0 };
+  return { ...t, pct: t.ts ? (t.st / t.ts) * 100 : 0, pctComp: votantes ? (t.comparecimento / votantes) * 100 : 0, pctAbst: votantes ? (t.abstencao / votantes) * 100 : 0, temPresenca: votantes > 0 };
 }
 const doEstado = (u) => (u ? agregar([u]) : null);
 
+/** Lista de estados da região escolhida. O exterior (ZZ) é um "estado" só na eleição presidencial. */
+export function ufsVisiveis(regiao, serie) {
+  const az = (l) => l.slice().sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
+  if (regiao === "exterior") return serie === "f" ? ["ZZ"] : [];
+  const base = az(regiao && REGIOES[regiao] ? REGIOES[regiao].ufs : Object.keys(UFS));
+  return !regiao && serie === "f" ? [...base, "ZZ"] : base;
+}
+
 const selo = (a) => `<span class="selo ${a === "p" || a === "f" ? a : ""}">${TEXTO_SITUACAO[a] ?? TEXTO_SITUACAO.n}</span>`;
-const barra = (v) => `<span class="mini-barra"><i style="width:${Math.min(100, v)}%"></i></span>`;
-const mi = (n) => (n >= 1e6 ? `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : fmt(n));
 
-function controleSerie(serie) {
+// ---------- componentes reaproveitáveis ----------
+export function controleSerie(serie) {
   return `<div class="seg" role="group" aria-label="Qual apuração mostrar">${Object.entries(SERIES).map(([k, n]) =>
-    `<button type="button" data-serie="${k}" aria-pressed="${k === serie}">${n}</button>`).join("")}</div>
-    <p class="muted seg-dica">${serie === "f" ? "Eleição presidencial (urnas de todo o país)." : "Governador, Senador e Deputados."}</p>`;
+    `<button type="button" data-serie="${k}" aria-pressed="${k === serie}">${n}</button>`).join("")}</div>`;
 }
 
-function cardProgresso(titulo, a, u, andamento, quando) {
-  return `<section class="card"><div class="prog-topo"><div><h2>${esc(titulo)}</h2>${selo(andamento)}</div><div class="prog-pct">${pct(a.pct, 2)}<small> das urnas</small></div></div>
-    <div class="barra-prog"><i style="width:${Math.min(100, a.pct)}%"></i></div>
-    <p class="muted">${a.ts ? `${fmt(a.st)} de ${fmt(a.ts)} seções apuradas` : ""}${quando ? ` · totalização do TSE: ${esc(quando)}` : ""}</p></section>`;
+function anel(valor) {
+  const r = 46, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, valor));
+  return `<svg class="anel" viewBox="0 0 110 110" role="img" aria-label="${pct(valor, 2)} das urnas apuradas"><circle class="anel-fundo" cx="55" cy="55" r="${r}"/>
+    <circle class="anel-valor" cx="55" cy="55" r="${r}" stroke-dasharray="${((p / 100) * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 55 55)"/>
+    <text x="55" y="53" text-anchor="middle" class="anel-pct">${Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</text>
+    <text x="55" y="70" text-anchor="middle" class="anel-leg">das urnas</text></svg>`;
 }
 
-function cardEvolucao(titulo, h, serie, chave) {
-  const largura = Math.max(300, Math.min(640, (typeof document === "undefined" ? 400 : document.documentElement.clientWidth) - 56));
-  return `<section class="card"><h2>${esc(titulo)}</h2>${linhaEvolucao(h, (p) => p[serie]?.[chave], { largura, altura: 200, rotulo: titulo })}
-    <p class="muted">% de seções apuradas ao longo do tempo (registro a cada minuto).</p></section>`;
+function presenca(a) {
+  if (!a.temPresenca) return `<p class="hero-vazio">Comparecimento e abstenção aparecem quando as primeiras seções forem apuradas.</p>`;
+  return `<div class="presenca"><div class="barra-dupla" role="img" aria-label="Comparecimento ${pct(a.pctComp)}, abstenção ${pct(a.pctAbst)}"><i class="comp" style="width:${a.pctComp}%"></i><i class="abst" style="width:${a.pctAbst}%"></i></div>
+    <div class="presenca-leg"><span><i class="pt comp"></i>Comparecimento <strong>${pct(a.pctComp)}</strong> <small>${mi(a.comparecimento)}</small></span>
+    <span><i class="pt abst"></i>Abstenção <strong>${pct(a.pctAbst)}</strong> <small>${mi(a.abstencao)}</small></span></div></div>`;
 }
 
-function cardComparecimento(titulo, a) {
-  const vazio = !a.comparecimento && !a.abstencao;
-  const corpo = vazio
-    ? `<p class="muted">Os números aparecem quando as primeiras seções forem apuradas.</p>`
-    : `<div class="barra-dupla" role="img" aria-label="Comparecimento ${pct(a.pctComp)}, abstenção ${pct(a.pctAbst)}"><i class="comp" style="width:${a.pctComp}%"></i><i class="abst" style="width:${a.pctAbst}%"></i></div>
-       <div class="duplo-legenda"><div><span><i class="pt comp"></i>Comparecimento</span><strong>${pct(a.pctComp)}</strong><small class="muted">${fmt(a.comparecimento)} eleitores</small></div>
-       <div><span><i class="pt abst"></i>Abstenção</span><strong>${pct(a.pctAbst)}</strong><small class="muted">${fmt(a.abstencao)} eleitores</small></div></div>`;
-  return `<section class="card"><h2>${esc(titulo)}</h2>${corpo}<p class="muted">Eleitorado total: ${fmt(a.eleitores)}. Os percentuais consideram só as seções já apuradas.</p></section>`;
+/** Painel de destaque: anel de progresso, situação, gráfico da evolução e presença, tudo num cartão só. */
+export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, hist, serie, chave, topo = "" }) {
+  const largura = Math.max(300, Math.min(640, (typeof document === "undefined" ? 400 : document.documentElement.clientWidth) - 64));
+  return `<section class="card hero">${topo}
+    <div class="hero-topo">${anel(a.pct)}<div class="hero-info"><h2>${esc(titulo)}</h2>${subtitulo ? `<p class="hero-sub">${esc(subtitulo)}</p>` : ""}${selo(andamento)}
+      <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${quando ? `<p class="hero-sub">TSE: ${esc(quando)}</p>` : ""}</div></div>
+    <div class="hero-grafico">${linhaEvolucao(hist, (p) => p[serie]?.[chave], { largura, altura: 150, rotulo: `Evolução da apuração: ${titulo}` })}</div>
+    ${presenca(a)}</section>`;
 }
 
-function cardRegioes(ac, regiao, ext) {
-  const linhas = Object.entries(REGIOES).map(([k, r]) => {
-    const a = agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()]));
-    return `<tr class="clicavel ${regiao === k ? "ativa" : ""}" data-regiao="${k}"><td class="uf-nome">${r.nome}<small class="muted">${r.ufs.length} estados · ${mi(a.eleitores)}</small></td>
-      <td class="com-barra">${pct(a.pct)}${barra(a.pct)}</td><td>${a.comparecimento || a.abstencao ? pct(a.pctComp) : "–"}</td><td>${a.comparecimento || a.abstencao ? pct(a.pctAbst) : "–"}</td></tr>`;
-  }).join("");
-  const e = ext ? doEstado(ext) : null;
-  const linhaExt = e ? `<tr class="clicavel" data-ir="presidente" data-ir-uf="ZZ"><td class="uf-nome">Exterior<small class="muted">voto no exterior · ${mi(e.eleitores)}</small></td>
-      <td class="com-barra">${pct(e.pct)}${barra(e.pct)}</td><td>${e.comparecimento || e.abstencao ? pct(e.pctComp) : "–"}</td><td>${e.comparecimento || e.abstencao ? pct(e.pctAbst) : "–"}</td></tr>` : "";
-  const nota = ext
-    ? `O exterior (${fmt(ext.ts)} seções) entra no total do Brasil e só vale para Presidente.`
-    : "Eleitores no exterior votam só para Presidente, por isso o total de seções das eleições estaduais é menor.";
-  return `<section class="card"><h2>Por região</h2><div class="tab-scroll"><table class="compacta"><tr><th>Região</th><th>Apurado</th><th>Comp.</th><th>Abst.</th></tr>${linhas}${linhaExt}</table></div>
-    <p class="muted">Toque em uma região para filtrar as tabelas de estados abaixo. ${nota}</p></section>`;
+export function chipsRegiao(ac, regiao, serie) {
+  const chip = (id, nome, valor) => `<button type="button" data-regiao="${id}" aria-pressed="${regiao === id}">${nome}${valor == null ? "" : ` <small>${pct(valor, 0)}</small>`}</button>`;
+  const regs = Object.entries(REGIOES).map(([k, r]) => chip(k, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct)).join("");
+  const ext = serie === "f" && ac.ufs.zz ? chip("exterior", "Exterior", doEstado(ac.ufs.zz).pct) : "";
+  return `<div class="chips" role="group" aria-label="Filtrar por região">${chip("", "Todos")}${regs}${ext}</div>`;
 }
 
-const ufsDaRegiao = (regiao) => (regiao ? REGIOES[regiao].ufs : Object.keys(UFS)).slice().sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
-
-function cardTabelaComparecimento(ac, regiao) {
-  const linhas = ufsDaRegiao(regiao).map((uf) => {
-    const a = doEstado(ac.ufs[uf.toLowerCase()]);
-    const tem = a && (a.comparecimento || a.abstencao);
-    return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(UFS[uf])}<small class="muted">${a ? mi(a.eleitores) : "–"} eleitores</small></td>
-      <td>${tem ? pct(a.pctComp) : "–"}</td><td>${tem ? pct(a.pctAbst) : "–"}</td></tr>`;
-  }).join("");
-  return `<section class="card"><h2>Comparecimento e abstenção por estado</h2><div class="tab-scroll"><table class="compacta"><tr><th>Estado</th><th>Comparecimento</th><th>Abstenção</th></tr>${linhas}</table></div></section>`;
+export function linhaEstado(uf, u) {
+  const a = doEstado(u);
+  const sigla = uf === "ZZ" ? "EX" : uf;
+  const estadoCls = u?.andamento === "f" ? "f" : u?.andamento === "p" ? "p" : "n";
+  const pc = a?.pct ?? 0;
+  return `<li><button type="button" class="linha-estado" data-uf="${uf}"><span class="sigla">${sigla}</span>
+    <span class="le-meio"><span class="le-nome">${esc(nomeEstado(uf))}<i class="ponto ${estadoCls}" title="${TEXTO_SITUACAO[u?.andamento] ?? TEXTO_SITUACAO.n}"></i></span>
+      <span class="le-barra"><i style="width:${Math.min(100, pc)}%"></i></span>
+      <span class="le-det">${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções` : "–"}${a?.temPresenca ? ` · comp. ${pct(a.pctComp)} · abst. ${pct(a.pctAbst)}` : ""}</span></span>
+    <span class="le-pct">${pct(pc)}</span><span class="seta" aria-hidden="true">›</span></button></li>`;
 }
 
-function linhaExteriorApuracao(ext) {
-  const a = doEstado(ext);
-  return `<tr class="clicavel" data-ir="presidente" data-ir-uf="ZZ"><td class="uf-nome">Exterior<small class="muted">${fmt(a.st)} de ${fmt(a.ts)} seções</small>${selo(ext.andamento)}</td>
-      <td class="com-barra">${pct(a.pct)}${barra(a.pct)}</td><td class="seta" aria-hidden="true">›</td></tr>`;
+function listaOrdenada(ac, regiao, serie, ordem) {
+  const ufs = ufsVisiveis(regiao, serie);
+  if (ordem === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
+  return ufs.map((uf) => linhaEstado(uf, ac.ufs[uf.toLowerCase()])).join("");
 }
 
-function cardTabelaApuracao(ac, regiao, ext) {
-  const linhas = ufsDaRegiao(regiao).map((uf) => {
-    const u = ac.ufs[uf.toLowerCase()];
-    const a = doEstado(u);
-    return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(UFS[uf])}<small class="muted">${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções` : "–"}</small>${selo(u?.andamento)}</td>
-      <td class="com-barra">${pct(a?.pct ?? 0)}${barra(a?.pct ?? 0)}</td><td class="seta" aria-hidden="true">›</td></tr>`;
-  }).join("");
-  return `<section class="card"><h2>Apuração por estado</h2><div class="tab-scroll"><table class="compacta"><tr><th>Estado</th><th>Apurado</th><th></th></tr>${linhas}${ext && !regiao ? linhaExteriorApuracao(ext) : ""}</table></div>
-    <p class="muted">Toque em um estado para ver o detalhamento da eleição.</p></section>`;
-}
-
-function lideres(titulo, aba, d, vagas = 3) {
-  if (!d) return `<section class="card"><h2>${esc(titulo)}</h2><p class="muted">Dados indisponíveis no momento.</p></section>`;
-  const top = d.candidatos.filter((c) => c.votos > 0).slice(0, vagas);
+// ---------- tela ----------
+function lideres(titulo, aba, d) {
+  if (!d) return "";
+  const top = d.candidatos.filter((c) => c.votos > 0).slice(0, 3);
   const itens = top.length
     ? top.map((c, i) => `<li><span class="pos">${i + 1}</span><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span><span class="lid-nome">${esc(c.nome)}</span><strong>${pct(c.pct, 2)}</strong></li>`).join("")
-    : `<li class="muted">Sem votos apurados ainda.</li>`;
-  return `<section class="card"><div class="lid-topo"><h2>${esc(titulo)}</h2><button type="button" class="link" data-ir="${aba}">Ver completo ›</button></div><ol class="lideres">${itens}</ol></section>`;
+    : `<li class="muted vazio">Sem votos apurados ainda.</li>`;
+  return `<div class="lid-bloco"><div class="lid-topo"><h3>${esc(titulo)}</h3><button type="button" class="link" data-ir="${aba}">Ver completo ›</button></div><ol class="lideres">${itens}</ol></div>`;
 }
 
 function detalheEstado(v, estado) {
-  const { uf, serie } = estado, k = uf.toLowerCase();
-  const un = (ac) => ac.ufs[k];
-  const a = doEstado(un(serie === "f" ? v.f : v.e));
-  const ac = serie === "f" ? v.f : v.e;
-  const outros = ["presidente", "governador", "senador", "dep-federal", "dep-estadual"];
-  const nomes = { presidente: "Presidente", governador: "Governador", senador: "Senador", "dep-federal": "Dep. Federal", "dep-estadual": "Dep. Estadual" };
+  const { uf } = estado, ext = uf === "ZZ";
+  const serie = ext ? "f" : estado.serie, k = uf.toLowerCase();
+  const ac = serie === "f" ? v.f : v.e, u = ac.ufs[k];
   const d = v.detalhe ?? {};
-  return `<button type="button" class="voltar" data-voltar>‹ Voltar ao Brasil</button>
-    ${controleSerie(serie)}
-    ${cardProgresso(UFS[uf], a, un(ac), un(ac)?.andamento, [un(ac)?.dt, un(ac)?.ht].filter(Boolean).join(" "))}
-    ${cardEvolucao(`Evolução da apuração: ${UFS[uf]}`, v.h, serie, k)}
-    ${cardComparecimento(`Comparecimento e abstenção: ${UFS[uf]}`, a)}
-    ${lideres(`Governador: ${UFS[uf]}`, "governador", d.gov)}${lideres(`Senador: ${UFS[uf]}`, "senador", d.sen)}${lideres(`Presidente em ${UFS[uf]}`, "presidente", d.pres)}
-    <section class="card"><h2>Ver eleição em ${esc(UFS[uf])}</h2><div class="atalhos">${outros.map((o) => `<button type="button" data-ir="${o}">${nomes[o]}</button>`).join("")}</div></section>`;
+  const cargos = [["presidente", "Presidente"], ["governador", "Governador"], ["senador", "Senador"], ["dep-federal", "Dep. Federal"], ["dep-estadual", "Dep. Estadual"]]
+    .filter(([id]) => !ext || id === "presidente");
+  const topo = `<div class="hero-nav"><button type="button" class="voltar" data-voltar>‹ Brasil</button>${ext ? "" : controleSerie(serie)}</div>`;
+  return `${heroApuracao({ titulo: nomeEstado(uf), subtitulo: ext ? "Votos de brasileiros no exterior (só Presidente)" : SERIES[serie], a: doEstado(u) ?? agregar([]), andamento: u?.andamento, quando: [u?.dt, u?.ht].filter(Boolean).join(" "), hist: v.h, serie, chave: k, topo })}
+    <section class="card"><h2>Quem lidera</h2>${ext ? "" : lideres("Governador", "governador", d.gov) + lideres("Senador", "senador", d.sen)}${lideres("Presidente", "presidente", d.pres)}</section>
+    <nav class="pills" aria-label="Ver eleição completa">${cargos.map(([id, n]) => `<button type="button" data-ir="${id}">${n} ›</button>`).join("")}</nav>`;
 }
 
 export function telaMarcha(v, estado) {
@@ -137,15 +126,13 @@ export function telaMarcha(v, estado) {
   const { serie, regiao } = estado;
   const ac = serie === "f" ? v.f : v.e;
   const br = ac.ufs.br;
-  const ext = serie === "f" ? ac.ufs.zz : null; // votam no exterior só para Presidente
-  const todos = agregar([...Object.keys(UFS).map((u) => ac.ufs[u.toLowerCase()]), ext]);
+  const todos = agregar([...Object.keys(UFS).map((u) => ac.ufs[u.toLowerCase()]), serie === "f" ? ac.ufs.zz : null]);
   const brasil = br ? { ...todos, ts: br.ts || todos.ts, st: br.st ?? todos.st, pct: br.pct } : todos;
-  return `${controleSerie(serie)}
-    ${cardProgresso("Brasil", brasil, br, br?.andamento, [br?.dt, br?.ht].filter(Boolean).join(" "))}
-    ${cardEvolucao("Evolução da apuração no Brasil", v.h, serie, "br")}
-    ${cardComparecimento("Comparecimento e abstenção no Brasil", todos)}
-    ${cardRegioes(ac, regiao, ext)}
-    ${regiao ? `<p class="filtro-ativo">Mostrando só a região ${REGIOES[regiao].nome}. <button type="button" class="link" data-regiao="">Limpar</button></p>` : ""}
-    ${cardTabelaApuracao(ac, regiao, ext)}
-    ${cardTabelaComparecimento(ac, regiao)}`;
+  const nota = serie === "f" ? "" : `<p class="muted nota">O total é menor que o da eleição presidencial porque o exterior vota só para Presidente.</p>`;
+  const hero = heroApuracao({ titulo: "Brasil", subtitulo: SERIES[serie], a: brasil, andamento: br?.andamento, quando: [br?.dt, br?.ht].filter(Boolean).join(" "), hist: v.h, serie, chave: "br", topo: controleSerie(serie) });
+  return `${hero}
+    <section class="card estados"><div class="estados-topo"><h2>Estados</h2>
+      <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
+      ${chipsRegiao(ac, regiao, serie)}
+      <ul class="lista-estados">${listaOrdenada(ac, regiao, serie, estado.ordem)}</ul>${nota}</section>`;
 }
