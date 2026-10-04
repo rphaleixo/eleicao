@@ -20,7 +20,7 @@ import { barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js
 import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS, INICIO_APURACAO } from "./config.js";
 import {
-  urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlEventos, urlResultadosPresidente, urlFoto,
+  urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
 } from "./tse.js";
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
@@ -113,12 +113,12 @@ async function obterMandatos() {
 }
 
 const memoRP = new Map();
-async function obterResultadosPresidente(locais) {
-  const chave = locais.join(",");
+async function obterResultadosPresidente(locais, cargo = "presidente") {
+  const chave = `${cargo}:${locais.join(",")}`;
   const m = memoRP.get(chave);
   if (m && Date.now() - m.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return m.dados;
   let dados = m?.dados ?? null;
-  try { dados = await buscarJson(urlResultadosPresidente(locais)); } catch { /* segue com o que já tinha */ }
+  try { dados = await buscarJson(cargo === "governador" ? urlResultadosGovernador(locais) : urlResultadosPresidente(locais)); } catch { /* segue com o que já tinha */ }
   memoRP.set(chave, { t: Date.now(), dados });
   return dados;
 }
@@ -187,7 +187,7 @@ async function carregarView(rota) {
     }
     if (cargo === "resumo") return { ...base, detalhe: emSegundoPlano("detx-" + uf, 9000, () => detalhesEstado(uf, true)) ?? {} };
     if (CARGOS[cargo].proporcional) { const d = await obter(cargo, uf); return { ...base, d, dist: distribuirEstado(d) }; }
-    const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente(locaisResultado(uf, "")) : null]);
+    const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente(locaisResultado(uf, "")) : cargo === "governador" && !mun ? obterResultadosPresidente([uf.toLowerCase()], "governador") : null]);
     return { ...base, d, rp };
   }
   if (aba === "governadores" || aba === "senadores") {
@@ -240,8 +240,10 @@ function blocoResultadoEvolucao(rp, local, final = false) {
   const largura = Math.max(300, Math.min(640, document.documentElement.clientWidth - 64));
   const grafico = rp === undefined ? `<p class="muted vazio-grafico">Carregando o histórico…</p>`
     : linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO, ate: final ? 0 : Date.now() });
+  const primeiro = rp?.pontos?.[0]?.t * 1000;
+  const parcial = primeiro && primeiro > INICIO_APURACAO + 5 * 60000 ? ` O registro deste gráfico começou às ${new Date(primeiro).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}, quando o site passou a guardá-lo.` : "";
   return `<section class="card"><h2>Evolução do resultado</h2>${grafico}
-    <p class="muted">% dos votos válidos de cada candidato, desde o início da apuração, minuto a minuto. Toque no gráfico para ver um momento.</p></section>`;
+    <p class="muted">% dos votos válidos de cada candidato, minuto a minuto. A etiqueta mostra a diferença entre os dois primeiros (em pontos percentuais e em votos). Toque no gráfico para ver um momento.${parcial}</p></section>`;
 }
 
 function blocoEvolucao(titulo, hist, serie, chave) {
@@ -344,7 +346,7 @@ function telaMajoritaria(v) {
   const { d } = v, { uf, mun } = estado, aba = cargoAtivo();
   const local = mun ? `${nomeUF(uf)}, município ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : nomeUF(uf);
   const titulo = aba === "senador" ? `Senador (${d.vagas || 2} vagas): ${local}` : `${CARGOS[aba].nome}: ${local}`;
-  const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, locaisResultado(uf, ""), d.totalizacaoFinal) : "";
+  const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, locaisResultado(uf, ""), d.totalizacaoFinal) : !mun && aba === "governador" ? blocoResultadoEvolucao(v.rp, [uf.toLowerCase()], d.totalizacaoFinal) : "";
   return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${rankingMajoritario(d, { aba, uf })}</section>${cartoesVotacao(d)}${evolucao}`;
 }
 

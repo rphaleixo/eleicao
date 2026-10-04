@@ -27,10 +27,14 @@ function marcar(svg, g, ordem, t) {
     html += `<circle cx="${x}" cy="${yy}" r="4" ${s.cor ? `style="fill:${s.cor}"` : ""}/>`;
   });
   el.innerHTML = html; svg.appendChild(el);
+  if (g.rot?.[i]) { // etiqueta da diferença acompanha o momento escolhido
+    const t = svg.querySelector(".g-dif text"), r = svg.querySelector(".g-dif rect");
+    if (t) { t.textContent = g.rot[i]; r?.setAttribute("width", Math.min(g.l - g.e - g.d, g.rot[i].length * 6.9 + 20)); }
+  }
   const info = svg.nextElementSibling;
   if (info?.classList.contains("g-info")) {
     info.hidden = false;
-    info.innerHTML = `<b>${quando(g.ts[i])}</b>` + g.series.map((s) => `<span>${s.cor ? `<i class="pt" style="background:${s.cor}"></i>` : ""}${esc(s.n)} <b>${pct(s.v[i])}</b></span>`).join("");
+    info.innerHTML = `<b>${quando(g.ts[i])}</b>` + g.series.map((s) => `<span>${s.cor ? `<i class="pt" style="background:${s.cor}"></i>` : ""}${esc(s.n)} <b>${pct(s.v[i])}</b></span>`).join("") + (g.rot?.[i] ? `<span class="g-dif-info">${esc(g.rot[i])}</span>` : "");
   }
   memoria.set(ordem, g.ts[i]);
 }

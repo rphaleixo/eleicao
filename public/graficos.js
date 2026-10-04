@@ -1,8 +1,9 @@
 // Gráficos simples em SVG, sem bibliotecas.
-import { pct } from "./formato.js";
+import { pct, fmt } from "./formato.js";
 const escAttr = (o) => JSON.stringify(o).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 /** Dados que tornam o gráfico consultável (ver graficoInterativo.js): geometria, instantes e séries. */
 const dadosG = (largura, altura, m, t0, t1, ts, series, extra = {}) => escAttr({ l: largura, h: altura, e: m.e, d: m.d, c: m.c, b: m.b, t0, t1, ts, series, ...extra });
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
 /**
@@ -87,6 +88,22 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
     <polyline class="g-borda" points="${topo}"/>${linhaUrnas}</svg><div class="g-info" hidden></div>`;
 }
 
+const TITULOS = new Set(["DR.", "DRA.", "PROF.", "CEL.", "CORONEL", "PROFESSOR", "PROFESSORA", "DELEGADO", "DELEGADA", "CAPITÃO", "SARGENTO", "PASTOR", "PASTORA", "JUIZ", "JUÍZA", "ESCRITOR", "TENENTE", "MAJOR", "GENERAL", "DOUTOR", "DOUTORA"]);
+/** Nome curto para a etiqueta: "FLAVIO", "DR. LUIZINHO". */
+export function nomeCurto(n) {
+  const p = String(n ?? "").trim().split(/\s+/);
+  return p.length > 1 && TITULOS.has(p[0].toUpperCase()) ? `${p[0]} ${p[1]}` : p[0] ?? "";
+}
+
+/** Texto da diferença entre os dois primeiros colocados naquele instante: "FLAVIO +3,91 p.p. · 4.512.300 votos". */
+export function textoDiferenca(r, nome) {
+  const ord = Object.entries(r.c).sort((a, b) => b[1] - a[1]);
+  if (ord.length < 2 || !r.vv) return "";
+  const [[id1, v1], [, v2]] = ord, dif = v1 - v2;
+  if (dif <= 0) return "Empatados";
+  return `${nomeCurto(nome(id1))} +${pct((dif / r.vv) * 100).replace("%", " p.p.")} · ${fmt(dif)} votos`;
+}
+
 /**
  * Evolução do % de votos válidos de cada candidato, minuto a minuto.
  * @param {{cands:object, pontos:object[]}} rp histórico de resultados (worker/resultados.js)
@@ -109,7 +126,8 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
   const ids = Object.keys(ult.c).sort((a, b) => ult.c[b] - ult.c[a]).slice(0, max);
   const pc = (r, id) => ((r.c[id] ?? 0) / r.vv) * 100;
   const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => ids.map((id) => pc(p.r, id)))) / 10) * 10);
-  const m = { e: 56, d: 12, c: 10, b: 24 };
+  const m = { e: 56, d: 12, c: 34, b: 24 }; // a faixa de cima abriga a etiqueta da diferença
+  altura += 24;
   const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, ate, t0 + 60000);
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
   const y = (v) => m.c + (1 - v / topo) * (altura - m.c - m.b);
@@ -123,6 +141,9 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
     return `<path class="g-cand" d="${d}" style="stroke:${cor(partido(id))}"/><circle cx="${x(pts[pts.length - 1].t).toFixed(1)}" cy="${y(pc(ult, id)).toFixed(1)}" r="3.5" style="fill:${cor(partido(id))}"/>`;
   }).join("");
   const legenda = ids.map((id) => `<span><i class="pt" style="background:${cor(partido(id))}"></i>${nome(id)} <b>${pct(pc(ult, id))}</b></span>`).join("");
-  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })));
-  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos">${grade}${ticks}${linhas}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
+  const rot = pts.map((p) => textoDiferenca(p.r, nome));
+  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })), { rot });
+  const ultRot = rot[rot.length - 1];
+  const etiqueta = ultRot ? `<g class="g-dif"><rect x="${m.e}" y="5" width="${Math.min(largura - m.e - m.d, ultRot.length * 6.9 + 20)}" height="22" rx="11"/><text x="${m.e + 9}" y="20">${esc(ultRot)}</text></g>` : "";
+  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
 }

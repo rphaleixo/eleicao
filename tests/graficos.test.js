@@ -53,3 +53,15 @@ test("presença: linha de % de urnas apuradas a cada minuto (recorte único)", (
   assert.ok(svg.includes('class="g-urnas"') && svg.includes("Urnas apuradas"));
   assert.ok(!areaPresenca(pts, ["br", "rj"], 1000, { inicio: T0 * 1000, ate: (T0 + 400) * 1000 }).includes("g-urnas")); // soma de vários locais: sem a linha
 });
+
+test("resultado: etiqueta com a diferença entre os dois primeiros, em p.p. e votos", async () => {
+  const { textoDiferenca, nomeCurto } = await import("../public/graficos.js");
+  const nome = (id) => ({ 1: "FLAVIO BOLSONARO", 2: "LULA", 3: "DR. LUIZINHO" }[id]);
+  assert.equal(textoDiferenca({ vv: 1000, c: { 1: 500, 2: 400, 3: 100 } }, nome), "FLAVIO +10,00 p.p. · 100 votos");
+  assert.equal(textoDiferenca({ vv: 1000, c: { 1: 500 } }, nome), "");
+  assert.equal(textoDiferenca({ vv: 1000, c: { 1: 300, 2: 300 } }, nome), "Empatados");
+  assert.equal(nomeCurto("DR. LUIZINHO"), "DR. LUIZINHO"); assert.equal(nomeCurto("SERGIO MORO"), "SERGIO");
+  const rp = { cands: { 1: { n: "FLAVIO BOLSONARO", p: "PL" }, 2: { n: "LULA", p: "PT" } }, pontos: [{ t: T0 + 60, v: { br: { vv: 1000, c: { 1: 500, 2: 400 } } } }] };
+  const svg = linhasResultado(rp, "br", () => "#000", { inicio: T0 * 1000, ate: (T0 + 300) * 1000 });
+  assert.ok(svg.includes('class="g-dif"') && svg.includes("FLAVIO +10,00 p.p. · 100 votos"));
+});

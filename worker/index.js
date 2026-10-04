@@ -48,6 +48,7 @@ export default {
     const mMalha = /^\/api\/malha\/([A-Za-z]{2})$/.exec(url.pathname);
     if (mMalha) return malhaDoEstado(CODIGO_IBGE[mMalha[1].toUpperCase()]);
     if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] });
+    if (url.pathname === "/api/resultados-governador") return lerHistorico(request, env, ctx, "governador", { cands: {}, pontos: [] }, url.searchParams.get("local"));
     if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] }, url.searchParams.get("local"));
 
     if (url.pathname === "/api/eventos") return lerEventos(request, env, ctx);
@@ -79,7 +80,7 @@ export default {
 
   // Rotina agendada (a cada minuto): guarda a foto do andamento de todos os estados.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(registrarHistorico(env));
+    ctx.waitUntil(registrarHistorico(env).then((e) => registrarGovernadores(env, e)).catch((e) => console.error("governadores:", e.message)));
     ctx.waitUntil(registrarResultados(env).catch((e) => console.error("resultados da presidência:", e.message)));
     ctx.waitUntil(registrarEventos(env).catch((e) => console.error("definições:", e.message)));
     ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
@@ -208,6 +209,27 @@ export async function registrarHistorico(env) {
   const atual = await env.HIST.get("historico", "json");
   const { historico, mudou } = acrescentar(atual, { f: f?.pct ?? {}, e: e?.pct ?? {}, p: f?.presenca });
   if (mudou) await env.HIST.put("historico", JSON.stringify(historico));
+  return e?.pct ?? null; // % de seções por estado (eleição estadual), para saber quais governos mudaram
+}
+
+// Votos de cada candidato a Governador, por estado. Só buscamos os estados cujo % apurado mudou desde a última vez.
+export async function registrarGovernadores(env, pctEstadual) {
+  if (!env.HIST || !pctEstadual) return;
+  const doc = (await env.HIST.get("governador", "json")) ?? { cands: {}, pontos: [], pct: {} };
+  const pct = doc.pct ?? {};
+  const mudaram = UFS_MINUSCULAS.filter((u) => u !== "zz" && pctEstadual[u] != null && pctEstadual[u] !== pct[u]);
+  if (!mudaram.length) return;
+  const resp = await Promise.all(mudaram.map(async (u) => {
+    try {
+      const r = await fetch(`${ORIGEM_TSE}ele${ANO}/${ELEICAO_ESTADUAL}/dados/${u}/${u}-c0003-e00${ELEICAO_ESTADUAL}-u.json`);
+      return r.ok ? [u, lerResultado(await r.json())] : null;
+    } catch { return null; }
+  }));
+  const ult = doc.pontos[doc.pontos.length - 1], v = { ...(ult?.v ?? {}) }, nomes = {}, novoPct = { ...pct };
+  for (const x of resp) if (x) { v[x[0]] = x[1].valor; Object.assign(nomes, x[1].nomes); novoPct[x[0]] = pctEstadual[x[0]]; }
+  const { historico, mudou } = acrescentarResultado({ cands: doc.cands, pontos: doc.pontos }, v, nomes);
+  await env.HIST.put("governador", JSON.stringify({ ...historico, pct: novoPct }));
+  return mudou;
 }
 
 async function lerHistorico(request, env, ctx, chaveKV, vazio, locais = null) {
