@@ -5,6 +5,7 @@ import { rankingMajoritario } from "./ranking.js";
 import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./cardsEstados.js";
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
+import { seletorAgrupCamara, plenarioCamara, porPartidoCamara, cardsEstadosCamara, tabelaEstadosCamara, lideresCamara, MAIORIA_CAMARA } from "./camara.js";
 import { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO, mapaMunicipal } from "./mapa.js";
 import { lerMalha, carregarMunicipios as carregarVotosMunicipais, lerMun, progresso } from "./municipios.js";
 import { ordenarCandidatos } from "./ranking.js";
@@ -27,7 +28,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), fEleitos: { ...filtrosVazios(), status: "definida" } };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), fEleitos: { ...filtrosVazios(), status: "definida" } };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -574,30 +575,46 @@ function telaProporcionalUF(v) {
 
 function telaNacionalProp(v) {
   const n = v.nacional;
-  if (!n) return `${blocoProgresso("Brasil: Deputados", null, v.ac.ufs.br)}${blocoEvolucao("Evolução da apuração no Brasil", v.h, "e", "br")}${carregandoEstados("Câmara dos Deputados: cadeiras por partido/federação")}`;
+  const p = escopoDoPainel({ f: v.ac, e: { ufs: {} } }, "", "BR");
+  const extra = n ? `<p class="hero-sub">${n.total} de ${n.totalVagas} cadeiras projetadas · ${n.confirmadasTotal} confirmadas</p>` : "";
+  const hero = heroApuracao({ ...p, titulo: "Câmara dos Deputados", subtitulo: "513 cadeiras, eleitas nos 27 estados", extra, grafico: false, hist: [] });
+  if (!n) return `${hero}${carregandoEstados("Câmara dos Deputados: cadeiras por partido/federação")}`;
+
+  const agrup = estado.agrupCamara, f = estado.filtros;
+  const ordenadas = n.ufs.map((u) => u.uf).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
+  const statusDe = (uf) => (n.ufs.find((u) => u.uf === uf)?.oficial ? "definida" : "aberta");
+  let ufs = filtrarUfs(ordenadas, f, statusDe);
+  if (agrup === "estado" && estado.ordem === "pct") ufs = ufs.slice().sort((a, b) => (n.ufs.find((u) => u.uf === b)?.pct ?? 0) - (n.ufs.find((u) => u.uf === a)?.pct ?? 0));
+  const filtros = barraFiltros(f, { comSegundo: false });
+  let corpo;
+  if (agrup === "estado") {
+    const ordem = `<div class="controles-estados"><div class="seg mini" role="group" aria-label="Ordenar">${[["az", "A–Z"], ["pct", "% apurado"]].map(([k, nome]) => `<button type="button" data-ordem="${k}" aria-pressed="${k === (estado.ordem === "pct" ? "pct" : "az")}">${nome}</button>`).join("")}</div></div>`;
+    corpo = `${filtros}${ordem}${ufs.length ? cardsEstadosCamara(n, ufs) : `<p class="muted">Nenhum estado com esses filtros.</p>`}`;
+  } else if (agrup === "mapa") {
+    const lideres = lideresCamara(n), dentro = new Set(ufs);
+    const sel = estado.mapaUf && dentro.has(estado.mapaUf) ? estado.mapaUf : "";
+    const filtrando = !!(f.regiao || f.uf || f.status);
+    const contagem = contarLideres(Object.fromEntries(Object.entries(lideres).filter(([u]) => dentro.has(u))));
+    corpo = `${filtros}<div class="mapa-area">${mapaBrasil(lideres, { selecionado: sel, destaque: filtrando ? dentro : null })}</div>
+      ${legendaMapa(contagem, { nota: "Cada estado tem a cor do partido ou federação com a maior bancada nele, mais forte quanto mais avançou a apuração." })}
+      ${sel ? `<div class="cartao-mapa">${cardsEstadosCamara(n, [sel])}</div>` : `<p class="muted dica-mapa">Toque em um estado para ver a bancada dele.</p>`}`;
+  } else if (agrup === "tabela") {
+    corpo = `${filtros}${tabelaEstadosCamara(n, ufs)}`;
+  } else {
+    corpo = porPartidoCamara(n);
+  }
+  const maior = n.partidos[0];
   const parciais = n.ufs.filter((u) => !u.final).length;
-  const cadeiras = blocoCadeiras({
-    titulo: "Câmara dos Deputados: cadeiras por partido/federação",
-    subtitulo: parciais ? `Previsão: soma dos 27 estados. ${parciais} estado(s) ainda sem totalização final.` : "Soma dos 27 estados, resultado oficial do TSE.",
-    partidos: n.partidos, totalVagas: n.totalVagas, rotuloTotal: "cadeiras",
-  });
-  const linhas = n.partidos.map((p) => {
-    const ufs = Object.entries(p.porUF).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([u, q]) => `${u} ${q}`).join(" · ");
-    return `<tr><td><span class="chip" style="--cor:${corPartido(p.sigla)}">${esc(p.sigla)}</span></td><td><strong>${p.vagas}</strong></td><td>${p.confirmadas}</td><td>${fmt(p.votos)}</td><td style="text-align:left;white-space:normal">${esc(ufs)}</td></tr>`;
-  }).join("");
-  const f = estado.filtros;
-  const mantidos = new Set(filtrarUfs(n.ufs.map((u) => u.uf), f, (uf) => (n.ufs.find((u) => u.uf === uf)?.oficial ? "definida" : "aberta")));
-  const porEstado = n.ufs.filter((u) => mantidos.has(u.uf)).sort((a, b) => a.uf.localeCompare(b.uf)).map((u) => {
-    const ban = [...u.bancadas].sort((a, b) => b.vagas - a.vagas).map((x) => `<span class="chip" style="--cor:${corPartido(x.sigla)}">${esc(x.sigla)} ${x.vagas}</span>`).join(" ");
-    return `<tr class="clicavel" data-uf="${u.uf}"><td class="uf-nome">${esc(UFS[u.uf])}</td><td>${u.vagas}</td>
-    <td><span class="mini-barra"><i style="width:${Math.min(100, u.pct)}%"></i></span>${pct(u.pct)}</td><td>${u.oficial ? "oficial" : "projeção"}</td><td style="text-align:left;white-space:normal">${ban || "–"}</td></tr>`;
-  }).join("");
-  return `${blocoProgresso("Brasil: Deputados Federais", null, v.ac.ufs.br)}${blocoEvolucao("Evolução da apuração no Brasil", v.h, "e", "br")}${cadeiras}
-    <section class="card"><h2>Quadro geral da Câmara por partido/federação</h2>
-    <p class="muted">Previsão = soma das cadeiras de cada estado com os votos contados até agora. Confirmadas = cadeiras de estados já com totalização final (${n.confirmadasTotal} de ${n.totalVagas}).</p>
-    <div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Previsão</th><th>Confirmadas</th><th>Votos</th><th>Maiores bancadas por estado</th></tr>${linhas}</table></div>${COMO}</section>
-    <section class="card"><h2>Apuração e cadeiras em cada estado</h2>${barraFiltros(f, { comSegundo: false })}<div class="tab-scroll"><table><tr><th>Estado</th><th>Vagas</th><th>Apurado</th><th>Situação</th><th>Cadeiras por partido/federação</th></tr>${porEstado || `<tr><td colspan="5" class="muted" style="text-align:left">Nenhum estado com esses filtros.</td></tr>`}</table></div>
-    <p class="muted">Cada estado elege só os seus deputados. Clique em um estado para ver a distribuição detalhada.</p></section>`;
+  const evolucao = linhaEvolucao(v.h, (pt) => pt.e?.br, { rotulo: "Evolução da apuração no Brasil", inicio: INICIO_APURACAO, ate: Date.now() });
+  return `${hero}
+    <section class="card"><div class="titulo-cadeiras"><h2>Câmara em 2027</h2><span><strong>${n.total}</strong> <span class="muted">de ${n.totalVagas}</span></span></div>
+      ${plenarioCamara(n)}
+      <p class="muted">${parciais ? `Previsão: soma dos 27 estados, com ${parciais} ainda sem totalização final.` : "Soma dos 27 estados, resultado oficial do TSE."} Maioria: ${MAIORIA_CAMARA}.${maior ? ` Maior bancada: <strong>${esc(maior.sigla)}</strong> (${maior.vagas}).` : ""}</p>
+      <div class="bancada-topo">${seletorAgrupCamara(agrup)}</div>
+      ${corpo}
+      <p class="muted nota">Previsão = soma das cadeiras de cada estado com os votos contados até agora. Confirmadas = cadeiras de estados já com totalização final (${n.confirmadasTotal} de ${n.totalVagas}). Cada estado elege só os seus deputados: toque em um estado para ver a distribuição detalhada.</p></section>
+    <section class="card"><details><summary class="resumo-lista"><h2>Evolução da apuração no Brasil</h2></summary>${evolucao}<p class="muted">% de seções apuradas ao longo do tempo (registro a cada minuto).</p></details></section>
+    <section class="card">${COMO}</section>`;
 }
 
 // A navegação fica fora do conteúdo: persiste e não perde a rolagem a cada atualização.
@@ -756,6 +773,8 @@ $("conteudo").addEventListener("click", (e) => {
   if (filtro) { estado.regiao = filtro.dataset.filtroRegiao; navegar({ uf: "BR", mun: "" }); return; }
   const mapaUf = e.target.closest("[data-mapa-uf]");
   if (mapaUf) { estado.mapaUf = estado.mapaUf === mapaUf.dataset.mapaUf ? "" : mapaUf.dataset.mapaUf; render(); return; }
+  const agrupC = e.target.closest("[data-agrup-camara]");
+  if (agrupC) { estado.agrupCamara = agrupC.dataset.agrupCamara; render(); return; }
   const agrup = e.target.closest("[data-agrup-bancada]");
   if (agrup) { estado.agrupBancada = agrup.dataset.agrupBancada; render(); return; }
   const visao = e.target.closest("[data-visao-senado]");

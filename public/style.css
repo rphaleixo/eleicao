@@ -510,3 +510,11 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 
 .escala-apuracao { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: .72rem; color: var(--muted); }
 .escala-apuracao i { flex: 1; max-width: 160px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, color-mix(in srgb, var(--acento) 22%, transparent), var(--acento)); }
+
+/* Câmara */
+.plenario-camara { grid-template-columns: repeat(57, 1fr); gap: 2px; } .plenario-camara i { border-radius: 2px; }
+.camara-partidos li { grid-template-columns: minmax(70px, 34%) 1fr 54px; grid-template-areas: "c b t" "d d d"; }
+.camara-partidos .chip { grid-area: c; } .camara-partidos .bp-barra { grid-area: b; } .camara-partidos .bp-total { grid-area: t; } .bc-detalhe { grid-area: d; color: var(--muted); font-size: .72rem; }
+.card-camara { gap: 10px; } .cc-vagas { font-size: .9rem; } .cc-vagas strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; } .cc-vagas small { color: var(--muted); }
+.cc-barra { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--barra); gap: 1px; } .cc-barra i { display: block; height: 100%; }
+.cc-chips { display: flex; flex-wrap: wrap; gap: 4px; } .cc-chips .chip { margin: 0; } .cc-chips .chip.mais { background: var(--barra); color: var(--txt); text-shadow: none; }
