@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apuração Eleições 2026</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Apuração Eleições 2026</h1>
+    <p class="sub">Dados do TSE, atualizados automaticamente. Site independente, não oficial.</p>
+  </header>
+
+  <nav id="cargos" aria-label="Cargos"></nav>
+
+  <section class="filtros">
+    <label>Estado
+      <select id="uf"></select>
+    </label>
+    <label id="lbl-mun">Município
+      <select id="mun"></select>
+    </label>
+    <span id="status" role="status"></span>
+  </section>
+
+  <main id="conteudo"></main>
+
+  <footer>
+    <p>Fonte: arquivos de divulgação de resultados do TSE (resultados.tse.jus.br). Os números só são oficiais no site do TSE.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
