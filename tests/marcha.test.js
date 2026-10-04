@@ -19,7 +19,8 @@ test("agregar soma seções e calcula percentuais", () => {
 
 const ufs = Object.fromEntries(Object.keys(UFS).map((u) => [u.toLowerCase(), { pct: 50, ts: 10, st: 5, andamento: "p", eleitores: 100, comparecimento: 40, abstencao: 10, dt: "", ht: "" }]));
 ufs.br = { ...ufs.ac, ts: 270, st: 135 };
-const v = { f: { ufs }, e: { ufs }, h: [], detalhe: { pres: null, gov: null, sen: null } };
+const ufsF = { ...ufs, zz: { pct: 10, ts: 5, st: 1, andamento: "p", eleitores: 50, comparecimento: 5, abstencao: 5, dt: "", ht: "" } };
+const v = { f: { ufs: ufsF }, e: { ufs }, h: [], detalhe: { pres: null, gov: null, sen: null } };
 
 test("tela do Brasil: seções, regiões, tabelas e filtro por região", () => {
   const h = telaMarcha(v, { uf: "BR", serie: "f", regiao: "" });
@@ -32,4 +33,13 @@ test("tela do Brasil: seções, regiões, tabelas e filtro por região", () => {
 test("tela do estado: detalhamento e atalhos", () => {
   const h = telaMarcha(v, { uf: "RJ", serie: "f", regiao: "" });
   assert.ok(h.includes("Rio de Janeiro") && h.includes("data-voltar") && h.includes('data-ir="dep-federal"'));
+});
+
+test("exterior aparece só na apuração presidencial e entra nos totais", () => {
+  const f = telaMarcha(v, { uf: "BR", serie: "f", regiao: "" });
+  assert.ok(f.includes('data-ir-uf="ZZ"') && f.includes("voto no exterior"));
+  const e = telaMarcha(v, { uf: "BR", serie: "e", regiao: "" });
+  assert.ok(!e.includes('data-ir-uf="ZZ"') && e.includes("só para Presidente"));
+  const sul = telaMarcha(v, { uf: "BR", serie: "f", regiao: "sul" });
+  assert.equal((sul.match(/data-ir-uf="ZZ"/g) || []).length, 1); // só na linha da seção de regiões
 });

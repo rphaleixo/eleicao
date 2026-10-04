@@ -61,14 +61,20 @@ function cardComparecimento(titulo, a) {
   return `<section class="card"><h2>${esc(titulo)}</h2>${corpo}<p class="muted">Eleitorado total: ${fmt(a.eleitores)}. Os percentuais consideram só as seções já apuradas.</p></section>`;
 }
 
-function cardRegioes(ac, regiao) {
+function cardRegioes(ac, regiao, ext) {
   const linhas = Object.entries(REGIOES).map(([k, r]) => {
     const a = agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()]));
     return `<tr class="clicavel ${regiao === k ? "ativa" : ""}" data-regiao="${k}"><td class="uf-nome">${r.nome}<small class="muted">${r.ufs.length} estados · ${mi(a.eleitores)}</small></td>
       <td class="com-barra">${pct(a.pct)}${barra(a.pct)}</td><td>${a.comparecimento || a.abstencao ? pct(a.pctComp) : "–"}</td><td>${a.comparecimento || a.abstencao ? pct(a.pctAbst) : "–"}</td></tr>`;
   }).join("");
-  return `<section class="card"><h2>Por região</h2><div class="tab-scroll"><table class="compacta"><tr><th>Região</th><th>Apurado</th><th>Comp.</th><th>Abst.</th></tr>${linhas}</table></div>
-    <p class="muted">Toque em uma região para filtrar as tabelas de estados abaixo.</p></section>`;
+  const e = ext ? doEstado(ext) : null;
+  const linhaExt = e ? `<tr class="clicavel" data-ir="presidente" data-ir-uf="ZZ"><td class="uf-nome">Exterior<small class="muted">voto no exterior · ${mi(e.eleitores)}</small></td>
+      <td class="com-barra">${pct(e.pct)}${barra(e.pct)}</td><td>${e.comparecimento || e.abstencao ? pct(e.pctComp) : "–"}</td><td>${e.comparecimento || e.abstencao ? pct(e.pctAbst) : "–"}</td></tr>` : "";
+  const nota = ext
+    ? `O exterior (${fmt(ext.ts)} seções) entra no total do Brasil e só vale para Presidente.`
+    : "Eleitores no exterior votam só para Presidente, por isso o total de seções das eleições estaduais é menor.";
+  return `<section class="card"><h2>Por região</h2><div class="tab-scroll"><table class="compacta"><tr><th>Região</th><th>Apurado</th><th>Comp.</th><th>Abst.</th></tr>${linhas}${linhaExt}</table></div>
+    <p class="muted">Toque em uma região para filtrar as tabelas de estados abaixo. ${nota}</p></section>`;
 }
 
 const ufsDaRegiao = (regiao) => (regiao ? REGIOES[regiao].ufs : Object.keys(UFS)).slice().sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
@@ -83,14 +89,20 @@ function cardTabelaComparecimento(ac, regiao) {
   return `<section class="card"><h2>Comparecimento e abstenção por estado</h2><div class="tab-scroll"><table class="compacta"><tr><th>Estado</th><th>Comparecimento</th><th>Abstenção</th></tr>${linhas}</table></div></section>`;
 }
 
-function cardTabelaApuracao(ac, regiao) {
+function linhaExteriorApuracao(ext) {
+  const a = doEstado(ext);
+  return `<tr class="clicavel" data-ir="presidente" data-ir-uf="ZZ"><td class="uf-nome">Exterior<small class="muted">${fmt(a.st)} de ${fmt(a.ts)} seções</small>${selo(ext.andamento)}</td>
+      <td class="com-barra">${pct(a.pct)}${barra(a.pct)}</td><td class="seta" aria-hidden="true">›</td></tr>`;
+}
+
+function cardTabelaApuracao(ac, regiao, ext) {
   const linhas = ufsDaRegiao(regiao).map((uf) => {
     const u = ac.ufs[uf.toLowerCase()];
     const a = doEstado(u);
     return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(UFS[uf])}<small class="muted">${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções` : "–"}</small>${selo(u?.andamento)}</td>
       <td class="com-barra">${pct(a?.pct ?? 0)}${barra(a?.pct ?? 0)}</td><td class="seta" aria-hidden="true">›</td></tr>`;
   }).join("");
-  return `<section class="card"><h2>Apuração por estado</h2><div class="tab-scroll"><table class="compacta"><tr><th>Estado</th><th>Apurado</th><th></th></tr>${linhas}</table></div>
+  return `<section class="card"><h2>Apuração por estado</h2><div class="tab-scroll"><table class="compacta"><tr><th>Estado</th><th>Apurado</th><th></th></tr>${linhas}${ext && !regiao ? linhaExteriorApuracao(ext) : ""}</table></div>
     <p class="muted">Toque em um estado para ver o detalhamento da eleição.</p></section>`;
 }
 
@@ -125,14 +137,15 @@ export function telaMarcha(v, estado) {
   const { serie, regiao } = estado;
   const ac = serie === "f" ? v.f : v.e;
   const br = ac.ufs.br;
-  const todos = agregar(Object.keys(UFS).map((u) => ac.ufs[u.toLowerCase()]));
+  const ext = serie === "f" ? ac.ufs.zz : null; // votam no exterior só para Presidente
+  const todos = agregar([...Object.keys(UFS).map((u) => ac.ufs[u.toLowerCase()]), ext]);
   const brasil = br ? { ...todos, ts: br.ts || todos.ts, st: br.st ?? todos.st, pct: br.pct } : todos;
   return `${controleSerie(serie)}
     ${cardProgresso("Brasil", brasil, br, br?.andamento, [br?.dt, br?.ht].filter(Boolean).join(" "))}
     ${cardEvolucao("Evolução da apuração no Brasil", v.h, serie, "br")}
     ${cardComparecimento("Comparecimento e abstenção no Brasil", todos)}
-    ${cardRegioes(ac, regiao)}
+    ${cardRegioes(ac, regiao, ext)}
     ${regiao ? `<p class="filtro-ativo">Mostrando só a região ${REGIOES[regiao].nome}. <button type="button" class="link" data-regiao="">Limpar</button></p>` : ""}
-    ${cardTabelaApuracao(ac, regiao)}
+    ${cardTabelaApuracao(ac, regiao, ext)}
     ${cardTabelaComparecimento(ac, regiao)}`;
 }

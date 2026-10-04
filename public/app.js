@@ -14,7 +14,7 @@ const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
 const pct = (n, c = 2) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c }) + "%";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const hora = (d) => d.toLocaleTimeString("pt-BR");
-const nomeUF = (uf) => (uf === "BR" ? "Brasil" : UFS[uf] ?? uf);
+const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
 const estado = { aba: "presidente", uf: "BR", mun: "", municipios: {}, mostrar: 50, view: null, serie: "f", regiao: "" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "", carregando: false, pendente: false };
@@ -24,15 +24,16 @@ function lerHash() {
   const [, aba, uf, mun] = location.hash.split("/");
   estado.aba = ABAS.some((a) => a.id === aba) ? aba : "presidente";
   const u = (uf || "BR").toUpperCase();
-  estado.uf = u === "BR" || UFS[u] ? u : "BR";
+  estado.uf = u === "BR" || UFS[u] || (u === "ZZ" && estado.aba === "presidente") ? u : "BR"; // ZZ = voto no exterior (só Presidente)
   estado.mun = /^\d{5}$/.test(mun || "") && estado.uf !== "BR" ? mun : "";
 }
 const gravarHash = () => history.replaceState(null, "", "#/" + [estado.aba, estado.uf, estado.mun].filter(Boolean).join("/"));
-const permiteMun = () => ["presidente", "governador", "senador"].includes(estado.aba) && estado.uf !== "BR";
+const permiteMun = () => ["presidente", "governador", "senador"].includes(estado.aba) && estado.uf !== "BR" && estado.uf !== "ZZ";
 
 function montarControles() {
   $("abas").innerHTML = ABAS.map((a) => `<button data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
-  $("uf").innerHTML = `<option value="BR">Brasil</option>` + Object.entries(UFS).map(([s, n]) => `<option value="${s}">${n}</option>`).join("");
+  $("uf").innerHTML = `<option value="BR">Brasil</option>` + Object.entries(UFS).map(([s, n]) => `<option value="${s}">${n}</option>`).join("") +
+    (estado.aba === "presidente" ? `<option value="ZZ">Exterior</option>` : "");
   $("uf").value = estado.uf;
   $("lbl-mun").hidden = !permiteMun();
   const lista = estado.municipios[estado.uf] || [];
@@ -42,6 +43,7 @@ function montarControles() {
 
 function navegar(mudanca) {
   Object.assign(estado, mudanca);
+  if (estado.uf === "ZZ" && estado.aba !== "presidente") estado.uf = "BR";
   if (mudanca.aba || mudanca.uf) estado.mun = mudanca.mun ?? "";
   estado.mostrar = 50;
   gravarHash(); montarControles(); atualizar();
@@ -74,7 +76,7 @@ function emSegundoPlano(chave, ttlMs, produtor) {
 }
 
 async function panorama(cargo) {
-  const ufs = Object.keys(UFS);
+  const ufs = [...Object.keys(UFS), ...(cargo === "presidente" ? ["ZZ"] : [])];
   const rs = await Promise.allSettled(ufs.map((uf) => obter(cargo, uf)));
   return ufs.map((uf, i) => ({ uf, d: rs[i].status === "fulfilled" ? rs[i].value : null }));
 }
@@ -250,7 +252,7 @@ function tabelaPanorama(aba, lista, ac) {
     const p = ac.ufs[k];
     const top = (d?.candidatos ?? []).filter((c) => c.votos > 0).slice(0, 2);
     const cel = (c) => c ? `<span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${esc(c.nome)} <span class="muted">${fmt(c.votos)}</span>` : "–";
-    return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(UFS[uf])}</td>
+    return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(nomeUF(uf))}</td>
       <td>${p ? `<span class="mini-barra"><i style="width:${Math.min(100, p.pct)}%"></i></span>${pct(p.pct, 1)}` : "–"}</td>
       <td style="text-align:left">${cel(top[0])}</td><td style="text-align:left">${cel(top[1])}</td></tr>`;
   }).join("");
@@ -384,7 +386,7 @@ $("conteudo").addEventListener("click", (e) => {
   if (reg) { estado.regiao = estado.regiao === reg.dataset.regiao ? "" : reg.dataset.regiao; render(); return; }
   if (e.target.closest("[data-voltar]")) { navegar({ uf: "BR", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   const ir = e.target.closest("[data-ir]");
-  if (ir) { navegar({ aba: ir.dataset.ir, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (ir) { navegar({ aba: ir.dataset.ir, ...(ir.dataset.irUf ? { uf: ir.dataset.irUf } : {}), mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (e.target.closest("[data-mais]")) { estado.mostrar += 50; render(); return; }
   const tr = e.target.closest("tr[data-uf]");
   if (tr) {
