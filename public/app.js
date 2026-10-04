@@ -1,3 +1,4 @@
+import { telaMarcha } from "./marcha.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS } from "./config.js";
 import {
@@ -15,7 +16,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : UFS[uf] ?? uf);
 
-const estado = { aba: "presidente", uf: "BR", mun: "", municipios: {}, mostrar: 50, view: null };
+const estado = { aba: "presidente", uf: "BR", mun: "", municipios: {}, mostrar: 50, view: null, serie: "f", regiao: "" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "", carregando: false, pendente: false };
 
 // ---------- navegação (guardada na URL: #/governador/SP/71072) ----------
@@ -87,8 +88,9 @@ async function carregarView() {
   const { aba, uf, mun } = estado;
   const hist = obterHistorico();
   if (aba === "andamento") {
-    const [f, e, h] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist]);
-    return { tipo: "andamento", f, e, h };
+    const talvez = (cargo) => (uf === "BR" ? null : obter(cargo, uf).catch(() => null));
+    const [f, e, h, pres, gov, sen] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist, talvez("presidente"), talvez("governador"), talvez("senador")]);
+    return { tipo: "andamento", f, e, h, detalhe: { pres, gov, sen } };
   }
   const cargo = CARGOS[aba];
   const acomp = obterAcompanhamento(aba);
@@ -237,19 +239,6 @@ function maisVotados(d, rotulo = "Candidatos por votos") {
   return `<section class="card"><h2>${esc(rotulo)} (${fmt(d.candidatos.length)})</h2>${itens}${mais}</section>`;
 }
 
-function tabelaAndamento(f, e, h, selecionada) {
-  const ufs = Object.keys(UFS);
-  const linhas = ufs.map((uf) => {
-    const k = uf.toLowerCase(), fe = f.ufs[k], ee = e.ufs[k];
-    const barra = (v) => v ? `<span class="mini-barra"><i style="width:${Math.min(100, v.pct)}%"></i></span>${pct(v.pct, 1)}` : "–";
-    return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(UFS[uf])}</td><td>${barra(fe)}</td><td>${barra(ee)}</td>
-      <td>${sparkline(h, (p) => p.e?.[k])}</td><td>${selo(ee?.andamento)}</td></tr>`;
-  }).join("");
-  return `<section class="card"><h2>Andamento por estado</h2><div class="tab-scroll"><table>
-    <tr><th>Estado</th><th>Presidente</th><th>Estaduais</th><th>Evolução</th><th>Situação</th></tr>${linhas}</table></div>
-    <p class="muted">Clique em um estado para ver os gráficos. Estaduais: Governador, Senador e Deputados.</p></section>`;
-}
-
 function carregandoEstados(titulo) {
   return `<section class="card"><h2>${esc(titulo)}</h2><p class="muted">Carregando os 27 estados…</p></section>`;
 }
@@ -270,18 +259,6 @@ function tabelaPanorama(aba, lista, ac) {
 }
 
 // ---------- telas ----------
-function telaAndamento(v) {
-  const br = (x) => x.ufs.br;
-  const uf = estado.uf !== "BR" ? estado.uf : null;
-  const k = uf?.toLowerCase();
-  const extra = uf
-    ? `<div class="grade2">${blocoEvolucao(`Presidente em ${nomeUF(uf)}`, v.h, "f", k)}${blocoEvolucao(`Eleições estaduais em ${nomeUF(uf)}`, v.h, "e", k)}</div>`
-    : "";
-  return `<div class="grade2">${blocoProgresso("Brasil: Presidente", null, br(v.f))}${blocoProgresso("Brasil: Governador, Senador e Deputados", null, br(v.e))}</div>
-    <div class="grade2">${blocoEvolucao("Evolução no Brasil: Presidente", v.h, "f", "br")}${blocoEvolucao("Evolução no Brasil: eleições estaduais", v.h, "e", "br")}</div>
-    ${extra}${tabelaAndamento(v.f, v.e, v.h)}`;
-}
-
 function telaMajoritaria(v) {
   const { d } = v, { aba, uf, mun } = estado;
   const local = mun ? `${nomeUF(uf)}, município ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : nomeUF(uf);
@@ -350,7 +327,7 @@ function telaEstaduaisLista(v) {
 function render() {
   const v = estado.view;
   if (!v) return;
-  const tela = { andamento: telaAndamento, maj: telaMajoritaria, panorama: telaPanorama, prop: telaProporcionalUF, "nacional-prop": telaNacionalProp, "estaduais-lista": telaEstaduaisLista }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado), maj: telaMajoritaria, panorama: telaPanorama, prop: telaProporcionalUF, "nacional-prop": telaNacionalProp, "estaduais-lista": telaEstaduaisLista }[v.tipo];
   $("conteudo").innerHTML = tela(v);
 }
 
@@ -401,6 +378,13 @@ $("conteudo").addEventListener("keydown", (e) => {
 $("conteudo").addEventListener("click", (e) => {
   const it = e.target.closest("[data-sq]");
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
+  const serie = e.target.closest("[data-serie]");
+  if (serie) { estado.serie = serie.dataset.serie; render(); return; }
+  const reg = e.target.closest("[data-regiao]");
+  if (reg) { estado.regiao = estado.regiao === reg.dataset.regiao ? "" : reg.dataset.regiao; render(); return; }
+  if (e.target.closest("[data-voltar]")) { navegar({ uf: "BR", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const ir = e.target.closest("[data-ir]");
+  if (ir) { navegar({ aba: ir.dataset.ir, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (e.target.closest("[data-mais]")) { estado.mostrar += 50; render(); return; }
   const tr = e.target.closest("tr[data-uf]");
   if (tr) {

@@ -23,7 +23,7 @@ export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotu
     .map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${g}%</text>`)
     .join("");
   const ticks = [0, 1, 2, 3, 4]
-    .map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="middle">${hhmm(t)}</text>`; })
+    .map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; })
     .join("");
   const ult = pts[pts.length - 1];
   return `<svg class="grafico" viewBox="0 0 ${largura} ${altura}" role="img" aria-label="${rotulo}: ${ult.v.toLocaleString("pt-BR")}% das seções apuradas">

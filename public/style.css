@@ -133,3 +133,37 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .ficha-aba { flex: none; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--muted); font: inherit; padding: 8px 12px; cursor: pointer; }
 .ficha-aba[aria-selected="true"] { color: var(--txt); font-weight: 600; border-bottom-color: var(--acento); }
 .ficha-painel section:first-child h3 { margin-top: 0; }
+
+/* Marcha da apuração (mobile first) */
+.seg { display: flex; margin-top: 14px; background: var(--barra); border-radius: 12px; padding: 3px; gap: 3px; }
+.seg button { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; padding: 10px 6px; border-radius: 10px; cursor: pointer; min-height: 44px; }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--txt); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+.seg-dica { margin: 6px 4px 0; }
+:root { --comp: #1f7a5a; --abst: #b9c2cf; }
+@media (prefers-color-scheme: dark) { :root { --comp: #4cc58a; --abst: #4a5667; } }
+.barra-dupla { display: flex; height: 18px; border-radius: 9px; overflow: hidden; background: var(--barra); margin: 12px 0 10px; }
+.barra-dupla i { display: block; height: 100%; transition: width .5s; }
+.barra-dupla .comp, .pt.comp { background: var(--comp); } .barra-dupla .abst, .pt.abst { background: var(--abst); }
+.duplo-legenda { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.duplo-legenda span { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--muted); }
+.duplo-legenda strong { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.duplo-legenda small { display: block; }
+.duplo-legenda .pt { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+table.compacta td, table.compacta th { padding: 10px 6px; }
+table.compacta td small { display: block; font-weight: 400; font-size: .74rem; }
+table.compacta .selo { white-space: nowrap; font-size: .7rem; }
+table.compacta td.seta { color: var(--muted); font-size: 1.3rem; padding-left: 0; width: 18px; }
+tr.clicavel { cursor: pointer; } tr.clicavel:active { background: var(--barra); }
+tr.ativa td { background: color-mix(in srgb, var(--acento) 12%, transparent); }
+.filtro-ativo { margin: 12px 4px 0; font-size: .88rem; }
+.link { border: 0; background: none; color: var(--acento); font: inherit; font-weight: 600; cursor: pointer; padding: 6px 4px; min-height: 36px; }
+.voltar { margin-top: 12px; border: 1px solid var(--line); background: var(--card); color: var(--txt); font: inherit; font-weight: 600; padding: 10px 14px; border-radius: 10px; min-height: 44px; cursor: pointer; }
+.lid-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .lid-topo h2 { margin: 0; }
+.lideres { list-style: none; margin: 8px 0 0; padding: 0; }
+.lideres li { display: grid; grid-template-columns: 20px auto 1fr auto; align-items: center; gap: 6px; padding: 9px 0; border-top: 1px solid var(--line); }
+.lideres li:first-child { border-top: 0; } .lid-nome { overflow-wrap: anywhere; font-weight: 600; }
+.atalhos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.atalhos button { border: 1px solid var(--line); background: var(--bg); color: var(--txt); font: inherit; font-weight: 600; padding: 12px 8px; border-radius: 10px; min-height: 44px; cursor: pointer; }
+@media (min-width: 700px) { .atalhos { grid-template-columns: repeat(5, 1fr); } }
+table.compacta td.com-barra { white-space: nowrap; } table.compacta .mini-barra { display: block; width: 100%; min-width: 54px; margin: 4px 0 0; }
+table.compacta td.uf-nome .selo { margin-top: 4px; }
