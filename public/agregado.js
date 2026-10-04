@@ -1,5 +1,11 @@
 // Soma o resultado de vários locais (estados de uma região) em um único resultado, no mesmo
 // formato de normalizar() em tse.js, para mostrar uma região como se fosse uma "eleição".
+/** O mais recente de vários "dd/mm/aaaa hh:mm:ss". */
+export function maisRecente(textos) {
+  const valor = (t) => { const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(String(t || "").trim()); return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +m[6]) : -1; };
+  return textos.filter(Boolean).reduce((a, t) => (valor(t) > valor(a) ? t : a), "");
+}
+
 export function agregarResultados(lista) {
   const ds = lista.filter(Boolean);
   if (!ds.length) return null;
@@ -22,6 +28,6 @@ export function agregarResultados(lista) {
     comparecimento: soma("comparecimento"), abstencao: soma("abstencao"),
     divulgaVotos: ds.some((d) => d.divulgaVotos), definido: "", semEleito: false, motivosSemEleito: [], totalizacaoFinal: ds.every((d) => d.totalizacaoFinal),
     andamento: ds.every((d) => d.andamento === "f") ? "f" : ds.some((d) => d.andamento !== "n") ? "p" : "n",
-    atualizadoEm: "",
+    atualizadoEm: maisRecente(ds.map((d) => d.atualizadoEm)),
   };
 }

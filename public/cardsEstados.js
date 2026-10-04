@@ -34,8 +34,11 @@ export function cardRegiao(id, nome, sigla, d, u, cargo = "presidente", total = 
 }
 
 function cardBase({ chave, sigla, nome, uf, d, u, cargo, total, extra = "" }) {
-  const apurado = u?.pct ?? d?.pctSecoes ?? 0;
-  const abst = abstencaoDe(u);
+  // Os números do card vêm do mesmo arquivo dos votos mostrados (o do cargo); o acompanhamento só entra se ele faltar.
+  const doCargo = d && d.secoesTotal > 0;
+  const apurado = doCargo ? d.pctSecoes : u?.pct ?? 0;
+  const abst = doCargo ? abstencaoDe({ comparecimento: d.comparecimento, abstencao: d.abstencao }) : abstencaoDe(u);
+  const eleitores = doCargo && d.eleitorado?.apto ? d.eleitorado.apto : u?.eleitores;
   const todos = d ? ordenarCandidatos(d.candidatos) : [];
   const top = todos.slice(0, total);
   const and = u?.andamento ?? d?.andamento ?? "n";
@@ -53,7 +56,7 @@ function cardBase({ chave, sigla, nome, uf, d, u, cargo, total, extra = "" }) {
     : !top.length ? `<p class="muted cu-aviso">${d ? "Sem candidatos" : "Resultado indisponível"}</p>`
     : `<ul class="cu-cands">${top.slice(0, 2).map(destaque).join("")}</ul>
        ${top.length > 2 ? `<ol class="cu-resto" start="3">${cargo === "senador" ? `<li class="cu-corte" role="presentation">${vagas} vagas</li>` : ""}${top.slice(2).map((c, i) => menor(c, i + 2)).join("")}</ol>` : ""}`;
-  const metricas = [abst == null ? "" : `Abstenção ${pct(abst)}`, u?.eleitores ? `${fmt(u.eleitores)} eleitores` : ""].filter(Boolean).join(" · ");
+  const metricas = [abst == null ? "" : `Abstenção ${pct(abst)}`, eleitores ? `${fmt(eleitores)} eleitores` : ""].filter(Boolean).join(" · ");
   return `<li><button type="button" class="card-uf${sit ? ` eleicao-${sit}` : ""}" ${chave} aria-label="${esc(nome)}: ver apuração completa">
     <span class="cu-topo"><span class="sigla">${esc(sigla)}</span><span class="cu-nome-uf"><b>${esc(nome)}</b>${seloEleicao(d)}</span>
       <span class="cu-pilula ${and}" title="${TEXTO[and] ?? TEXTO.n}"><i class="ponto ${and === "f" ? "f" : and === "p" ? "p" : "n"}"></i>${pct(apurado)}</span></span>

@@ -62,3 +62,11 @@ test("card do Senado mostra quem foi eleito em 2022", () => {
   assert.equal(linha2022(null), "");
   assert.ok(!cardEstado("PI", d, u, "governador").includes("Eleito em 2022"));
 });
+
+test("o card usa os números do arquivo do cargo (mesmos dos votos), não do acompanhamento", () => {
+  const cargo = { ...d, secoesTotal: 100, secoesApuradas: 24, pctSecoes: 24.45, comparecimento: 750, abstencao: 250, eleitorado: { apto: 2000, apuradas: 1000, comparecimento: 750, abstencao: 250 } };
+  const adiantado = { ...u, pct: 29.61, comparecimento: 900, abstencao: 100, eleitores: 1111 };
+  const h = cardEstado("RJ", cargo, adiantado);
+  assert.ok(h.includes("24,45%") && !h.includes("29,61%"));
+  assert.ok(h.includes("Abstenção 25,00%") && h.includes("2.000 eleitores") && !h.includes("1.111"));
+});

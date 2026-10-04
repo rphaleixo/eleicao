@@ -67,10 +67,10 @@ export function barraPresenca(a) {
 }
 
 /** Painel de destaque: anel de progresso, situação e gráfico de presença, tudo num cartão só. */
-export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave, grafico = true, topo = "" }) {
+export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave, grafico = true, topo = "", origem = "Acompanhamento TSE" }) {
   return `<section class="card hero">${topo}
     <div class="hero-topo">${anel(a.pct)}<div class="hero-info"><h2>${esc(titulo)}</h2>${subtitulo ? `<p class="hero-sub">${esc(subtitulo)}</p>` : ""}${selo(andamento)}
-      <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${extra}${quando ? `<p class="hero-sub">TSE: ${esc(quando)}</p>` : ""}</div></div>
+      <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${extra}${quando ? `<p class="hero-sub">${esc(origem)}: ${esc(quando)}</p>` : ""}</div></div>
     ${grafico === null ? "" : `<div class="hero-grafico">${grafico ? graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` }) : barraPresenca(a)}</div>`}</section>`;
 }
 
@@ -191,20 +191,20 @@ export function escopoDoPainel(v, regiao, uf = "BR") {
   const ac = v.f;
   if (uf !== "BR" && ac.ufs[uf.toLowerCase()]) {
     const u = ac.ufs[uf.toLowerCase()];
-    return { titulo: nomeEstado(uf), subtitulo: uf === "ZZ" ? "Voto de brasileiros no exterior" : "Estado", a: doEstado(u), andamento: u.andamento, quando: [u.dt, u.ht].filter(Boolean).join(" "), chave: uf.toLowerCase(), extra: "" };
+    return { titulo: nomeEstado(uf), subtitulo: uf === "ZZ" ? "Voto de brasileiros no exterior" : "Estado", a: doEstado(u), andamento: u.andamento, quando: ac.geradoEm, chave: uf.toLowerCase(), extra: "" };
   }
   if (regiao === "exterior" && ac.ufs.zz) {
     const u = ac.ufs.zz;
-    return { titulo: "Exterior", subtitulo: "Voto de brasileiros no exterior", a: doEstado(u), andamento: u.andamento, quando: [u.dt, u.ht].filter(Boolean).join(" "), chave: "zz", extra: "" };
+    return { titulo: "Exterior", subtitulo: "Voto de brasileiros no exterior", a: doEstado(u), andamento: u.andamento, quando: ac.geradoEm, chave: "zz", extra: "" };
   }
   if (REGIOES[regiao]) {
     const us = REGIOES[regiao].ufs.map((x) => ac.ufs[x.toLowerCase()]);
-    return { titulo: REGIOES[regiao].nome, subtitulo: `Região · ${us.length} estados`, a: agregar(us), andamento: situacaoGeral(us), quando: "", chave: REGIOES[regiao].ufs.map((x) => x.toLowerCase()), extra: "" };
+    return { titulo: REGIOES[regiao].nome, subtitulo: `Região · ${us.length} estados`, a: agregar(us), andamento: situacaoGeral(us), quando: ac.geradoEm, chave: REGIOES[regiao].ufs.map((x) => x.toLowerCase()), extra: "" };
   }
   const br = ac.ufs.br, e = v.e.ufs.br;
   const todos = agregar([...Object.keys(UFS).map((u) => ac.ufs[u.toLowerCase()]), ac.ufs.zz]);
   const a = br ? { ...todos, ts: br.ts || todos.ts, st: br.st ?? todos.st, pct: br.pct, eleitores: br.eleitores || todos.eleitores } : todos;
-  return { titulo: "Brasil", subtitulo: "Todas as urnas, com o exterior", a, andamento: br?.andamento, quando: [br?.dt, br?.ht].filter(Boolean).join(" "), chave: "br",
+  return { titulo: "Brasil", subtitulo: "Todas as urnas, com o exterior", a, andamento: br?.andamento, quando: ac.geradoEm, chave: "br",
     extra: e ? `<p class="hero-sub">Eleições estaduais: ${pct(e.pct)} das seções</p>` : "" };
 }
 
@@ -231,6 +231,7 @@ export function telaMarcha(v, estado, comNav = true) {
   const hero = estado.painel === "regioes" ? heroRegioes(v, estado, topo, p)
     : heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave, topo });
   return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${hero}
+    <p class="muted nota-fonte">Acompanhamento do TSE, no horário de Brasília. Os resultados por cargo (aba Presidente) são publicados em arquivos separados e podem estar alguns minutos atrás deste acompanhamento.</p>
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
       <ul class="lista-estados">${listaOrdenada(v, estado)}</ul>

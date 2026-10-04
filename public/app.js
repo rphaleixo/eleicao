@@ -379,8 +379,13 @@ function telaPresidente(v) {
   }
   const p = escopoDoPainel({ f: v.ac, e: { ufs: {} } }, uf === "BR" ? regiao : "", uf);
   const nome = mun ? `${nomeUF(uf)}, ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : p.titulo;
-  // Município: o painel usa os números do próprio município (o arquivo de acompanhamento só vai até o estado).
-  const painel = mun && d ? { ...p, subtitulo: "Município", a: { ...p.a, st: d.secoesApuradas, ts: d.secoesTotal, pct: d.pctSecoes }, andamento: d.andamento, quando: d.atualizadoEm } : p;
+  // O painel usa o mesmo arquivo dos votos mostrados (o do cargo), para bater com o site do TSE.
+  // O acompanhamento por estado pode estar alguns minutos à frente do arquivo nacional do cargo.
+  const doArquivo = d && d.secoesTotal > 0
+    ? { ...p, subtitulo: mun ? "Município" : p.subtitulo, a: { ...p.a, st: d.secoesApuradas, ts: d.secoesTotal, pct: d.pctSecoes, ...(d.eleitorado?.apto ? { eleitores: d.eleitorado.apto, comparecimento: d.comparecimento, abstencao: d.abstencao } : {}) },
+        andamento: d.andamento, quando: d.atualizadoEm, origem: "Dados do TSE" }
+    : p;
+  const painel = mun ? { ...doArquivo, extra: "" } : doArquivo;
   const hero = heroApuracao({ ...painel, titulo: nome, hist: v.h, grafico: mun ? null : false });
   const locaisGrafico = locaisResultado(uf, regiao);
   const listaCand = d
