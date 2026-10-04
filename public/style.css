@@ -46,3 +46,7 @@ th { font-weight: 600; color: var(--muted); border-top: 0; }
 .regras { display: flex; gap: 16px; flex-wrap: wrap; align-items: end; margin-top: 12px; }
 .tabela-scroll { overflow-x: auto; }
 footer { padding-bottom: 32px; margin-top: 32px; }
+[hidden] { display: none !important; }
+select { max-width: 100%; }
+.regras label { width: 100%; }
+.regras select { width: 100%; }

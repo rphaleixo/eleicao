@@ -1,5 +1,5 @@
 import { CONFIG, CARGOS, UFS, VAGAS_FEDERAIS } from "./config.js";
-import { urlResultado, urlMunicipios, buscarJson, normalizar, lerMunicipios } from "./tse.js";
+import { urlsResultado, urlMunicipios, buscarJson, buscarPrimeiro, normalizar, lerMunicipios } from "./tse.js";
 import {
   distribuirCadeiras, vagasEstaduais, REGRAS_STF_2024, REGRAS_CODIGO_LITERAL,
 } from "./quociente.js";
@@ -83,7 +83,7 @@ function listaCandidatos(cands, limite = 30) {
 
 function telaMajoritaria(d) {
   const c = CARGOS[estado.cargo];
-  const titulo = estado.cargo === "senador" ? `Senador (${c.vagas} vagas, os dois mais votados são eleitos)` : c.nome;
+  const titulo = estado.cargo === "senador" ? `Senador (${d.vagas || 2} vagas, os mais votados são eleitos)` : c.nome;
   return cabecalhoApuracao(d) + `<div class="card"><h2 style="margin-top:0">${titulo}</h2>${listaCandidatos(d.candidatos)}</div>`;
 }
 
@@ -159,14 +159,9 @@ function ligarEventosProporcional() {
 // ---------- carregamento ----------
 async function carregar() {
   const el = $("conteudo");
-  if (!CONFIG.eleicao) {
-    el.innerHTML = `<p class="aviso">Falta configurar o código da eleição do TSE em public/config.js (campo "eleicao"). Para testar com dados de 2022, abra o site com ?ano=2022&amp;ele=544 no final do endereço.</p>`;
-    return;
-  }
   $("status").textContent = "Atualizando…";
   try {
-    const url = urlResultado(estado.cargo, estado.uf, estado.mun);
-    const json = await buscarJson(url);
+    const { json } = await buscarPrimeiro(urlsResultado(estado.cargo, estado.uf, estado.mun));
     const d = normalizar(json);
     const proporcional = CARGOS[estado.cargo].proporcional;
     el.innerHTML = proporcional ? telaProporcional(d) : telaMajoritaria(d);
@@ -179,7 +174,6 @@ async function carregar() {
 }
 
 async function carregarMunicipios() {
-  if (!CONFIG.eleicao) return;
   try { estado.municipios = lerMunicipios(await buscarJson(urlMunicipios())); } catch { /* segue sem lista */ }
 }
 
