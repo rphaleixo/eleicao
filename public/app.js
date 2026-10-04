@@ -3,7 +3,8 @@ import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
 import { cardEstado, cardRegiao, gradeCards, linha2022 } from "./cardsEstados.js";
-import { montarBancada, telaBancada } from "./bancada.js";
+import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
+import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
 import { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO } from "./mapa.js";
 import { ordenarCandidatos } from "./ranking.js";
 import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao, seloSit, seloProjetado, rotuloEleito } from "./situacao.js";
@@ -25,7 +26,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", visaoEstados: "cards", mapaUf: "" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", visaoEstados: "cards", mapaUf: "", filtros: filtrosVazios(), fEleitos: { ...filtrosVazios(), status: "definida" } };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -156,6 +157,10 @@ async function carregarView(rota) {
     if (CARGOS[cargo].proporcional) { const d = await obter(cargo, uf); return { ...base, d, dist: distribuirEstado(d) }; }
     const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente(locaisResultado(uf, "")) : null]);
     return { ...base, d, rp };
+  }
+  if (aba === "eleitos") {
+    const lista = emSegundoPlano("pan-senador", CONFIG.atualizarACadaSegundos * 900, () => panorama("senador"));
+    return { tipo: "senadores-eleitos", lista };
   }
   if (aba === "governadores" || aba === "senadores") {
     const cargo = aba === "governadores" ? "governador" : "senador";
@@ -343,7 +348,17 @@ function telaBancadaSenado(v) {
   if (!v.lista || (v.mandatos === null)) return `${seletorSenado("bancada")}${telaBancada(null, { carregando: true })}`;
   if (!v.mandatos?.senadores) return `${seletorSenado("bancada")}<section class="card">${aviso("Não foi possível carregar a lista de senadores em exercício. Tentaremos de novo automaticamente.")}</section>`;
   const b = montarBancada({ mandatos: v.mandatos.senadores, resultados: v.lista });
-  return `${seletorSenado("bancada")}${telaBancada(b, { versao: v.mandatos.versao, agrupamento: estado.agrupBancada })}`;
+  // Nas visões por estado e em tabela, os filtros de região, estado e situação valem; na visão por partido a soma é do Senado todo.
+  const porEstado = estado.agrupBancada !== "partido";
+  let barra = "", bf = b;
+  if (porEstado) {
+    const f = estado.filtros;
+    const statusDe = (u) => (situacaoUf(b.porUf.find((x) => x.uf === u) ?? { eleitos: [], confirmados: 0 }) === "definida" ? "definida" : "aberta");
+    const mantidos = new Set(filtrarUfs(b.porUf.map((x) => x.uf), f, statusDe));
+    bf = { ...b, porUf: b.porUf.filter((x) => mantidos.has(x.uf)) };
+    barra = barraFiltros(f, { comSegundo: false });
+  }
+  return `${seletorSenado("bancada")}${telaBancada(bf, { versao: v.mandatos.versao, agrupamento: estado.agrupBancada, filtros: barra, totais: b })}`;
 }
 
 function telaCargoPorEstado(v) {
@@ -362,6 +377,30 @@ function telaCargoPorEstado(v) {
   const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra,
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
   return `${governador ? "" : seletorSenado("estados")}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
+}
+
+/** Senadores eleitos em 2026, com o estado de cada um. Filtros: região, estado e situação da eleição. */
+function telaSenadoresEleitos(v) {
+  const f = estado.fEleitos;
+  if (!v.lista) return carregandoEstados("Senadores eleitos");
+  const dDe = (u) => v.lista.find((x) => x.uf === u)?.d ?? null;
+  const todas = Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
+  const ufs = filtrarUfs(todas, f, (u) => (statusEleicao(dDe(u)) === "definida" ? "definida" : "aberta"));
+  let eleitos = 0, projetados = 0;
+  const linhas = ufs.flatMap((uf) => {
+    const d = dDe(uf);
+    if (!d) return [];
+    return ordenarCandidatos(d.candidatos).filter((c) => c.votos > 0 && c.elegivel).slice(0, d.vagas || 2).map((c) => ({ uf, c, ok: c.sit === "eleito" }));
+  });
+  for (const l of linhas) { if (l.ok) eleitos++; else projetados++; }
+  const itens = linhas.map(({ uf, c, ok }) => `<li class="se${ok ? " sit-eleito" : ""}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato" style="--cor:${corPartido(c.partido)}">
+      <span class="sigla">${uf}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto("senador", uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+      <span class="se-quem"><b>${esc(c.nome)}</b><span class="muted">${esc(UFS[uf])}</span></span><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>
+      <span class="se-votos"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)} votos</small></span>${ok ? seloSit({ sit: "eleito" }) : seloProjetado()}</li>`).join("");
+  return `<section class="card"><div class="titulo-cadeiras"><h2>Senadores eleitos em 2026</h2><span><strong>${eleitos}</strong> <span class="muted">de 54</span></span></div>
+    <p class="muted">${eleitos} eleito${eleitos === 1 ? "" : "s"} com a eleição definida${projetados ? ` · ${projetados} na projeção (os mais votados)` : ""}. Cada estado elege 2 senadores.</p>
+    ${barraFiltros(f, { escopo: "fEleitos", comSegundo: false, statusTodos: "Todas" })}
+    ${itens ? `<ul class="lista-se">${itens}</ul>` : `<p class="muted">Nenhum senador com esses filtros.</p>`}</section>`;
 }
 
 function telaPresidente(v) {
@@ -421,13 +460,14 @@ function lideresPorUf(lista, porPartido, maioria = false) {
 function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = false, maioria = false, extra = () => "", nota = "", comRegioes = false, exterior = false }) {
   const visao = estado.visaoEstados;
   const seg = (attr, valor, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === valor}">${n}</button>`).join("")}</div>`;
-  const chips = comRegioes ? `<div class="chips filtro-regioes" role="group" aria-label="Filtrar por região">${[["", "Todas"], ...Object.entries(REGIOES).map(([k, r]) => [k, r.nome]), ...(exterior ? [["exterior", "Exterior"]] : [])]
-    .map(([k, n]) => `<button type="button" data-filtro-regiao="${k}" aria-pressed="${regiao === k}">${n}</button>`).join("")}</div>` : "";
+  const chips = barraFiltros(estado.filtros, { comSegundo: cargo !== "senador", exterior });
   const controles = `<div class="estados-topo"><h2>${esc(titulo)}</h2>${seg("data-visao-estados", visao, [["cards", "Cards"], ["mapa", "Mapa"]])}</div>
     ${visao === "cards" ? `<div class="controles-estados">${seg("data-ordem", estado.ordem, [["az", "A–Z"], ["pct", "% apurado"]])}</div>` : ""}${chips}`;
   if (!lista) return `<section class="card">${controles}<p class="muted">Carregando os estados…</p></section>`;
   const dDe = (u) => lista.find((x) => x.uf === u)?.d ?? null;
   const apurado = (u) => ac.ufs[u.toLowerCase()]?.pct ?? 0;
+  const filtrando = !!(estado.filtros.regiao || estado.filtros.uf || estado.filtros.status);
+  ufs = filtrarUfs(ufs, estado.filtros, (u) => statusEleicao(dDe(u)));
   if (visao === "mapa") {
     const lideres = lideresPorUf(lista, porPartido, maioria);
     const dentro = new Set(ufs);
@@ -438,10 +478,11 @@ function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = fa
     const exteriorChip = exterior && ac.ufs.zz && lideres.ZZ !== undefined
       ? `<button type="button" class="chip-exterior${sel === "ZZ" ? " sel" : ""}" data-mapa-uf="ZZ"><i style="background:${lideres.ZZ?.cor ?? "var(--barra)"}"></i>Exterior${lideres.ZZ ? ` · ${esc(lideres.ZZ.quem)}` : ""}</button>` : "";
     const cartao = sel ? `<ul class="cards-estados cartao-mapa">${cardEstado(sel, dDe(sel), ac.ufs[sel.toLowerCase()], cargo, 5, extra(sel))}</ul>` : `<p class="muted dica-mapa">Toque em um estado para ver o resultado.</p>`;
-    return `<section class="card">${controles}<div class="mapa-area">${mapaBrasil(lideres, { selecionado: sel, destaque: regiao && regiao !== "exterior" ? dentro : null })}</div>${exteriorChip}
+    return `<section class="card">${controles}<div class="mapa-area">${mapaBrasil(lideres, { selecionado: sel, destaque: (regiao && regiao !== "exterior") || filtrando ? dentro : null })}</div>${exteriorChip}
       ${legendaMapa(contagem, { semVotos, nota: maioria ? "Cada estado ganha a cor do partido quando um candidato tem mais de 50% dos votos válidos. Sem essa maioria, a disputa vai ao 2º turno." : "" })}${cartao}${nota ? `<p class="muted nota">${nota}</p>` : ""}</section>`;
   }
   const ordenados = ufs.slice().sort(estado.ordem === "pct" ? (a, b) => apurado(b) - apurado(a) : (a, b) => (a === "ZZ") - (b === "ZZ") || (UFS[a] ?? "").localeCompare(UFS[b] ?? "", "pt-BR"));
+  if (!ordenados.length) return `<section class="card">${controles}<p class="muted">Nenhum estado com esses filtros.</p></section>`;
   return `<section class="card">${controles}${gradeCards(ordenados.map((u) => cardEstado(u, dDe(u), ac.ufs[u.toLowerCase()], cargo, 5, extra(u))))}${nota ? `<p class="muted nota">${nota}</p>` : ""}</section>`;
 }
 
@@ -499,7 +540,9 @@ function telaNacionalProp(v) {
     const ufs = Object.entries(p.porUF).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([u, q]) => `${u} ${q}`).join(" · ");
     return `<tr><td><span class="chip" style="--cor:${corPartido(p.sigla)}">${esc(p.sigla)}</span></td><td><strong>${p.vagas}</strong></td><td>${p.confirmadas}</td><td>${fmt(p.votos)}</td><td style="text-align:left;white-space:normal">${esc(ufs)}</td></tr>`;
   }).join("");
-  const porEstado = n.ufs.sort((a, b) => a.uf.localeCompare(b.uf)).map((u) => {
+  const f = estado.filtros;
+  const mantidos = new Set(filtrarUfs(n.ufs.map((u) => u.uf), f, (uf) => (n.ufs.find((u) => u.uf === uf)?.oficial ? "definida" : "aberta")));
+  const porEstado = n.ufs.filter((u) => mantidos.has(u.uf)).sort((a, b) => a.uf.localeCompare(b.uf)).map((u) => {
     const ban = [...u.bancadas].sort((a, b) => b.vagas - a.vagas).map((x) => `<span class="chip" style="--cor:${corPartido(x.sigla)}">${esc(x.sigla)} ${x.vagas}</span>`).join(" ");
     return `<tr class="clicavel" data-uf="${u.uf}"><td class="uf-nome">${esc(UFS[u.uf])}</td><td>${u.vagas}</td>
     <td><span class="mini-barra"><i style="width:${Math.min(100, u.pct)}%"></i></span>${pct(u.pct)}</td><td>${u.oficial ? "oficial" : "projeção"}</td><td style="text-align:left;white-space:normal">${ban || "–"}</td></tr>`;
@@ -508,7 +551,7 @@ function telaNacionalProp(v) {
     <section class="card"><h2>Quadro geral da Câmara por partido/federação</h2>
     <p class="muted">Previsão = soma das cadeiras de cada estado com os votos contados até agora. Confirmadas = cadeiras de estados já com totalização final (${n.confirmadasTotal} de ${n.totalVagas}).</p>
     <div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Previsão</th><th>Confirmadas</th><th>Votos</th><th>Maiores bancadas por estado</th></tr>${linhas}</table></div>${COMO}</section>
-    <section class="card"><h2>Apuração e cadeiras em cada estado</h2><div class="tab-scroll"><table><tr><th>Estado</th><th>Vagas</th><th>Apurado</th><th>Situação</th><th>Cadeiras por partido/federação</th></tr>${porEstado}</table></div>
+    <section class="card"><h2>Apuração e cadeiras em cada estado</h2>${barraFiltros(f, { comSegundo: false })}<div class="tab-scroll"><table><tr><th>Estado</th><th>Vagas</th><th>Apurado</th><th>Situação</th><th>Cadeiras por partido/federação</th></tr>${porEstado || `<tr><td colspan="5" class="muted" style="text-align:left">Nenhum estado com esses filtros.</td></tr>`}</table></div>
     <p class="muted">Cada estado elege só os seus deputados. Clique em um estado para ver a distribuição detalhada.</p></section>`;
 }
 
@@ -537,7 +580,8 @@ function renderNavegacao(v) {
 function render() {
   const v = estado.view;
   if (!v) return;
-  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp }[v.tipo];
+  if (document.activeElement?.tagName === "SELECT" && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "senadores-eleitos": telaSenadoresEleitos, "nacional-prop": telaNacionalProp }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
@@ -630,6 +674,10 @@ function apuracaoDe(sq) {
   const c = fontes.flatMap((f) => f.candidatos).find((x) => x.id === String(sq));
   return c ? { votos: c.votos, pct: c.pct, situacao: c.sit ? TEXTO_SIT[c.sit] : c.eleito ? c.situacao || "Eleito" : !c.elegivel ? c.situacaoVoto : null } : null;
 }
+$("conteudo").addEventListener("change", (e) => {
+  const sel = e.target.closest?.("[data-f-uf]");
+  if (sel) { const alvo = estado[sel.dataset.fEscopo]; alvo.uf = sel.value; if (sel.value) alvo.regiao = regiaoDe(sel.value); render(); }
+});
 $("conteudo").addEventListener("keydown", (e) => {
   const mp = e.target.closest?.("[data-mapa-uf]");
   if (mp && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); estado.mapaUf = estado.mapaUf === mp.dataset.mapaUf ? "" : mp.dataset.mapaUf; render(); return; }
@@ -642,6 +690,13 @@ $("conteudo").addEventListener("click", (e) => {
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   if (e.target.closest("[data-tentar]")) { atualizar(); return; }
+  const fr = e.target.closest("[data-f-regiao]"), fs = e.target.closest("[data-f-status]");
+  if (fr || fs) {
+    const alvo = estado[(fr ?? fs).dataset.fEscopo];
+    if (fr) { alvo.regiao = fr.dataset.fRegiao; if (alvo.uf && alvo.regiao && regiaoDe(alvo.uf) !== alvo.regiao) alvo.uf = ""; }
+    if (fs) alvo.status = fs.dataset.fStatus;
+    render(); return;
+  }
   const vis = e.target.closest("[data-visao-estados]");
   if (vis) { estado.visaoEstados = vis.dataset.visaoEstados; render(); return; }
   const filtro = e.target.closest("[data-filtro-regiao]");

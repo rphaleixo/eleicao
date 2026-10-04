@@ -28,7 +28,7 @@ test("endereços antigos viram a visão por estado", () => {
 });
 
 test("montar e ler são inversos", () => {
-  for (const r of [{ aba: "estados", uf: "RJ", cargo: "governador", mun: "71072" }, { aba: "estados", uf: "AC", cargo: "resumo", mun: "" }, { aba: "presidente", uf: "BA", cargo: "resumo", mun: "" }, { aba: "camara", uf: "BR", cargo: "resumo", mun: "" }, { aba: "governadores", uf: "BR", cargo: "resumo", mun: "" }, { aba: "senadores", uf: "BR", cargo: "resumo", mun: "" }]) {
+  for (const r of [{ aba: "estados", uf: "RJ", cargo: "governador", mun: "71072" }, { aba: "estados", uf: "AC", cargo: "resumo", mun: "" }, { aba: "presidente", uf: "BA", cargo: "resumo", mun: "" }, { aba: "camara", uf: "BR", cargo: "resumo", mun: "" }, { aba: "governadores", uf: "BR", cargo: "resumo", mun: "" }, { aba: "senadores", uf: "BR", cargo: "resumo", mun: "" }, { aba: "eleitos", uf: "BR", cargo: "resumo", mun: "" }]) {
     assert.deepEqual(lerRota(montarRota(r), o), r);
   }
 });

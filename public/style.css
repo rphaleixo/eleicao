@@ -487,3 +487,17 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .bc-linha.ok .bc-quem small { color: var(--sit-eleito); font-weight: 700; } .bc-linha.vazia .bc-marca { background: var(--barra); } .bc-linha.vazia b { color: var(--muted); font-weight: 400; font-size: .9rem; }
 .bc-linha .chip { max-width: 9rem; }
 .hero-sec2 { margin: 4px 0 0; } .le-det { display: block; font-size: .74rem; color: var(--muted); margin-bottom: 3px; }
+
+/* filtros por região, estado e situação */
+.filtros-estados { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 10px; }
+.filtros-estados .chips { padding: 6px 0 2px; }
+.f-uf { flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; } .f-uf select { flex: 1; min-width: 0; }
+/* lista de senadores eleitos */
+.lista-se { list-style: none; margin: 8px 0 0; padding: 0; }
+.se { display: grid; grid-template-columns: 36px 40px 1fr auto; grid-template-areas: "s f q c" "s f v e"; gap: 2px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.se .sigla { grid-area: s; width: 36px; height: 36px; font-size: .74rem; border-radius: 9px; } .se .foto { grid-area: f; width: 40px; height: 40px; }
+.se-quem { grid-area: q; display: flex; flex-direction: column; min-width: 0; } .se-quem b { font-size: .95rem; overflow-wrap: anywhere; } .se-quem .muted { font-size: .72rem; }
+.se .chip { grid-area: c; margin: 0; justify-self: end; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.se-votos { grid-area: v; display: flex; align-items: baseline; gap: 8px; } .se-votos strong { font-variant-numeric: tabular-nums; } .se-votos small { color: var(--muted); font-size: .74rem; }
+.se > .selo-sit { grid-area: e; justify-self: end; }
+.se.sit-eleito { box-shadow: inset 3px 0 0 var(--sit-eleito); padding-left: 8px; }
