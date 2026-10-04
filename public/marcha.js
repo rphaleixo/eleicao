@@ -6,8 +6,7 @@ import { urlFoto } from "./tse.js";
 import { corPartido } from "./cores.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
-const pct = (n, c = 1) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c }) + "%";
+import { fmt, pct } from "./formato.js";
 export const mi = (n) => (n >= 1e6 ? `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : fmt(n));
 
 export const REGIOES = {
@@ -47,16 +46,16 @@ const largura = () => Math.max(300, Math.min(640, (typeof document === "undefine
 
 function anel(valor) {
   const r = 46, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, valor));
-  return `<svg class="anel" viewBox="0 0 110 110" role="img" aria-label="${pct(valor, 2)} das urnas apuradas"><circle class="anel-fundo" cx="55" cy="55" r="${r}"/>
+  return `<svg class="anel" viewBox="0 0 110 110" role="img" aria-label="${pct(valor)} das urnas apuradas"><circle class="anel-fundo" cx="55" cy="55" r="${r}"/>
     <circle class="anel-valor" cx="55" cy="55" r="${r}" stroke-dasharray="${((p / 100) * c).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 55 55)"/>
-    <text x="55" y="53" text-anchor="middle" class="anel-pct">${Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</text>
+    <text x="55" y="53" text-anchor="middle" class="anel-pct">${pct(valor)}</text>
     <text x="55" y="70" text-anchor="middle" class="anel-leg">das urnas</text></svg>`;
 }
 
 /** Gráfico empilhado (presentes e ausentes, em % do eleitorado) com a legenda dos três pedaços. */
 export function graficoPresenca({ hist, chave, a, altura = 160, titulo }) {
   const comp = a.eleitores ? (a.comparecimento / a.eleitores) * 100 : 0, aus = a.eleitores ? (a.abstencao / a.eleitores) * 100 : 0;
-  return `${areaPresenca(hist, chave, a.eleitores, { largura: largura(), altura, rotulo: titulo, inicio: INICIO_APURACAO })}
+  return `${areaPresenca(hist, chave, a.eleitores, { largura: largura(), altura, rotulo: titulo, inicio: INICIO_APURACAO, ate: Date.now() })}
     <div class="presenca-leg"><span><i class="pt pres"></i>Presentes <strong>${pct(comp)}</strong></span><span><i class="pt aus"></i>Ausentes <strong>${pct(aus)}</strong></span><span><i class="pt falta"></i>A apurar <strong>${pct(Math.max(0, 100 - comp - aus))}</strong></span></div>`;
 }
 
@@ -82,7 +81,7 @@ export const regiaoDe = (uf) => Object.entries(REGIOES).find(([, r]) => r.ufs.in
  * 1ª linha: Brasil e regiões (com o % apurado); 2ª linha: "Região inteira" e os estados da região escolhida.
  */
 export function navegacaoRegional(ac, { regiao, uf, comExterior = true }) {
-  const chip = (attrs, nome, valor, ativo) => `<button type="button" ${attrs} aria-pressed="${ativo}">${nome}${valor == null ? "" : ` <small>${pct(valor, 0)}</small>`}</button>`;
+  const chip = (attrs, nome, valor, ativo) => `<button type="button" ${attrs} aria-pressed="${ativo}">${nome}${valor == null ? "" : ` <small>${pct(valor)}</small>`}</button>`;
   const linha1 = chip('data-regiao=""', "Brasil", null, regiao === "")
     + Object.entries(REGIOES).map(([k, r]) => chip(`data-regiao="${k}"`, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct, regiao === k)).join("")
     + (comExterior && ac.ufs.zz ? chip('data-regiao="exterior"', "Exterior", doEstado(ac.ufs.zz).pct, regiao === "exterior") : "");
@@ -92,6 +91,14 @@ export function navegacaoRegional(ac, { regiao, uf, comExterior = true }) {
         .map((u) => chip(`data-nav-uf="${u}"`, esc(UFS[u]), doEstado(ac.ufs[u.toLowerCase()])?.pct ?? 0, uf === u)).join("")}</div>`
     : "";
   return `<nav class="navegacao" aria-label="Navegar por região e estado"><div class="chips" role="group" aria-label="Regiões">${linha1}</div>${linha2}</nav>`;
+}
+
+/** Locais do histórico de resultados que formam o recorte escolhido: estado, exterior, região ou Brasil. */
+export function locaisResultado(uf, regiao) {
+  if (uf !== "BR") return [uf.toLowerCase()];
+  if (regiao === "exterior") return ["zz"];
+  if (REGIOES[regiao]) return REGIOES[regiao].ufs.map((u) => u.toLowerCase());
+  return ["br"];
 }
 
 /** Divisão do eleitorado em presentes, ausentes e ainda a apurar (somam 100%). */
@@ -132,7 +139,7 @@ export function cardCargo({ titulo, aba, uf, d }) {
     ? top.map((c, i) => `<li data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato"><span class="pos">${i + 1}</span>
         <img class="foto mini" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
         <span class="cc-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span></span>
-        <span class="cc-votos"><strong>${pct(c.pct, 2)}</strong><small>${fmt(c.votos)}</small></span></li>`).join("")
+        <span class="cc-votos"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)}</small></span></li>`).join("")
     : `<li class="vazio muted">Sem candidatos no arquivo do TSE.</li>`;
   return `<article class="card-cargo"><div class="cc-topo"><h3>${esc(titulo)}</h3><span class="muted">${pct(d.pctSecoes)} apurado</span></div>
     <ol class="cc-lista">${itens}</ol>${blocoVotos(d)}<button type="button" class="link" data-ir="${aba}">Ver completo ›</button></article>`;

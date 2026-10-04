@@ -30,7 +30,7 @@ export function urlAcompanhamento(cargo) {
 }
 
 export const urlHistorico = () => "/api/historico";
-export const urlResultadosPresidente = () => "/api/resultados-presidente";
+export const urlResultadosPresidente = (locais = []) => `/api/resultados-presidente${locais.length ? `?local=${locais.join(",")}` : ""}`;
 
 /** Foto do candidato: Presidente fica na pasta "br"; os demais cargos na pasta do estado. */
 export function urlFoto(cargo, uf, sqcand) {

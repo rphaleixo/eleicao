@@ -3,8 +3,7 @@ import { urlFoto } from "./tse.js";
 import { corPartido } from "./cores.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
-const pct = (n, c = 2) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c }) + "%";
+import { fmt, pct } from "./formato.js";
 
 /** Mais votados primeiro; empate (inclusive antes da apuração) em ordem alfabética. */
 export const ordenarCandidatos = (candidatos) => candidatos.slice().sort((a, b) => b.votos - a.votos || a.nome.localeCompare(b.nome, "pt-BR"));

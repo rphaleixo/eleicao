@@ -41,7 +41,7 @@ export default {
       return new Response(JSON.stringify({ uf: /^[A-Z]{2}$/.test(uf) ? uf : null }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-store" } });
     }
     if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] });
-    if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] });
+    if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] }, url.searchParams.get("local"));
 
     const mCand = /^\/api\/candidato\/(\d{1,15})$/.exec(url.pathname);
     if (mCand) return candidato(env, Number(mCand[1]));
@@ -119,13 +119,15 @@ export async function registrarHistorico(env) {
   if (mudou) await env.HIST.put("historico", JSON.stringify(historico));
 }
 
-async function lerHistorico(request, env, ctx, chaveKV, vazio) {
+async function lerHistorico(request, env, ctx, chaveKV, vazio, locais = null) {
   const cache = caches.default;
-  const chave = new Request(new URL(request.url).origin + new URL(request.url).pathname);
+  const lista = locais && /^[a-z]{2}(,[a-z]{2}){0,29}$/.test(locais) ? locais.split(",") : null; // só os locais pedidos: a resposta fica pequena
+  const chave = new Request(new URL(request.url).origin + new URL(request.url).pathname + (lista ? `?local=${lista.join(",")}` : ""));
   const guardado = await cache.match(chave);
   if (guardado) return guardado;
   const bruto = (env.HIST && (await env.HIST.get(chaveKV, "json"))) || vazio;
-  const dados = { ...bruto, pontos: (bruto.pontos ?? []).filter((p) => p.t >= INICIO_APURACAO) };
+  const recorta = (p) => (lista && p.v ? { ...p, v: Object.fromEntries(lista.filter((l) => p.v[l]).map((l) => [l, p.v[l]])) } : p);
+  const dados = { ...bruto, pontos: (bruto.pontos ?? []).filter((p) => p.t >= INICIO_APURACAO).map(recorta) };
   const resposta = new Response(JSON.stringify(dados), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",

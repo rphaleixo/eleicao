@@ -1,7 +1,7 @@
 // Modal com a ficha completa do candidato (dados do banco). Não aparece na tela de apuração.
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const brl = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
+import { fmt, pct } from "./formato.js";
 const campo = (rotulo, valor) => (valor == null || valor === "" ? "" : `<div><dt>${esc(rotulo)}</dt><dd>${esc(valor)}</dd></div>`);
 
 export const urlFichaCandidato = (sq) => `/api/candidato/${encodeURIComponent(sq)}`;
@@ -12,7 +12,7 @@ export function htmlFicha(f, apuracao) {
   const naturalidade = p.ufNascimento ? `${p.ufNascimento}` : null;
   const idade = f.idade != null ? `${f.idade} anos (na posse)` : p.anoNascimento ? `nascido em ${p.anoNascimento}` : null;
   const votos = apuracao ? `<section><h3>Na apuração</h3><dl class="ficha-campos">
-      ${campo("Votos", fmt(apuracao.votos))}${campo("% dos votos", apuracao.pct != null ? Number(apuracao.pct).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "%" : null)}
+      ${campo("Votos", fmt(apuracao.votos))}${campo("% dos votos", apuracao.pct != null ? pct(apuracao.pct) : null)}
       ${campo("Situação", apuracao.situacao)}</dl></section>` : "";
   const agr = f.agremiacao;
   const bens = f.bens.itens.length

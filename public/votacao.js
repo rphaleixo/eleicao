@@ -1,7 +1,6 @@
 // Cartões "Votação" e "Eleitorado": a composição dos votos e do comparecimento, para qualquer eleição.
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
-const pct = (n) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
+import { fmt, pct } from "./formato.js";
 
 const linha = (rotulo, n, total, { cor = "", nivel = 0, forte = false } = {}) =>
   `<div class="vt-linha n${nivel}${forte ? " forte" : ""}"><span class="vt-rot">${cor ? `<i class="vt-cor ${cor}"></i>` : ""}${esc(rotulo)}</span><span class="vt-n">${fmt(n)}</span><span class="vt-p">${pct(total ? (n / total) * 100 : 0)}</span></div>`;

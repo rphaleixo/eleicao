@@ -1,5 +1,6 @@
-import { telaMarcha, regiaoDe, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, REGIOES } from "./marcha.js";
+import { telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
+import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
 import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
@@ -15,14 +16,12 @@ import { corPartido } from "./cores.js";
 import { linhaEvolucao, linhasResultado } from "./graficos.js";
 
 const $ = (id) => document.getElementById(id);
-const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
-const pct = (n, c = 2) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c }) + "%";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
 const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az" };
-const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "", carregando: false, pendente: false };
+const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
 const guardarUf = (uf) => { try { localStorage.setItem("uf-estados", uf); } catch { /* sem armazenamento */ } };
@@ -47,6 +46,15 @@ function montarControles() {
   $("mun").value = estado.mun;
 }
 
+const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "presidente" ? "/" + estado.regiao : ""}`; // na aba Presidente a região também muda a carga
+const cacheViews = new Map(); // última resposta de cada tela: aparece na hora, e é atualizada em seguida
+
+function mostrarCarregando() {
+  estado.view = null;
+  renderNavegacao(null);
+  $("conteudo").innerHTML = `<section class="card carregando"><div class="barra-carregando"><i></i></div><p class="muted">Carregando${estado.aba === "estados" ? ` ${esc(UFS[estado.uf])}` : ""}…</p></section>`;
+}
+
 function navegar(mudanca) {
   Object.assign(estado, mudanca);
   if (estado.aba === "estados" && (estado.uf === "BR" || estado.uf === "ZZ")) estado.uf = estado.ufPadrao;
@@ -55,10 +63,13 @@ function navegar(mudanca) {
   if (mudanca.aba || mudanca.uf || mudanca.cargo) estado.mun = mudanca.mun ?? "";
   if (estado.aba === "estados") { guardarUf(estado.uf); estado.ufPadrao = estado.uf; }
   estado.mostrar = 50; estado.pagEleitos = 0;
-  if (estado.view?.tipo === "presidente" && estado.aba === "presidente") render(); // tudo o que o painel precisa já está carregado
-  if (estado.aba === "andamento" && estado.view?.tipo === "andamento") { estado.view = { ...estado.view, detalhe: {} }; render(); } // o painel já tem os dados: mostra na hora, os líderes chegam depois
-  if (estado.aba === "estados" && estado.view?.tipo === "estados") { renderNavegacao(estado.view); $("conteudo").innerHTML = `<section class="card"><p class="muted">Carregando ${esc(UFS[estado.uf])}…</p></section>`; }
-  gravarHash(); montarControles(); atualizar();
+  gravarHash(); montarControles();
+  const guardada = cacheViews.get(chaveRota());
+  if (guardada) { estado.view = guardada; render(); } // já vista: mostra na hora e atualiza em seguida
+  else if (estado.view?.tipo === "presidente" && estado.aba === "presidente") render(); // tudo o que o painel precisa já está carregado
+  else if (estado.aba === "andamento" && estado.view?.tipo === "andamento") { estado.view = { ...estado.view, detalhe: {} }; render(); } // o painel já tem os dados: mostra na hora, os líderes chegam depois
+  else mostrarCarregando();
+  atualizar();
 }
 
 // ---------- dados ----------
@@ -68,14 +79,16 @@ async function obter(cargo, uf, mun) {
 }
 const obterAcompanhamento = async (cargo) => lerAcompanhamento(await buscarJson(urlAcompanhamento(cargo)));
 
-const memoRP = { t: 0, dados: null };
-async function obterResultadosPresidente() {
-  if (Date.now() - memoRP.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return memoRP.dados;
-  try { memoRP.dados = await buscarJson(urlResultadosPresidente()); } catch { /* segue sem o gráfico */ }
-  memoRP.t = Date.now();
-  return memoRP.dados;
+const memoRP = new Map();
+async function obterResultadosPresidente(locais) {
+  const chave = locais.join(",");
+  const m = memoRP.get(chave);
+  if (m && Date.now() - m.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return m.dados;
+  let dados = m?.dados ?? null;
+  try { dados = await buscarJson(urlResultadosPresidente(locais)); } catch { /* segue com o que já tinha */ }
+  memoRP.set(chave, { t: Date.now(), dados });
+  return dados;
 }
-
 async function obterHistorico() {
   if (Date.now() - memo.historico.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return memo.historico.dados;
   try { memo.historico = { t: Date.now(), dados: (await buscarJson(urlHistorico())).pontos ?? [] }; } catch { memo.historico.t = Date.now(); }
@@ -114,8 +127,8 @@ async function detalhesEstado(uf, comDeputados = false) {
   return { pres, gov, sen, depf, depe };
 }
 
-async function carregarView() {
-  const { aba, uf, mun } = estado;
+async function carregarView(rota) {
+  const { aba, uf, mun } = rota;
   const hist = obterHistorico();
   if (aba === "andamento") {
     const [f, e, h] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist]);
@@ -124,20 +137,20 @@ async function carregarView() {
     return { tipo: "andamento", f, e, h, detalhe };
   }
   if (aba === "estados") {
-    const { cargo } = estado;
+    const { cargo } = rota;
     const [f, e] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador")]);
     const base = { tipo: "estados", uf, cargo, f, e };
     if (cargo === "resumo") return { ...base, detalhe: emSegundoPlano("detx-" + uf, 9000, () => detalhesEstado(uf, true)) ?? {} };
     if (CARGOS[cargo].proporcional) { const d = await obter(cargo, uf); return { ...base, d, dist: distribuirEstado(d) }; }
-    const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente() : null]);
+    const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente(locaisResultado(uf, "")) : null]);
     return { ...base, d, rp };
   }
   const acomp = obterAcompanhamento(aba === "camara" ? "dep-federal" : aba);
   if (aba === "presidente") {
     // Os 28 locais (27 estados e exterior) vêm em segundo plano: alimentam as regiões e a lista de estados.
     const lista = emSegundoPlano("pan-presidente", CONFIG.atualizarACadaSegundos * 900, () => panorama("presidente"));
-    const [d, du, ac, rp, h] = await Promise.all([obter("presidente", "BR"), uf === "BR" ? null : obter("presidente", uf, mun), acomp, obterResultadosPresidente(), hist]);
-    return { tipo: "presidente", d, du, duChave: `${uf}/${mun}`, lista, ac, rp, h };
+    const [d, du, ac, rp, h] = await Promise.all([obter("presidente", "BR"), uf === "BR" ? null : obter("presidente", uf, mun), acomp, obterResultadosPresidente(locaisResultado(uf, rota.regiao)), hist]);
+    return { tipo: "presidente", d, du, duChave: `${uf}/${mun}`, lista, ac, rp, rpLocais: locaisResultado(uf, rota.regiao).join(","), h };
   }
   // Câmara dos Deputados: os 513 deputados somados dos 27 estados.
   const estados = emSegundoPlano("nacional", CONFIG.atualizarNacionalACadaSegundos * 1000, estadosDepFederal);
@@ -174,14 +187,16 @@ function blocoProgresso(titulo, d, ac) {
     ${d ? avisosApuracao(d) : ""}</section>`;
 }
 
-function blocoResultadoEvolucao(rp, local) {
+function blocoResultadoEvolucao(rp, local, final = false) {
   const largura = Math.max(300, Math.min(640, document.documentElement.clientWidth - 64));
-  return `<section class="card"><h2>Evolução do resultado</h2>${linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO })}
-    <p class="muted">% dos votos válidos de cada candidato, apurado minuto a minuto.</p></section>`;
+  const grafico = rp === undefined ? `<p class="muted vazio-grafico">Carregando o histórico…</p>`
+    : linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO, ate: final ? 0 : Date.now() });
+  return `<section class="card"><h2>Evolução do resultado</h2>${grafico}
+    <p class="muted">% dos votos válidos de cada candidato, desde as 17h, minuto a minuto.</p></section>`;
 }
 
 function blocoEvolucao(titulo, hist, serie, chave) {
-  return `<section class="card"><h2>${esc(titulo)}</h2>${linhaEvolucao(hist, (p) => p[serie]?.[chave], { rotulo: titulo, inicio: INICIO_APURACAO })}
+  return `<section class="card"><h2>${esc(titulo)}</h2>${linhaEvolucao(hist, (p) => p[serie]?.[chave], { rotulo: titulo, inicio: INICIO_APURACAO, ate: Date.now() })}
     <p class="muted">% de seções apuradas ao longo do tempo (registro a cada minuto).</p></section>`;
 }
 
@@ -276,7 +291,7 @@ function telaMajoritaria(v) {
   const { d } = v, { uf, mun } = estado, aba = cargoAtivo();
   const local = mun ? `${nomeUF(uf)}, município ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : nomeUF(uf);
   const titulo = aba === "senador" ? `Senador (${d.vagas || 2} vagas): ${local}` : `${CARGOS[aba].nome}: ${local}`;
-  const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, chaveUF(uf)) : "";
+  const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, locaisResultado(uf, ""), d.totalizacaoFinal) : "";
   return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${rankingMajoritario(d, { aba, uf })}</section>${cartoesVotacao(d)}${evolucao}`;
 }
 
@@ -284,7 +299,7 @@ function resumoEstado(v) {
   const { uf } = estado, k = uf.toLowerCase();
   const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, "", uf);
   const fed = v.f.ufs[k];
-  const extra = `<p class="hero-sec">Eleitores aptos: <strong>${fmt(p.a.eleitores)}</strong></p>${fed ? `<p class="hero-sub">Presidente: ${pct(fed.pct, 1)} das seções</p>` : ""}`;
+  const extra = `<p class="hero-sec">Eleitores aptos: <strong>${fmt(p.a.eleitores)}</strong></p>${fed ? `<p class="hero-sub">Presidente: ${pct(fed.pct)} das seções</p>` : ""}`;
   const hero = heroApuracao({ ...p, titulo: UFS[uf], subtitulo: "Eleições estaduais", extra, hist: [], grafico: false });
   const dt = v.detalhe ?? {};
   const cards = [
@@ -322,11 +337,11 @@ function telaPresidente(v) {
   // Município: o painel usa os números do próprio município (o arquivo de acompanhamento só vai até o estado).
   const painel = mun && d ? { ...p, subtitulo: "Município", a: { ...p.a, st: d.secoesApuradas, ts: d.secoesTotal, pct: d.pctSecoes }, andamento: d.andamento, quando: d.atualizadoEm } : p;
   const hero = heroApuracao({ ...painel, titulo: nome, hist: v.h, grafico: mun ? null : false });
-  const chaveGrafico = uf !== "BR" ? chaveUF(uf) : regiao === "exterior" ? "zz" : emRegiao ? ufsRegiao.map((u) => u.toLowerCase()) : "br";
+  const locaisGrafico = locaisResultado(uf, regiao);
   const listaCand = d
     ? `${avisosApuracao(d)}${rankingMajoritario(d, { aba: "presidente", uf: "BR" })}`
     : `<p class="muted">${carregando ? "Carregando…" : "Resultado indisponível no momento."}</p>`;
-  const grafico = mun ? "" : blocoResultadoEvolucao(v.rp, chaveGrafico);
+  const grafico = mun ? "" : blocoResultadoEvolucao(v.rpLocais === locaisGrafico.join(",") ? v.rp : undefined, locaisGrafico, d?.totalizacaoFinal);
   return `${hero}
     <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${d ? cartoesVotacao(d) : ""}${grafico}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
 }
@@ -339,11 +354,11 @@ function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
     const d = v.lista.find((x) => x.uf === u)?.d, ac = v.ac.ufs[u.toLowerCase()];
     const top = (d?.candidatos ?? []).filter((c) => c.votos > 0).slice(0, 2);
     const lids = top.length
-      ? top.map((c) => `<span><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${esc(c.nome)} <b>${pct(c.pct, 1)}</b></span>`).join("")
+      ? top.map((c) => `<span><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${esc(c.nome)} <b>${pct(c.pct)}</b></span>`).join("")
       : `<span class="muted">Sem votos apurados</span>`;
     return `<li><button type="button" class="linha-estado" data-uf="${u}"><span class="sigla">${u === "ZZ" ? "EX" : u}</span>
       <span class="le-meio"><span class="le-nome">${esc(nomeUF(u))}</span><span class="le-lids">${lids}</span></span>
-      <span class="linha-uf-pct">${pct(ac?.pct ?? 0, 1)}<small>apurado</small></span><span class="seta" aria-hidden="true">›</span></button></li>`;
+      <span class="linha-uf-pct">${pct(ac?.pct ?? 0)}<small>apurado</small></span><span class="seta" aria-hidden="true">›</span></button></li>`;
   }).join("");
   return `<section class="card"><h2>Resultado por estado</h2><ul class="lista-estados">${itens}</ul>
     <p class="muted nota">Toque em um estado para ver o resultado dele. O resultado final da eleição presidencial é nacional.</p></section>`;
@@ -384,7 +399,7 @@ function telaNacionalProp(v) {
   const porEstado = n.ufs.sort((a, b) => a.uf.localeCompare(b.uf)).map((u) => {
     const ban = [...u.bancadas].sort((a, b) => b.vagas - a.vagas).map((x) => `<span class="chip" style="--cor:${corPartido(x.sigla)}">${esc(x.sigla)} ${x.vagas}</span>`).join(" ");
     return `<tr class="clicavel" data-uf="${u.uf}"><td class="uf-nome">${esc(UFS[u.uf])}</td><td>${u.vagas}</td>
-    <td><span class="mini-barra"><i style="width:${Math.min(100, u.pct)}%"></i></span>${pct(u.pct, 1)}</td><td>${u.oficial ? "oficial" : "projeção"}</td><td style="text-align:left;white-space:normal">${ban || "–"}</td></tr>`;
+    <td><span class="mini-barra"><i style="width:${Math.min(100, u.pct)}%"></i></span>${pct(u.pct)}</td><td>${u.oficial ? "oficial" : "projeção"}</td><td style="text-align:left;white-space:normal">${ban || "–"}</td></tr>`;
   }).join("");
   return `${blocoProgresso("Brasil: Deputados Federais", null, v.ac.ufs.br)}${blocoEvolucao("Evolução da apuração no Brasil", v.h, "e", "br")}${cadeiras}
     <section class="card"><h2>Quadro geral da Câmara por partido/federação</h2>
@@ -396,10 +411,10 @@ function telaNacionalProp(v) {
 
 // A navegação fica fora do conteúdo: persiste e não perde a rolagem a cada atualização.
 let navAnterior = "", subAnterior = "";
+let ultimoAc = null; // andamento por estado mais recente, para a navegação aparecer enquanto a tela carrega
 function renderNavegacao(v) {
-  const nav = v.tipo === "andamento" ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf })
-    : v.tipo === "presidente" ? navegacaoRegional(v.ac, { regiao: estado.regiao, uf: estado.uf })
-    : "";
+  ultimoAc = v?.f ?? v?.ac ?? ultimoAc;
+  const nav = (estado.aba === "andamento" || estado.aba === "presidente") && ultimoAc ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf }) : "";
   const sub = estado.aba === "estados" ? barraEstado(estado.uf, estado.cargo) : "";
   const preserva = (el, html, anterior) => {
     if (html === anterior) return anterior;
@@ -425,21 +440,25 @@ function render() {
 }
 
 // ---------- atualização automática (a cada 10 segundos) ----------
+// Cada tela carrega por conta própria: trocar de visão nunca espera uma carga anterior terminar.
+const emVoo = new Set();
 async function atualizar() {
-  if (memo.carregando) { memo.pendente = true; return; }
-  memo.carregando = true; memo.pendente = false;
-  const chave = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}`;
-  const alvo = chave();
+  const chave = chaveRota();
+  if (emVoo.has(chave)) return; // esta tela já está sendo carregada
+  emVoo.add(chave);
+  const rota = { ...estado };
   try {
-    const v = await carregarView();
-    if (alvo === chave()) { estado.view = v; render(); memo.ultima = new Date(); memo.erro = ""; }
+    const v = await carregarView(rota);
+    cacheViews.set(chave, v);
+    if (chave === chaveRota()) { estado.view = v; render(); memo.ultima = new Date(); memo.erro = ""; }
   } catch (e) {
-    memo.erro = e.message;
-    if (!estado.view) $("conteudo").innerHTML = aviso(`${e.message} Tentaremos de novo automaticamente.`);
+    if (chave === chaveRota()) {
+      memo.erro = e.message;
+      if (!cacheViews.has(chave)) $("conteudo").innerHTML = `<section class="card">${aviso(`${e.message} Tentaremos de novo automaticamente.`)}<button type="button" class="link" data-tentar>Tentar agora</button></section>`;
+    }
   } finally {
-    memo.carregando = false;
-    memo.proxima = Date.now() + CONFIG.atualizarACadaSegundos * 1000;
-    if (memo.pendente) atualizar();
+    emVoo.delete(chave);
+    if (chave === chaveRota()) memo.proxima = Date.now() + CONFIG.atualizarACadaSegundos * 1000;
   }
 }
 
@@ -516,6 +535,7 @@ $("conteudo").addEventListener("click", (e) => {
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
+  if (e.target.closest("[data-tentar]")) { atualizar(); return; }
   const pag = e.target.closest("[data-pag-eleitos]");
   if (pag) { estado.pagEleitos = Math.max(0, estado.pagEleitos + Number(pag.dataset.pagEleitos)); render(); return; }
   const abrir = e.target.closest("[data-abrir-estado]");

@@ -76,12 +76,12 @@ test("sem votos, os 5 candidatos aparecem em ordem alfabética", () => {
 
 test("válidos, brancos e nulos mostram total e percentual", () => {
   const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ" }));
-  assert.ok(h.includes("<strong>900</strong><small>90,0%</small>") && h.includes("<strong>60</strong><small>6,0%</small>") && h.includes("<strong>40</strong><small>4,0%</small>"));
+  assert.ok(h.includes("<strong>900</strong><small>90,00%</small>") && h.includes("<strong>60</strong><small>6,00%</small>") && h.includes("<strong>40</strong><small>4,00%</small>"));
 });
 
 test("cada estado mostra presentes, ausentes e a apurar, que somam 100%", () => {
   const h = telaMarcha(v, est({}));
-  assert.ok(h.includes("Presentes <b>40,0%</b>") && h.includes("Ausentes <b>10,0%</b>") && h.includes("A apurar <b>50,0%</b>"));
+  assert.ok(h.includes("Presentes <b>40,00%</b>") && h.includes("Ausentes <b>10,00%</b>") && h.includes("A apurar <b>50,00%</b>"));
 });
 
 test("navegação: segunda linha com 'Região inteira' e os estados da região escolhida", () => {
