@@ -60,12 +60,18 @@ export function graficoPresenca({ hist, chave, a, altura = 160, titulo }) {
     <div class="presenca-leg"><span><i class="pt pres"></i>Presentes <strong>${pct(comp)}</strong></span><span><i class="pt aus"></i>Ausentes <strong>${pct(aus)}</strong></span><span><i class="pt falta"></i>A apurar <strong>${pct(Math.max(0, 100 - comp - aus))}</strong></span></div>`;
 }
 
+/** Versão compacta do gráfico de presença: uma barra e a legenda. */
+export function barraPresenca(a) {
+  const d = divisaoEleitorado(a);
+  return `<div class="le-barra hero-barra" role="img" aria-label="Presentes ${pct(d.comp)}, ausentes ${pct(d.aus)}, a apurar ${pct(d.falta)}"><i class="pres" style="width:${d.comp}%"></i><i class="aus" style="width:${d.aus}%"></i></div>${legendaPresenca(a)}`;
+}
+
 /** Painel de destaque: anel de progresso, situação e gráfico de presença, tudo num cartão só. */
-export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave }) {
+export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave, grafico = true }) {
   return `<section class="card hero">
     <div class="hero-topo">${anel(a.pct)}<div class="hero-info"><h2>${esc(titulo)}</h2>${subtitulo ? `<p class="hero-sub">${esc(subtitulo)}</p>` : ""}${selo(andamento)}
       <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${extra}${quando ? `<p class="hero-sub">TSE: ${esc(quando)}</p>` : ""}</div></div>
-    <div class="hero-grafico">${graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` })}</div></section>`;
+    ${grafico === null ? "" : `<div class="hero-grafico">${grafico ? graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` }) : barraPresenca(a)}</div>`}</section>`;
 }
 
 /** Regiões aceitas na navegação. O exterior só existe na eleição presidencial. */
@@ -111,7 +117,7 @@ export function linhaEstado(uf, u, aberto = false, painel = "") {
 }
 
 // ---------- resumo do estado (campo expansível) ----------
-function blocoVotos(d) {
+export function blocoVotos(d) {
   const total = d.votosValidos + d.brancos + d.nulos;
   const parte = (rotulo, n) => `<div><span>${rotulo}</span><strong>${fmt(n)}</strong><small>${pct(total ? (n / total) * 100 : 0)}</small></div>`;
   return `<div class="votos-tipos">${parte("Válidos", d.votosValidos)}${parte("Brancos", d.brancos)}${parte("Nulos", d.nulos)}</div>`;
@@ -159,8 +165,12 @@ function situacaoGeral(lista) {
 }
 
 /** O painel de destaque acompanha a navegação: Brasil, uma região ou o exterior. */
-function escopoDoPainel(v, regiao) {
+export function escopoDoPainel(v, regiao, uf = "BR") {
   const ac = v.f;
+  if (uf !== "BR" && ac.ufs[uf.toLowerCase()]) {
+    const u = ac.ufs[uf.toLowerCase()];
+    return { titulo: nomeEstado(uf), subtitulo: uf === "ZZ" ? "Voto de brasileiros no exterior" : "Estado", a: doEstado(u), andamento: u.andamento, quando: [u.dt, u.ht].filter(Boolean).join(" "), chave: uf.toLowerCase(), extra: "" };
+  }
   if (regiao === "exterior" && ac.ufs.zz) {
     const u = ac.ufs.zz;
     return { titulo: "Exterior", subtitulo: "Voto de brasileiros no exterior", a: doEstado(u), andamento: u.andamento, quando: [u.dt, u.ht].filter(Boolean).join(" "), chave: "zz", extra: "" };
@@ -176,10 +186,10 @@ function escopoDoPainel(v, regiao) {
     extra: e ? `<p class="hero-sub">Eleições estaduais: ${pct(e.pct)} das seções</p>` : "" };
 }
 
-export function telaMarcha(v, estado) {
+export function telaMarcha(v, estado, comNav = true) {
   const p = escopoDoPainel(v, estado.regiao);
   const hero = heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave });
-  return `${navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf })}${hero}
+  return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${hero}
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
       <ul class="lista-estados">${listaOrdenada(v, estado)}</ul>

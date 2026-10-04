@@ -1,4 +1,5 @@
-import { telaMarcha, regiaoDe } from "./marcha.js";
+import { telaMarcha, regiaoDe, navegacaoRegional, heroApuracao, escopoDoPainel, blocoVotos, REGIOES } from "./marcha.js";
+import { agregarResultados } from "./agregado.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS } from "./config.js";
 import {
@@ -36,7 +37,9 @@ function montarControles() {
   $("uf").innerHTML = `<option value="BR">Brasil</option>` + Object.entries(UFS).map(([s, n]) => `<option value="${s}">${n}</option>`).join("") +
     (estado.aba === "presidente" ? `<option value="ZZ">Exterior</option>` : "");
   $("uf").value = estado.uf;
-  document.querySelector(".filtros").hidden = estado.aba === "andamento"; // na Marcha a navegação é pela lista de estados
+  const porNavegacao = estado.aba === "andamento" || estado.aba === "presidente"; // região e estado são escolhidos na navegação do topo
+  $("uf").parentElement.hidden = porNavegacao;
+  document.querySelector(".filtros").hidden = estado.aba === "andamento" || (estado.aba === "presidente" && !permiteMun());
   $("lbl-mun").hidden = !permiteMun();
   const lista = estado.municipios[estado.uf] || [];
   $("mun").innerHTML = `<option value="">Todo o estado</option>` + lista.map((m) => `<option value="${m.cod}">${esc(m.nome)}</option>`).join("");
@@ -48,6 +51,7 @@ function navegar(mudanca) {
   if (estado.uf === "ZZ" && estado.aba !== "presidente" && estado.aba !== "andamento") estado.uf = "BR";
   if (mudanca.aba || mudanca.uf) estado.mun = mudanca.mun ?? "";
   estado.mostrar = 50;
+  if (estado.view?.tipo === "presidente" && estado.aba === "presidente") render(); // tudo o que o painel precisa já está carregado
   if (estado.aba === "andamento" && estado.view?.tipo === "andamento") { estado.view = { ...estado.view, detalhe: {} }; render(); } // o painel já tem os dados: mostra na hora, os líderes chegam depois
   gravarHash(); montarControles(); atualizar();
 }
@@ -114,6 +118,12 @@ async function carregarView() {
   }
   const cargo = CARGOS[aba];
   const acomp = obterAcompanhamento(aba);
+  if (aba === "presidente") {
+    // Os 28 locais (27 estados e exterior) vêm em segundo plano: alimentam as regiões e a lista de estados.
+    const lista = emSegundoPlano("pan-presidente", CONFIG.atualizarACadaSegundos * 900, () => panorama("presidente"));
+    const [d, du, ac, rp, h] = await Promise.all([obter("presidente", "BR"), uf === "BR" ? null : obter("presidente", uf, mun), acomp, obterResultadosPresidente(), hist]);
+    return { tipo: "presidente", d, du, duChave: `${uf}/${mun}`, lista, ac, rp, h };
+  }
   if (uf === "BR") {
     if (aba === "dep-federal") {
       const estados = emSegundoPlano("nacional", CONFIG.atualizarNacionalACadaSegundos * 1000, estadosDepFederal);
@@ -293,6 +303,52 @@ function telaMajoritaria(v) {
   return `${blocoProgresso(titulo, d, null)}${evolucao}<section class="card"><h2>Candidatos por votos</h2>${listaMajoritaria(d, aba, uf)}</section>`;
 }
 
+function telaPresidente(v) {
+  const { regiao, uf, mun } = estado;
+  const emRegiao = uf === "BR" && REGIOES[regiao];
+  const ufsRegiao = emRegiao ? REGIOES[regiao].ufs : null;
+  // Resultado do recorte escolhido: Brasil, região (soma dos estados), estado/exterior/município.
+  // Estado: usa o arquivo próprio quando já chegou; até lá, o que a lista de estados já trouxe (sem município).
+  const doEstado = v.duChave === `${uf}/${mun}` ? v.du : mun ? null : v.lista?.find((x) => x.uf === uf)?.d ?? null;
+  let d = uf !== "BR" ? doEstado : v.d, carregando = uf !== "BR" && mun !== "" && !doEstado;
+  if (emRegiao) {
+    const ds = v.lista ? ufsRegiao.map((u) => v.lista.find((x) => x.uf === u)?.d) : [];
+    d = v.lista ? agregarResultados(ds) : null; carregando = !v.lista;
+  } else if (uf === "BR" && regiao === "exterior") {
+    d = v.lista?.find((x) => x.uf === "ZZ")?.d ?? null; carregando = !v.lista;
+  }
+  const p = escopoDoPainel({ f: v.ac, e: { ufs: {} } }, uf === "BR" ? regiao : "", uf);
+  const nome = mun ? `${nomeUF(uf)}, ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : p.titulo;
+  // Município: o painel usa os números do próprio município (o arquivo de acompanhamento só vai até o estado).
+  const painel = mun && d ? { ...p, subtitulo: "Município", a: { ...p.a, st: d.secoesApuradas, ts: d.secoesTotal, pct: d.pctSecoes }, andamento: d.andamento, quando: d.atualizadoEm } : p;
+  const hero = heroApuracao({ ...painel, titulo: nome, hist: v.h, grafico: mun ? null : false });
+  const chaveGrafico = uf !== "BR" ? chaveUF(uf) : regiao === "exterior" ? "zz" : emRegiao ? ufsRegiao.map((u) => u.toLowerCase()) : "br";
+  const listaCand = d
+    ? `${avisosApuracao(d)}${listaMajoritaria(d, "presidente", "BR")}${blocoVotos(d)}`
+    : `<p class="muted">${carregando ? "Carregando…" : "Resultado indisponível no momento."}</p>`;
+  const grafico = mun ? "" : blocoResultadoEvolucao(v.rp, chaveGrafico);
+  return `${hero}
+    <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${grafico}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
+}
+
+function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
+  if (uf !== "BR") return "";
+  if (!v.lista) return carregandoEstados("Resultado por estado");
+  const ufs = estado.regiao === "exterior" ? ["ZZ"] : ufsRegiao ?? [...Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR")), "ZZ"];
+  const itens = ufs.map((u) => {
+    const d = v.lista.find((x) => x.uf === u)?.d, ac = v.ac.ufs[u.toLowerCase()];
+    const top = (d?.candidatos ?? []).filter((c) => c.votos > 0).slice(0, 2);
+    const lids = top.length
+      ? top.map((c) => `<span><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${esc(c.nome)} <b>${pct(c.pct, 1)}</b></span>`).join("")
+      : `<span class="muted">Sem votos apurados</span>`;
+    return `<li><button type="button" class="linha-estado" data-uf="${u}"><span class="sigla">${u === "ZZ" ? "EX" : u}</span>
+      <span class="le-meio"><span class="le-nome">${esc(nomeUF(u))}</span><span class="le-lids">${lids}</span></span>
+      <span class="linha-uf-pct">${pct(ac?.pct ?? 0, 1)}<small>apurado</small></span><span class="seta" aria-hidden="true">›</span></button></li>`;
+  }).join("");
+  return `<section class="card"><h2>Resultado por estado</h2><ul class="lista-estados">${itens}</ul>
+    <p class="muted nota">Toque em um estado para ver o resultado dele. O resultado final da eleição presidencial é nacional.</p></section>`;
+}
+
 function telaPanorama(v) {
   const { aba } = estado;
   const progresso = v.d ? blocoProgresso("Presidente: Brasil", v.d, null) : blocoProgresso(`${CARGOS[aba].nome}: apuração nos estados`, null, v.ac.ufs.br);
@@ -355,7 +411,9 @@ function telaEstaduaisLista(v) {
 function render() {
   const v = estado.view;
   if (!v) return;
-  const tela = { andamento: (v) => telaMarcha(v, estado), maj: telaMajoritaria, panorama: telaPanorama, prop: telaProporcionalUF, "nacional-prop": telaNacionalProp, "estaduais-lista": telaEstaduaisLista }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), maj: telaMajoritaria, panorama: telaPanorama, prop: telaProporcionalUF, "nacional-prop": telaNacionalProp, presidente: telaPresidente, "estaduais-lista": telaEstaduaisLista }[v.tipo];
+  // A navegação por região e estado fica fora do conteúdo: persiste entre as abas que a usam.
+  $("nav").innerHTML = v.tipo === "andamento" ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : v.tipo === "presidente" ? navegacaoRegional(v.ac, { regiao: estado.regiao, uf: estado.uf }) : "";
   $("conteudo").innerHTML = tela(v);
   if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
 }
@@ -395,6 +453,13 @@ async function carregarMunicipios() {
 $("abas").addEventListener("click", (e) => { const b = e.target.closest("[data-aba]"); if (b) navegar({ aba: b.dataset.aba, mun: "" }); });
 $("uf").addEventListener("change", () => navegar({ uf: $("uf").value, mun: "" }));
 $("mun").addEventListener("change", () => navegar({ mun: $("mun").value }));
+$("nav").addEventListener("click", (e) => {
+  const reg = e.target.closest("[data-regiao]");
+  if (reg) { estado.regiao = reg.dataset.regiao; navegar({ uf: "BR", mun: "" }); return; }
+  if (e.target.closest("[data-regiao-inteira]")) { navegar({ uf: "BR", mun: "" }); return; }
+  const nav = e.target.closest("[data-nav-uf]");
+  if (nav) { estado.rolar = true; navegar({ uf: nav.dataset.navUf, mun: "" }); return; }
+});
 iniciarFicha();
 function apuracaoDe(sq) {
   const fontes = [estado.view?.d, ...Object.values(estado.view?.detalhe ?? {})].filter(Boolean);
@@ -408,11 +473,6 @@ $("conteudo").addEventListener("keydown", (e) => {
 $("conteudo").addEventListener("click", (e) => {
   const it = e.target.closest("[data-sq]");
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
-  const reg = e.target.closest("[data-regiao]");
-  if (reg) { estado.regiao = reg.dataset.regiao; navegar({ uf: "BR", mun: "" }); return; }
-  if (e.target.closest("[data-regiao-inteira]")) { navegar({ uf: "BR", mun: "" }); return; }
-  const nav = e.target.closest("[data-nav-uf]");
-  if (nav) { estado.rolar = true; navegar({ uf: nav.dataset.navUf, mun: "" }); return; }
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   const ir = e.target.closest("[data-ir]");

@@ -78,11 +78,19 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
 /**
  * Evolução do % de votos válidos de cada candidato, minuto a minuto.
  * @param {{cands:object, pontos:object[]}} rp histórico de resultados (worker/resultados.js)
- * @param {string} local "br", "rj", "zz"...
+ * @param {string|string[]} local "br", "rj", "zz"... (lista = soma dos locais)
  * @param {(sigla:string)=>string} cor cor do partido
  */
 export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6 } = {}) {
-  const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: p.v?.[local] })).filter((p) => p.r && p.r.vv > 0);
+  const locais = [].concat(local); // lista = soma de vários locais (estados de uma região)
+  const junta = (v) => {
+    const rs = locais.map((l) => v?.[l]).filter(Boolean);
+    if (!rs.length) return null;
+    const c = {};
+    for (const r of rs) for (const [id, n] of Object.entries(r.c)) c[id] = (c[id] ?? 0) + n;
+    return { vv: rs.reduce((t, r) => t + r.vv, 0), c };
+  };
+  const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: junta(p.v) })).filter((p) => p.r && p.r.vv > 0);
   if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando os primeiros votos forem apurados. O resultado é registrado a cada minuto.</p>`;
   const ult = pts[pts.length - 1].r;
   const ids = Object.keys(ult.c).sort((a, b) => ult.c[b] - ult.c[a]).slice(0, max);
