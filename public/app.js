@@ -261,7 +261,7 @@ function tabelaPanorama(aba, lista, ac) {
       <td>${p ? `<span class="mini-barra"><i style="width:${Math.min(100, p.pct)}%"></i></span>${pct(p.pct, 1)}` : "–"}</td>
       <td style="text-align:left">${cel(top[0])}</td><td style="text-align:left">${cel(top[1])}</td></tr>`;
   }).join("");
-  return `<section class="card"><h2>${aba === "presidente" ? "Presidente por estado" : aba === "senador" ? "Senador por estado: dois mais votados" : "Governador por estado"}</h2>
+  return `<section class="card"><h2>${aba === "presidente" ? "Presidente: resultado por estado (o resultado final é nacional)" : aba === "senador" ? "Senador por estado: dois mais votados" : "Governador por estado"}</h2>
     <div class="tab-scroll"><table><tr><th>Estado</th><th>Apurado</th><th>1º</th><th>2º</th></tr>${linhas}</table></div></section>`;
 }
 
@@ -288,8 +288,9 @@ function telaMajoritaria(v) {
 
 function telaPanorama(v) {
   const { aba } = estado;
-  const topo = v.d ? `${blocoProgresso("Presidente: Brasil", v.d, null)}<section class="card"><h2>Candidatos por votos</h2>${listaMajoritaria(v.d, aba, "BR")}</section>` : blocoProgresso(`${CARGOS[aba].nome}: Brasil`, null, v.ac.ufs.br);
-  return `${topo}${blocoEvolucao("Evolução da apuração no Brasil", v.h, serieDe(aba), "br")}${tabelaPanorama(aba, v.lista, v.ac)}`;
+  const topo = v.d ? `${blocoProgresso("Presidente: Brasil", v.d, null)}<section class="card"><h2>Candidatos por votos</h2>${listaMajoritaria(v.d, aba, "BR")}</section>` : blocoProgresso(`${CARGOS[aba].nome}: apuração nos estados`, null, v.ac.ufs.br);
+  const nota = aba === "presidente" ? "" : `<p class="aviso">${CARGOS[aba].nome} é eleição estadual: cada estado tem a sua disputa e não existe resultado nacional. O quadro abaixo só reúne os estados.</p>`;
+  return `${topo}${nota}${blocoEvolucao("Evolução da apuração no Brasil", v.h, serieDe(aba), "br")}${tabelaPanorama(aba, v.lista, v.ac)}`;
 }
 
 function telaProporcionalUF(v) {
@@ -314,19 +315,24 @@ function telaNacionalProp(v) {
   const parciais = n.ufs.filter((u) => !u.final).length;
   const cadeiras = blocoCadeiras({
     titulo: "Câmara dos Deputados: cadeiras por partido/federação",
-    subtitulo: parciais ? `Soma dos 27 estados. Projeção: ${parciais} estado(s) ainda sem totalização final.` : "Soma dos 27 estados, resultado oficial do TSE.",
+    subtitulo: parciais ? `Previsão: soma dos 27 estados. ${parciais} estado(s) ainda sem totalização final.` : "Soma dos 27 estados, resultado oficial do TSE.",
     partidos: n.partidos, totalVagas: n.totalVagas, rotuloTotal: "cadeiras",
   });
   const linhas = n.partidos.map((p) => {
     const ufs = Object.entries(p.porUF).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([u, q]) => `${u} ${q}`).join(" · ");
-    return `<tr><td><span class="chip" style="--cor:${corPartido(p.sigla)}">${esc(p.sigla)}</span></td><td><strong>${p.vagas}</strong></td><td>${fmt(p.votos)}</td><td style="text-align:left;white-space:normal">${esc(ufs)}</td></tr>`;
+    return `<tr><td><span class="chip" style="--cor:${corPartido(p.sigla)}">${esc(p.sigla)}</span></td><td><strong>${p.vagas}</strong></td><td>${p.confirmadas}</td><td>${fmt(p.votos)}</td><td style="text-align:left;white-space:normal">${esc(ufs)}</td></tr>`;
   }).join("");
-  const porEstado = n.ufs.sort((a, b) => a.uf.localeCompare(b.uf)).map((u) => `<tr class="clicavel" data-uf="${u.uf}"><td class="uf-nome">${esc(UFS[u.uf])}</td><td>${u.vagas}</td>
-    <td><span class="mini-barra"><i style="width:${Math.min(100, u.pct)}%"></i></span>${pct(u.pct, 1)}</td><td>${u.oficial ? "oficial" : "projeção"}</td></tr>`).join("");
-  return `${blocoProgresso("Brasil: Deputados", null, v.ac.ufs.br)}${blocoEvolucao("Evolução da apuração no Brasil", v.h, "e", "br")}${cadeiras}
-    <section class="card"><h2>Cadeiras por partido/federação no Brasil</h2><div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Cadeiras</th><th>Votos</th><th>Maiores bancadas por estado</th></tr>${linhas}</table></div>${COMO}</section>
-    <section class="card"><h2>Cadeiras por estado</h2><div class="tab-scroll"><table><tr><th>Estado</th><th>Vagas</th><th>Apurado</th><th>Cadeiras</th></tr>${porEstado}</table></div>
-    <p class="muted">Clique em um estado para ver a distribuição das cadeiras.</p></section>`;
+  const porEstado = n.ufs.sort((a, b) => a.uf.localeCompare(b.uf)).map((u) => {
+    const ban = [...u.bancadas].sort((a, b) => b.vagas - a.vagas).map((x) => `<span class="chip" style="--cor:${corPartido(x.sigla)}">${esc(x.sigla)} ${x.vagas}</span>`).join(" ");
+    return `<tr class="clicavel" data-uf="${u.uf}"><td class="uf-nome">${esc(UFS[u.uf])}</td><td>${u.vagas}</td>
+    <td><span class="mini-barra"><i style="width:${Math.min(100, u.pct)}%"></i></span>${pct(u.pct, 1)}</td><td>${u.oficial ? "oficial" : "projeção"}</td><td style="text-align:left;white-space:normal">${ban || "–"}</td></tr>`;
+  }).join("");
+  return `${blocoProgresso("Brasil: Deputados Federais", null, v.ac.ufs.br)}${blocoEvolucao("Evolução da apuração no Brasil", v.h, "e", "br")}${cadeiras}
+    <section class="card"><h2>Quadro geral da Câmara por partido/federação</h2>
+    <p class="muted">Previsão = soma das cadeiras de cada estado com os votos contados até agora. Confirmadas = cadeiras de estados já com totalização final (${n.confirmadasTotal} de ${n.totalVagas}).</p>
+    <div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Previsão</th><th>Confirmadas</th><th>Votos</th><th>Maiores bancadas por estado</th></tr>${linhas}</table></div>${COMO}</section>
+    <section class="card"><h2>Apuração e cadeiras em cada estado</h2><div class="tab-scroll"><table><tr><th>Estado</th><th>Vagas</th><th>Apurado</th><th>Situação</th><th>Cadeiras por partido/federação</th></tr>${porEstado}</table></div>
+    <p class="muted">Cada estado elege só os seus deputados. Clique em um estado para ver a distribuição detalhada.</p></section>`;
 }
 
 function telaEstaduaisLista(v) {

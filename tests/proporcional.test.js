@@ -24,6 +24,8 @@ test("consolida estados no total nacional por partido", () => {
   const nac = consolidarNacional([{ uf: "X", d: e1, dist: distribuirEstado(e1) }, { uf: "Y", d: e2, dist: distribuirEstado(e2) }]);
   assert.equal(nac.total, 8);
   assert.equal(nac.totalVagas, 8);
+  assert.equal(nac.confirmadasTotal, 0);
+  assert.equal(nac.ufs[0].bancadas.reduce((t, b) => t + b.vagas, 0), 4);
   assert.deepEqual(nac.partidos.map((x) => [x.sigla, x.vagas]), [["A", 4], ["B", 4]]);
   assert.equal(nac.partidos[0].porUF.X + nac.partidos[0].porUF.Y, 4);
 });

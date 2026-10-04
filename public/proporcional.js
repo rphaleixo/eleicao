@@ -44,22 +44,24 @@ export function distribuirEstado(d, modo = "2026", vagasManual = 0) {
 export function consolidarNacional(estados) {
   const mapa = new Map();
   let total = 0;
+  let confirmadasTotal = 0;
   for (const { uf, dist } of estados) {
     for (const l of dist.linhas) {
       if (!l.vagas) continue;
-      const m = mapa.get(l.sigla) ?? { sigla: l.sigla, vagas: 0, votos: 0, porUF: {} };
+      const m = mapa.get(l.sigla) ?? { sigla: l.sigla, vagas: 0, confirmadas: 0, votos: 0, porUF: {} };
+      if (dist.oficial) { m.confirmadas += l.vagas; confirmadasTotal += l.vagas; }
       m.vagas += l.vagas; m.porUF[uf] = (m.porUF[uf] ?? 0) + l.vagas; mapa.set(l.sigla, m);
       total += l.vagas;
     }
     for (const l of dist.linhas) { // votos de todos, mesmo sem cadeira
-      const m = mapa.get(l.sigla) ?? { sigla: l.sigla, vagas: 0, votos: 0, porUF: {} };
+      const m = mapa.get(l.sigla) ?? { sigla: l.sigla, vagas: 0, confirmadas: 0, votos: 0, porUF: {} };
       m.votos += l.votos; mapa.set(l.sigla, m);
     }
   }
   const partidos = [...mapa.values()].filter((p) => p.vagas > 0).sort((a, b) => b.vagas - a.vagas || b.votos - a.votos);
   const totalVagas = estados.reduce((s, e) => s + e.dist.vagas, 0);
   return {
-    total, totalVagas, partidos,
-    ufs: estados.map(({ uf, d, dist }) => ({ uf, vagas: dist.vagas, pct: d.pctSecoes, oficial: dist.oficial, final: d.totalizacaoFinal })),
+    total, totalVagas, confirmadasTotal, partidos,
+    ufs: estados.map(({ uf, d, dist }) => ({ uf, vagas: dist.vagas, bancadas: dist.linhas.filter((l) => l.vagas > 0).map((l) => ({ sigla: l.sigla, vagas: l.vagas })), pct: d.pctSecoes, oficial: dist.oficial, final: d.totalizacaoFinal })),
   };
 }
