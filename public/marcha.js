@@ -41,6 +41,14 @@ export function ufsVisiveis(regiao) {
   return regiao ? base : [...base, "ZZ"];
 }
 
+/** "N votos apurados | M eleitores aptos": votos = comparecimento nas seções já totalizadas. Sem comparecimento, só os aptos. */
+export function textoAptos(a, { forte = true } = {}) {
+  if (!a?.eleitores) return "";
+  const n = (v) => (forte ? `<strong>${fmt(v)}</strong>` : fmt(v));
+  const votos = a.comparecimento > 0 ? `${n(a.comparecimento)} votos apurados | ` : "";
+  return `${votos}${n(a.eleitores)} eleitores aptos`;
+}
+
 const selo = (a) => `<span class="selo ${a === "p" || a === "f" ? a : ""}">${TEXTO_SITUACAO[a] ?? TEXTO_SITUACAO.n}</span>`;
 
 // ---------- componentes reaproveitáveis ----------
@@ -58,7 +66,7 @@ function anel(valor) {
 export function graficoPresenca({ hist, chave, a, altura = 160, titulo }) {
   const comp = a.eleitores ? (a.comparecimento / a.eleitores) * 100 : 0, aus = a.eleitores ? (a.abstencao / a.eleitores) * 100 : 0;
   return `${areaPresenca(hist, chave, a.eleitores, { largura: largura(), altura, rotulo: titulo, inicio: INICIO_APURACAO, ate: Date.now() })}
-    <div class="presenca-leg"><span><i class="pt pres"></i>Presentes <strong>${pct(comp)}</strong></span><span><i class="pt aus"></i>Ausentes <strong>${pct(aus)}</strong></span><span><i class="pt falta"></i>A apurar <strong>${pct(Math.max(0, 100 - comp - aus))}</strong></span></div>`;
+    <div class="presenca-leg"><span><i class="pt pres"></i>Presentes <strong>${pct(comp)}</strong></span><span><i class="pt aus"></i>Ausentes <strong>${pct(aus)}</strong></span><span><i class="pt falta"></i>A apurar <strong>${pct(Math.max(0, 100 - comp - aus))}</strong></span>${a.pct != null && typeof chave === "string" ? `<span><i class="pt linha-urnas"></i>Urnas apuradas <strong>${pct(a.pct)}</strong></span>` : ""}</div>`;
 }
 
 /** Versão compacta do gráfico de presença: uma barra e a legenda. */
@@ -71,7 +79,7 @@ export function barraPresenca(a) {
 export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave, grafico = true, topo = "", origem = "Acompanhamento TSE" }) {
   return `<section class="card hero">${topo}
     <div class="hero-topo">${anel(a.pct)}<div class="hero-info"><h2>${esc(titulo)}</h2>${subtitulo ? `<p class="hero-sub">${esc(subtitulo)}</p>` : ""}${selo(andamento)}
-      <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${a.eleitores ? `<p class="hero-sec2"><strong>${fmt(a.eleitores)}</strong> eleitores aptos</p>` : ""}${extra}${quando ? `<p class="hero-sub">${esc(origem)}: ${esc(quando)}</p>` : ""}</div></div>
+      <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${a.eleitores ? `<p class="hero-sec2">${textoAptos(a)}</p>` : ""}${extra}${quando ? `<p class="hero-sub">${esc(origem)}: ${esc(quando)}</p>` : ""}</div></div>
     ${grafico === null ? "" : `<div class="hero-grafico">${grafico ? graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` }) : barraPresenca(a)}</div>`}</section>`;
 }
 
@@ -121,7 +129,7 @@ export function linhaEstado(uf, u, aberto = false, painel = "") {
   return `<li class="${aberto ? "aberto" : ""}"><button type="button" class="linha-estado" data-uf="${uf}" aria-expanded="${aberto}"><span class="sigla">${uf === "ZZ" ? "EX" : uf}</span>
     <span class="le-meio"><span class="le-nome">${esc(nomeEstado(uf))}<i class="ponto ${estadoCls}" title="${TEXTO_SITUACAO[u?.andamento] ?? TEXTO_SITUACAO.n}"></i></span>
       <span class="le-barra" role="img" aria-label="Presentes ${pct(d.comp)}, ausentes ${pct(d.aus)}, a apurar ${pct(d.falta)}"><i class="pres" style="width:${d.comp}%"></i><i class="aus" style="width:${d.aus}%"></i></span>
-      <span class="le-det">${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções · ${fmt(a.eleitores)} eleitores aptos` : "–"}</span>${legendaPresenca(a)}</span>
+      <span class="le-det">${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}` : "–"}</span>${legendaPresenca(a)}</span>
     <span class="le-pct">${pct(a?.pct ?? 0)}<small>das seções</small></span><span class="seta" aria-hidden="true">${aberto ? "⌃" : "⌄"}</span></button>${aberto ? painel : ""}</li>`;
 }
 
@@ -220,9 +228,9 @@ function heroRegioes(v, estado, topo, p) {
     ? r.ufs.map((u) => ({ nome: UFS[u], a: doEstado(ac.ufs[u.toLowerCase()]) }))
     : [...Object.values(REGIOES).map((g) => ({ nome: g.nome, a: agregar(g.ufs.map((u) => ac.ufs[u.toLowerCase()])) })), ...(ac.ufs.zz ? [{ nome: "Exterior", a: doEstado(ac.ufs.zz) }] : [])];
   itens.sort((x, y) => (y.a?.pct ?? 0) - (x.a?.pct ?? 0));
-  const barras = itens.map(({ nome, a }) => `<li><span class="br-nome">${esc(nome)}</span><span class="br-trilho"><i style="width:${Math.min(100, a?.pct ?? 0)}%"></i></span><b>${pct(a?.pct ?? 0)}</b><small>${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções · ${fmt(a.eleitores)} eleitores aptos` : "–"}</small></li>`).join("");
+  const barras = itens.map(({ nome, a }) => `<li><span class="br-nome">${esc(nome)}</span><span class="br-trilho"><i style="width:${Math.min(100, a?.pct ?? 0)}%"></i></span><b>${pct(a?.pct ?? 0)}</b><small>${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}` : "–"}</small></li>`).join("");
   return `<section class="card hero">${topo}<h2>% da apuração por ${r ? "estado" : "região"}</h2>
-    <p class="hero-sub">${esc(p.titulo)}: <strong>${pct(p.a.pct)}</strong> · ${fmt(p.a.st)} de ${fmt(p.a.ts)} seções · ${fmt(p.a.eleitores)} eleitores aptos</p>
+    <p class="hero-sub">${esc(p.titulo)}: <strong>${pct(p.a.pct)}</strong> · ${fmt(p.a.st)} de ${fmt(p.a.ts)} seções · ${textoAptos(p.a, { forte: false })}</p>
     <ul class="barras-regiao">${barras}</ul></section>`;
 }
 

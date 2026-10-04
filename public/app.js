@@ -1,4 +1,4 @@
-import { telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
+import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
@@ -22,7 +22,7 @@ import {
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
 } from "./tse.js";
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
-import { corPartido } from "./cores.js";
+import { corPartido, ajustarContrasteChips } from "./cores.js";
 import { linhaEvolucao, linhasResultado } from "./graficos.js";
 import { atualizarFaixa } from "./eventos.js";
 import { iniciarGraficos, reaplicarGraficos } from "./graficoInterativo.js";
@@ -346,7 +346,7 @@ function resumoEstado(v) {
   const { uf } = estado, k = uf.toLowerCase();
   const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, "", uf);
   const fed = v.f.ufs[k];
-  const extra = `<p class="hero-sec">Eleitores aptos: <strong>${fmt(p.a.eleitores)}</strong></p>${fed ? `<p class="hero-sub">Presidente: ${pct(fed.pct)} das seções</p>` : ""}`;
+  const extra = `<p class="hero-sec">${textoAptos(p.a)}</p>${fed ? `<p class="hero-sub">Presidente: ${pct(fed.pct)} das seções</p>` : ""}`;
   const hero = heroApuracao({ ...p, titulo: UFS[uf], subtitulo: "Eleições estaduais", extra, hist: [], grafico: false });
   const dt = v.detalhe ?? {};
   const cards = [
@@ -693,6 +693,7 @@ function render(forcar = false) {
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   reaplicarGraficos($("conteudo"));
+  ajustarContrasteChips($("conteudo"));
   if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
 }
 

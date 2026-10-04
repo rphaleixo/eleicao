@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { detectarEventos, acrescentarEventos, escolherAlvos, ALVOS, caminhoAlvo } from "../worker/eventos.js";
+import { detectarEventos, acrescentarEventos, escolherAlvos, ALVOS, caminhoAlvo, estimarInstante } from "../worker/eventos.js";
 import { blocoEventos, textoEvento, ordenarEventos, itensFaixa } from "../public/eventos.js";
 
 const c = (id, nome, partido, sit = "") => ({ id, nome, partido, sit });
@@ -48,4 +48,13 @@ test("faixa do topo: 5 mais recentes, sem o 'até'", () => {
   const f = itensFaixa({ itens });
   assert.equal(f.length, 5); assert.ok(f[0].texto.includes("X7"));
   assert.ok(!blocoEventos({ itens }).includes("até "));
+});
+
+test("estimativa da hora: primeiro minuto em que o critério de definida vale", () => {
+  const serie = [10, 30, 60, 90, 99].map((pct, i) => ({ t: 1000 + i * 60, pct }));
+  const base = { cargo: "senador", vagas: 2, vv: 1000, te: 2000, pctAgora: 99, serie, votos: [500, 480, 200, 100] };
+  assert.equal(estimarInstante({ ...base, indice: 0 }), 1000 + 3 * 60); // 90%: 480*0.91 - 200*0.91 > 200 restantes
+  assert.equal(estimarInstante({ ...base, indice: 0, votos: [500, 498, 497, 100] }), null); // disputa apertada: nunca garante
+  const maioria = estimarInstante({ cargo: "governador", tipo: "eleito", vagas: 1, vv: 1000, te: 1200, pctAgora: 99, serie, votos: [700, 200] });
+  assert.equal(maioria, 1000 + 3 * 60);
 });

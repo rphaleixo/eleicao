@@ -566,3 +566,9 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 .dv-votos .selo-sit { align-self: flex-end; margin-top: 2px; } .dv > .cr-barra { grid-area: b; }
 .card-dv { list-style: none; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
 .cd-topo { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; } .cd-topo b { font-size: 1.05rem; }
+
+/* Estado/município sem dados: área hachurada */
+.legenda-mapa .leg-vazio i { background: repeating-linear-gradient(45deg, var(--barra) 0 3px, var(--muted) 3px 4.5px); border: 1px solid var(--line); }
+
+.g-urnas { fill: none; stroke: #7cc4ff; stroke-width: 2.2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pt.linha-urnas { background: #7cc4ff; height: 3px; border-radius: 2px; }

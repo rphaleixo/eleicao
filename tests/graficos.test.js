@@ -46,3 +46,10 @@ test("gráficos começam na primeira apuração e são consultáveis", async () 
   assert.equal(instanteEm(g, g.e), g.t0);
   assert.equal(instanteEm(g, g.l - g.d), g.t1);
 });
+
+test("presença: linha de % de urnas apuradas a cada minuto (recorte único)", () => {
+  const pts = [0, 1, 2].map((i) => ({ t: T0 + 60 + i * 60, f: { br: 10 * (i + 1) }, p: { br: [100 * (i + 1), 20 * (i + 1)] } }));
+  const svg = areaPresenca(pts, "br", 1000, { inicio: T0 * 1000, ate: (T0 + 400) * 1000 });
+  assert.ok(svg.includes('class="g-urnas"') && svg.includes("Urnas apuradas"));
+  assert.ok(!areaPresenca(pts, ["br", "rj"], 1000, { inicio: T0 * 1000, ate: (T0 + 400) * 1000 }).includes("g-urnas")); // soma de vários locais: sem a linha
+});

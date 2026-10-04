@@ -6,7 +6,7 @@
 import { fichaDoCandidato } from "./candidato.js";
 import { carregarSeed } from "./carga.js";
 import { URL_SENADO, senadoresEleitosEm2022 } from "./senado.js";
-import { ALVOS, acrescentarEventos, caminhoAlvo, detectarEventos, escolherAlvos, normalizar } from "./eventos.js";
+import { ALVOS, acrescentarEventos, caminhoAlvo, detectarEventos, escolherAlvos, estimarInstante, normalizar, num } from "./eventos.js";
 import { acrescentarResultado, lerResultado, UFS_MINUSCULAS } from "./resultados.js";
 import { acrescentar, pontoDeAcompanhamento, presencaDeAcompanhamento } from "./historico.js";
 
@@ -156,7 +156,38 @@ export async function registrarEventos(env) {
     itens = acrescentarEventos({ itens }, eventos, agora, primeira).itens;
     if (fechado) estado.fechado[a.id] = 1;
   }
+  itens = await refinarEventos(env, itens);
   await env.HIST.put("eventos", JSON.stringify({ itens, visto: estado.visto, fechado: estado.fechado }));
+}
+
+// Definições achadas na primeira visita (já existiam antes do registro): estima a hora real a partir do histórico da apuração.
+async function refinarEventos(env, itens) {
+  const pendentes = itens.filter((e) => e.a && !e.r);
+  if (!pendentes.length) return itens;
+  const historico = await env.HIST.get("historico", "json");
+  const pontos = (historico?.pontos ?? []).filter((p) => p.t >= INICIO_APURACAO);
+  const grupos = new Map();
+  for (const e of pendentes) { const id = e.cargo === "presidente" ? "presidente:br" : `${e.cargo}:${e.uf.toLowerCase()}`; grupos.set(id, [...(grupos.get(id) ?? []), e]); }
+  const feitos = new Set();
+  for (const [id, evs] of [...grupos].slice(0, 8)) {
+    const alvo = ALVOS.find((a) => a.id === id);
+    try {
+      const r = await fetch(ORIGEM_TSE + caminhoAlvo(alvo, ANO, ELEICAO_FEDERAL, ELEICAO_ESTADUAL));
+      if (!r.ok) continue;
+      const json = await r.json(), d = normalizar(json);
+      const ordenados = d.candidatos.filter((c) => c.votos > 0 && c.elegivel).sort((a, b) => b.votos - a.votos);
+      const votos = ordenados.map((c) => c.votos), chave = alvo.cargo === "presidente" ? "f" : "e", uf = alvo.uf;
+      const serie = pontos.map((p) => ({ t: p.t, pct: p[chave]?.[uf] })).filter((p) => p.pct != null);
+      const base = { vv: num(json.v?.vv), te: d.eleitorado?.apto ?? 0, vagas: d.vagas || 1, pctAgora: d.pctSecoes, serie, votos };
+      for (const e of evs) {
+        const indice = ordenados.findIndex((c) => c.id === e.c?.[0]?.id);
+        const t = estimarInstante({ ...base, tipo: e.tipo, cargo: e.cargo, indice: Math.max(0, indice) });
+        if (t != null) { e.t = t; e.est = 1; }
+        e.r = 1; feitos.add(e.k);
+      }
+    } catch { /* tenta de novo no próximo minuto */ }
+  }
+  return itens;
 }
 
 async function lerEventos(request, env, ctx) {

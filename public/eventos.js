@@ -21,11 +21,11 @@ export const ordenarEventos = (itens) => [...(itens ?? [])].sort((a, b) => b.t -
 export function blocoEventos(dados) {
   if (!dados) return `<section class="card"><h2>Definições da eleição</h2><p class="muted">Carregando…</p></section>`;
   const itens = ordenarEventos(dados.itens);
-  const linhas = itens.map((e) => `<li class="ev ${e.tipo}"><span class="ev-hora">${hhmm(e.t)}</span>
+  const linhas = itens.map((e) => `<li class="ev ${e.tipo}"><span class="ev-hora"${e.est ? ' title="Horário estimado a partir da evolução da apuração"' : ""}>${e.est ? "~" : ""}${hhmm(e.t)}</span>
     <span class="ev-corpo"><span class="ev-onde">${CARGO[e.cargo] ?? esc(e.cargo)}${e.cargo === "presidente" ? "" : ` · ${esc(e.uf)}`}</span> ${textoEvento(e)}</span></li>`).join("");
   return `<section class="card"><div class="titulo-cadeiras"><h2>Definições da eleição</h2><span class="muted">${itens.length}</span></div>
     ${itens.length ? `<ul class="log-eventos">${linhas}</ul>` : `<p class="muted">Nenhuma definição ainda. Aqui aparecem, da mais recente para a mais antiga, os candidatos eleitos e os 2º turnos confirmados desde o início da apuração.</p>`}
-    <p class="muted nota">A hora é a em que o site registrou a definição (verificação a cada poucos minutos). Definições que já existiam quando o registro começou mostram a hora em que foram detectadas.${dados.acompanhados ? ` Cargos acompanhados: ${dados.acompanhados}; já definidos: ${dados.fechados}.` : ""}</p></section>`;
+    <p class="muted nota">A hora é a em que o site registrou a definição (verificação a cada poucos minutos). Horários com "~" são estimados: a definição já existia quando o registro começou e a hora foi calculada pela evolução da apuração.${dados.acompanhados ? ` Cargos acompanhados: ${dados.acompanhados}; já definidos: ${dados.fechados}.` : ""}</p></section>`;
 }
 
 const tira = (html) => String(html).replace(/<[^>]+>/g, "");

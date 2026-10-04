@@ -59,7 +59,8 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
   const pts = pontos.map((p) => {
     const chaves = [].concat(chave), partes = chaves.map((k) => p.p?.[k]);
     const par = partes.every(Boolean) ? [partes.reduce((s, x) => s + x[0], 0), partes.reduce((s, x) => s + x[1], 0)] : p.f?.[chaves[0]] === 0 ? [0, 0] : null; // antes da apuração começar, tudo é zero
-    return par ? { t: p.t * 1000, c: (par[0] / eleitorado) * 100, a: (par[1] / eleitorado) * 100 } : null;
+    const u = chaves.length === 1 ? p.f?.[chaves[0]] : null; // % das urnas (seções) apuradas naquele minuto, quando o recorte é um só
+    return par ? { t: p.t * 1000, c: (par[0] / eleitorado) * 100, a: (par[1] / eleitorado) * 100, u: u ?? null } : null;
   }).filter((p) => p && p.c + p.a > 0 && p.t >= inicio);
   if (ate && pts.length && ate > pts[pts.length - 1].t) pts.push({ ...pts[pts.length - 1], t: ate });
   if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
@@ -77,10 +78,13 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
   const ult = pts[pts.length - 1], fim = base(ult.t), ini = base(t0);
   const grade = [0, 25, 50, 75, 100].map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`).join("");
   const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; }).join("");
-  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [{ n: "Presentes", v: pts.map((p) => p.c), y: [0, 100] }, { n: "Ausentes", v: pts.map((p) => p.a), y: [0, 100] }]);
+  const comUrnas = pts.some((p) => p.u != null);
+  if (comUrnas) { let ant = 0; for (const p of pts) { if (p.u == null) p.u = ant; ant = p.u; } } // lacunas: mantém o último valor
+  const linhaUrnas = comUrnas ? `<polyline class="g-urnas" points="${degrau((p) => p.u)}"/>` : "";
+  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [{ n: "Presentes", v: pts.map((p) => p.c), y: [0, 100] }, { n: "Ausentes", v: pts.map((p) => p.a), y: [0, 100] }, ...(comUrnas ? [{ n: "Urnas apuradas", cor: "#7cc4ff", v: pts.map((p) => p.u), y: [0, 100] }] : [])]);
   return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.c)} presentes e ${pct(ult.a)} ausentes do eleitorado">
     ${grade}${ticks}<polygon class="g-aus" points="${topo} ${fim} ${ini}"/><polygon class="g-pres" points="${meio} ${fim} ${ini}"/>
-    <polyline class="g-borda" points="${topo}"/></svg><div class="g-info" hidden></div>`;
+    <polyline class="g-borda" points="${topo}"/>${linhaUrnas}</svg><div class="g-info" hidden></div>`;
 }
 
 /**

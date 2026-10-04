@@ -1,6 +1,6 @@
 // Registro das definições da eleição (eleito, 2º turno), com a hora em que cada uma apareceu.
 // Usa o mesmo leitor dos arquivos do TSE do site (public/tse.js), para a regra de "eleito" ser uma só.
-import { normalizar } from "../public/tse.js";
+import { normalizar, num } from "../public/tse.js";
 
 export const UFS_ALVO = ["ac", "al", "ap", "am", "ba", "ce", "df", "es", "go", "ma", "mt", "ms", "mg", "pa", "pb", "pr", "pe", "pi", "rj", "rn", "rs", "ro", "rr", "sc", "sp", "se", "to"];
 export const CODIGO_CARGO = { presidente: "0001", governador: "0003", senador: "0005" };
@@ -47,4 +47,28 @@ export const caminhoAlvo = (a, ano, eleicaoFederal, eleicaoEstadual) => {
   return `ele${ano}/${e}/dados/${a.uf}/${a.uf}-c${CODIGO_CARGO[a.cargo]}-e00${e}-u.json`;
 };
 
-export { normalizar };
+/**
+ * Estima quando uma definição aconteceu, para o que já estava definido antes de o registro começar.
+ * Aplica o mesmo critério de "definida" do site aos votos de cada minuto, supondo que a proporção entre
+ * os candidatos seja a de agora e que os votos contados cresçam com o % de seções apuradas (histórico).
+ * Critério: o candidato fica garantido quando seus votos superam os do maior rival somados a todos os
+ * eleitores das seções ainda não apuradas (Senado e 2º turno), ou passam de 50% dos votos possíveis (maioria).
+ * @param {object} o { tipo, cargo, indice (posição do candidato entre os mais votados), votos[] (ordenados), vv, te, vagas, pctAgora, serie:[{t,pct}] }
+ * @returns {number|null} instante (segundos) ou null se o critério não foi atingido no histórico
+ */
+export function estimarInstante({ tipo, cargo, indice = 0, votos, vv, te, vagas = 1, pctAgora, serie }) {
+  if (!pctAgora || !te || !votos?.length) return null;
+  for (const { t, pct } of serie) {
+    if (!(pct > 0)) continue;
+    const k = Math.min(1, pct / pctAgora), restantes = te * (1 - Math.min(100, pct) / 100);
+    const v = votos.map((x) => x * k), validos = vv * k;
+    let ok;
+    if (cargo === "senador") ok = v[indice] > (v[vagas] ?? 0) + restantes;
+    else if (tipo === "segundo") ok = v[0] + 0.5 * restantes < 0.5 * validos && v[1] > (v[2] ?? 0) + restantes;
+    else ok = v[0] > 0.5 * (validos + restantes);
+    if (ok) return t;
+  }
+  return null;
+}
+
+export { normalizar, num };

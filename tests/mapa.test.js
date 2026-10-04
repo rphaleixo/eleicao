@@ -61,3 +61,10 @@ test("a força da cor acompanha a apuração, nos mapas de estado e de municípi
   assert.ok(hm.includes("fill:#d00;fill-opacity:0.84") && hm.includes("80,00% apurado"));
   assert.ok(legendaMapa([{ cor: "#d00", quem: "ANA", n: 1 }]).includes("escala-apuracao"));
 });
+
+test("estado sem dados é hachurado, no mapa e na legenda", async () => {
+  const { mapaBrasil, legendaMapa } = await import("../public/mapa.js");
+  const h = mapaBrasil({ SP: null });
+  assert.ok(h.includes('<pattern id="hachura-mapa"') && h.includes("fill:url(#hachura-mapa)"));
+  assert.ok(legendaMapa([], { semVotos: 1 }).includes("leg-vazio"));
+});
