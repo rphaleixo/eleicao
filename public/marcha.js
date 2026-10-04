@@ -87,20 +87,24 @@ export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, ext
 export const regiaoDe = (uf) => Object.entries(REGIOES).find(([, r]) => r.ufs.includes(uf))?.[0] ?? (uf === "ZZ" ? "exterior" : "");
 
 /**
- * Navegação por região e estado, usada no topo das abas:
- * 1ª linha: Brasil e regiões (com o % apurado); 2ª linha: "Região inteira" e os estados da região escolhida.
+ * Navegação por região e estado, usada no topo das abas. Uma barra mostra onde você está ("Brasil › Nordeste › Bahia", com o % apurado);
+ * tocar nela abre o painel com as regiões e, escolhida a região, os estados. Nada rola para o lado.
  */
-export function navegacaoRegional(ac, { regiao, uf, comExterior = true, comEstados = true }) {
-  const chip = (attrs, nome, valor, ativo) => `<button type="button" ${attrs} aria-pressed="${ativo}">${nome}${valor == null ? "" : ` <small>${pct(valor)}</small>`}</button>`;
-  const linha1 = chip('data-regiao=""', "Brasil", null, regiao === "")
-    + Object.entries(REGIOES).map(([k, r]) => chip(`data-regiao="${k}"`, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct, regiao === k)).join("")
-    + (comExterior && ac.ufs.zz ? chip('data-regiao="exterior"', "Exterior", doEstado(ac.ufs.zz).pct, regiao === "exterior") : "");
+export function navegacaoRegional(ac, { regiao, uf, comExterior = true, comEstados = true, aberto = false }) {
+  const botao = (attrs, nome, valor, ativo, classe = "") => `<button type="button" class="np-item${classe}" ${attrs} aria-pressed="${ativo}"><span>${nome}</span>${valor == null ? "" : `<small>${pct(valor)}</small>`}</button>`;
+  const regioes = botao('data-regiao=""', "Brasil", doEstado(ac.ufs.br)?.pct ?? null, regiao === "" && uf === "BR")
+    + Object.entries(REGIOES).map(([k, r]) => botao(`data-regiao="${k}"`, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct, regiao === k)).join("")
+    + (comExterior && ac.ufs.zz ? botao('data-regiao="exterior"', "Exterior", doEstado(ac.ufs.zz).pct, regiao === "exterior") : "");
   const r = REGIOES[regiao];
-  const linha2 = r && comEstados
-    ? `<div class="chips chips-estados" role="group" aria-label="Estados de ${esc(r.nome)}">${chip("data-regiao-inteira", "Região inteira", null, uf === "BR")}${r.ufs.slice().sort((x, y) => UFS[x].localeCompare(UFS[y], "pt-BR"))
-        .map((u) => chip(`data-nav-uf="${u}"`, esc(UFS[u]), doEstado(ac.ufs[u.toLowerCase()])?.pct ?? 0, uf === u)).join("")}</div>`
+  const estados = r && comEstados
+    ? `<p class="np-titulo">Estados de ${esc(r.nome)}</p><div class="np-grade">${botao("data-regiao-inteira", "Região inteira", null, uf === "BR", " np-inteira")}${r.ufs.slice().sort((x, y) => UFS[x].localeCompare(UFS[y], "pt-BR"))
+        .map((u) => botao(`data-nav-uf="${u}"`, esc(UFS[u]), doEstado(ac.ufs[u.toLowerCase()])?.pct ?? 0, uf === u)).join("")}</div>`
     : "";
-  return `<nav class="navegacao" aria-label="Navegar por região e estado"><div class="chips" role="group" aria-label="Regiões">${linha1}</div>${linha2}</nav>`;
+  const caminho = ["Brasil", ...(regiao === "exterior" ? ["Exterior"] : r ? [r.nome] : []), ...(uf !== "BR" && uf !== "ZZ" ? [UFS[uf]] : [])];
+  const atual = uf !== "BR" ? doEstado(ac.ufs[uf.toLowerCase()])?.pct : r ? agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct : regiao === "exterior" ? doEstado(ac.ufs.zz)?.pct : doEstado(ac.ufs.br)?.pct;
+  return `<nav class="navegacao" aria-label="Navegar por região e estado"><button type="button" class="escopo-barra" data-escopo-toggle aria-expanded="${aberto}">
+    <span class="esc-rotulo">Mostrando</span><b class="esc-caminho">${caminho.map(esc).join(" › ")}</b>${atual != null ? `<small>${pct(atual)} apurado</small>` : ""}<i class="esc-seta" aria-hidden="true"></i></button>
+    <div class="escopo-painel"${aberto ? "" : " hidden"}><p class="np-titulo">Região</p><div class="np-grade">${regioes}</div>${estados}</div></nav>`;
 }
 
 /** Locais do histórico de resultados que formam o recorte escolhido: estado, exterior, região ou Brasil. */

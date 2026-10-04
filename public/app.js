@@ -32,7 +32,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -669,7 +669,7 @@ let ultimoAc = null; // andamento por estado mais recente, para a navegação ap
 function renderNavegacao(v) {
   ultimoAc = v?.f ?? v?.ac ?? v?.e ?? ultimoAc;
   const nav = usaRegiao() && ultimoAc
-    ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf, comExterior: estado.aba === "andamento" || estado.aba === "presidente", comEstados: estado.aba === "andamento" || estado.aba === "presidente" }) : "";
+    ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf, comExterior: estado.aba === "andamento" || estado.aba === "presidente", comEstados: estado.aba === "andamento" || estado.aba === "presidente", aberto: estado.navAberta }) : "";
   const sub = estado.aba === "estados" ? barraEstado(estado.uf, estado.cargo) : "";
   const preserva = (el, html, anterior) => {
     if (html === anterior) return anterior;
@@ -738,11 +738,13 @@ async function carregarMunicipios() {
 $("abas").addEventListener("click", (e) => { const b = e.target.closest("[data-aba]"); if (b) { estado.regiao = ""; estado.filtros = filtrosVazios(); navegar({ aba: b.dataset.aba, uf: "BR", cargo: "resumo", mun: "" }); window.scrollTo({ top: 0 }); } }); // trocar de aba recomeça do Brasil, sem carregar o estado da aba anterior
 $("mun").addEventListener("change", () => navegar({ mun: $("mun").value }));
 $("nav").addEventListener("click", (e) => {
+  if (e.target.closest("[data-escopo-toggle]")) { estado.navAberta = !estado.navAberta; renderNavegacao(estado.view); return; }
+  const fechar = () => { estado.navAberta = false; };
   const reg = e.target.closest("[data-regiao]");
-  if (reg) { estado.regiao = reg.dataset.regiao; if (estado.filtros.uf && regiaoDe(estado.filtros.uf) !== estado.regiao) estado.filtros.uf = ""; navegar({ uf: "BR", mun: "" }); return; }
-  if (e.target.closest("[data-regiao-inteira]")) { navegar({ uf: "BR", mun: "" }); return; }
+  if (reg) { estado.regiao = reg.dataset.regiao; if (estado.filtros.uf && regiaoDe(estado.filtros.uf) !== estado.regiao) estado.filtros.uf = ""; if (!estado.regiao || !["andamento", "presidente"].includes(estado.aba)) fechar(); navegar({ uf: "BR", mun: "" }); return; }
+  if (e.target.closest("[data-regiao-inteira]")) { fechar(); navegar({ uf: "BR", mun: "" }); return; }
   const nav = e.target.closest("[data-nav-uf]");
-  if (nav) { estado.rolar = true; navegar({ uf: nav.dataset.navUf, mun: "" }); return; }
+  if (nav) { fechar(); estado.rolar = true; navegar({ uf: nav.dataset.navUf, mun: "" }); return; }
 });
 // ---------- seleção de estado: tira, barra fixa e folha de busca ----------
 const folha = $("seletor-estado");

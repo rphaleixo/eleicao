@@ -574,3 +574,21 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 .pt.linha-urnas { background: #7cc4ff; height: 3px; border-radius: 2px; }
 
 .ver-completa { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-weight: 600; font-size: .9rem; color: var(--acento); text-decoration: none; }
+
+/* Navegação por região e estado: barra do escopo + painel */
+.navegacao { margin: 4px 0 6px; }
+.escopo-barra { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--txt); font: inherit; text-align: left; cursor: pointer; }
+.esc-rotulo { flex: none; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.esc-caminho { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.escopo-barra small { flex: none; color: var(--muted); font-weight: 600; }
+.esc-seta { flex: none; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform .15s; }
+.escopo-barra[aria-expanded="true"] .esc-seta { transform: rotate(-135deg); }
+.escopo-painel { margin-top: 6px; padding: 10px 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.escopo-painel[hidden] { display: none; }
+.np-titulo { margin: 4px 0 6px; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.np-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 6px; }
+.np-item { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--txt); font: inherit; font-size: .88rem; cursor: pointer; }
+.np-item small { color: var(--muted); font-weight: 600; }
+.np-item[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--acento-txt); font-weight: 600; } .np-item[aria-pressed="true"] small { color: inherit; opacity: .85; }
+.np-inteira { grid-column: 1 / -1; }
+@media (max-width: 520px) { .esc-rotulo { display: none; } .escopo-barra small { font-size: .78rem; } }
