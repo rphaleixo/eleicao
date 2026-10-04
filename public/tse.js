@@ -114,6 +114,16 @@ export function normalizar(json) {
   candidatos.sort((x, y) => y.votos - x.votos || Number(x.numero) - Number(y.numero));
 
   const s = json.s ?? {}, v = json.v ?? {};
+  // Situação visual de cada candidato (c.sit): "eleito" ou "segundo" (2º turno). Vale o que o TSE marcou no candidato;
+  // enquanto isso não vem, usa a eleição matematicamente definida (md): "e" = mais votados eleitos, "s" = dois vão ao 2º turno.
+  const md = json.md === "e" || json.md === "s" ? json.md : "";
+  for (const c of candidatos) c.sit = /2.\s*turno/i.test(c.situacao) ? "segundo" : c.eleito ? "eleito" : ""; // o TSE marca e="s" também em quem vai ao 2º turno
+  const vagas = num(cargo.nv) || 1;
+  if (!candidatos.some((c) => c.sit)) {
+    const lideres = candidatos.filter((c) => c.votos > 0 && c.elegivel);
+    if (md === "e") lideres.slice(0, vagas).forEach((c) => { c.sit = "eleito"; });
+    if (md === "s") lideres.slice(0, 2).forEach((c) => { c.sit = "segundo"; });
+  }
   // Em todo o site o % do candidato é votos no candidato ÷ votos válidos.
   const validos = num(v.vv);
   if (validos > 0) for (const c of candidatos) c.pct = (c.votos / validos) * 100;

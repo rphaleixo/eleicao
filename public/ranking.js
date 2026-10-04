@@ -1,6 +1,7 @@
 // Ranking das eleições majoritárias: os 3 primeiros em destaque e os demais numa lista compacta (sem foto).
 import { urlFoto } from "./tse.js";
 import { corPartido } from "./cores.js";
+import { seloSit, classeSit } from "./situacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 import { fmt, pct } from "./formato.js";
@@ -9,14 +10,13 @@ import { fmt, pct } from "./formato.js";
 export const ordenarCandidatos = (candidatos) => candidatos.slice().sort((a, b) => b.votos - a.votos || a.nome.localeCompare(b.nome, "pt-BR"));
 
 function selo(c) {
-  if (c.eleito) return `<span class="badge">${esc(c.situacao || "Eleito")}</span>`;
-  if (c.situacao === "2º turno") return `<span class="badge">2º turno</span>`;
-  if (!c.elegivel) return `<span class="badge neutro">${esc(c.situacaoVoto)}</span>`;
-  return "";
+  const sit = seloSit(c);
+  if (sit) return sit;
+  return !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
 }
 
 function pódio(c, i, aba, uf) {
-  return `<li class="pod pod-${i + 1}${c.eleito ? " eleito" : ""}" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
+  return `<li class="pod pod-${i + 1}${classeSit(c)}" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
     <span class="pod-pos">${i + 1}º</span>
     <img class="foto pod-foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
     <b class="pod-nome">${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>
@@ -24,7 +24,7 @@ function pódio(c, i, aba, uf) {
 }
 
 function linha(c, i, max) {
-  return `<li class="cr${c.eleito ? " eleito" : ""}" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
+  return `<li class="cr${classeSit(c)}" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
     <span class="pos">${i + 1}</span><span class="cr-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${selo(c)}</span>
     <span class="cr-pct">${pct(c.pct)}</span><span class="cr-votos">${fmt(c.votos)}</span><span class="cr-barra"><i style="width:${max ? (c.votos / max) * 100 : 0}%"></i></span></li>`;
 }

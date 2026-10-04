@@ -3,6 +3,7 @@
 import { UFS, INICIO_APURACAO } from "./config.js";
 import { areaPresenca } from "./graficos.js";
 import { urlFoto } from "./tse.js";
+import { seloSit, classeSit, seloEleicao } from "./situacao.js";
 import { corPartido } from "./cores.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -136,12 +137,12 @@ export function cardCargo({ titulo, aba, uf, d }) {
   // Mais votados primeiro; sem votos (apuração não começou), ordem alfabética.
   const top = d.candidatos.slice().sort((x, y) => y.votos - x.votos || x.nome.localeCompare(y.nome, "pt-BR")).slice(0, 5);
   const itens = top.length
-    ? top.map((c, i) => `<li data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato"><span class="pos">${i + 1}</span>
+    ? top.map((c, i) => `<li class="${classeSit(c).trim()}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato"><span class="pos">${i + 1}</span>
         <img class="foto mini" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
-        <span class="cc-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span></span>
+        <span class="cc-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${seloSit(c, { curto: true })}</span>
         <span class="cc-votos"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)}</small></span></li>`).join("")
     : `<li class="vazio muted">Sem candidatos no arquivo do TSE.</li>`;
-  return `<article class="card-cargo"><div class="cc-topo"><h3>${esc(titulo)}</h3><span class="muted">${pct(d.pctSecoes)} apurado</span></div>
+  return `<article class="card-cargo"><div class="cc-topo"><h3>${esc(titulo)}</h3>${seloEleicao(d) || `<span class="muted">${pct(d.pctSecoes)} apurado</span>`}</div>
     <ol class="cc-lista">${itens}</ol>${blocoVotos(d)}<button type="button" class="link" data-ir="${aba}">Ver completo ›</button></article>`;
 }
 
