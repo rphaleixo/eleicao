@@ -70,6 +70,6 @@ export function blocoClausula(c, filtro = "todos", seletor = "", status = "") {
       <li><b>Cadeiras:</b> ao menos ${regra.deputados} deputados federais eleitos, distribuídos em pelo menos ${regra.ufsMin} UFs.</li></ul>
     <p class="cl-resumo"><b>${n("atingiu")}</b> atingiram${c.final ? "" : " na projeção"} · <b>${n(c.final ? "nao" : "andamento")}</b> ${c.final ? "não atingiram" : "ainda não atingiram"} · ${c.oficiais} de ${c.ufs} estados com totalização final.</p>
     ${c.final ? "" : `<p class="muted">Enquanto a apuração não termina, é uma projeção com os votos contados até agora: o resultado de cada partido ainda muda. Regra da Emenda Constitucional 97/2017.</p>`}
-    <p class="muted nota">Fonte da regra: <a href="https://g1.globo.com/politica/noticia/2026/04/01/eleicoes-2026-o-que-e-clausula-de-desempenho-dos-partidos-e-como-isso-impacta-a-disputa-eleitoral-entenda.ghtml" target="_blank" rel="noopener noreferrer">g1, “o que é cláusula de desempenho”</a>. Federações (Cidadania-PSDB, PSOL-Rede, PT-PCdoB-PV, PRD-Solidariedade, União-PP) contam como uma única agremiação.</p>
+    <p class="muted nota">Federações (Cidadania-PSDB, PSOL-Rede, PT-PCdoB-PV, PRD-Solidariedade, União-PP) contam como uma única agremiação.</p>
     ${seletor}${lista.length ? `<ul class="cards-estados cards-cl">${lista.map((p) => cardClausula(p, c.final)).join("")}</ul>` : `<p class="muted">Nenhum partido neste grupo.</p>`}</div>`;
 }
