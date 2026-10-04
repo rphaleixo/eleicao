@@ -803,6 +803,7 @@ $("conteudo").addEventListener("keydown", (e) => {
   if (it && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); }
 });
 $("conteudo").addEventListener("click", (e) => {
+  if (e.target.closest("[data-ver-completa]")) { window.scrollTo({ top: 0 }); return; } // o endereço (#/estados/UF/dep-federal) abre a apuração
   const it = e.target.closest("[data-sq]");
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const ord = e.target.closest("[data-ordem]");

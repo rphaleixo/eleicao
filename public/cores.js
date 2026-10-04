@@ -1,5 +1,6 @@
 // Cores dos partidos, padronizadas pela predefinição "Cor de partido político (BRA)" da Wikipédia.
 // Para federações usa-se a cor do primeiro partido da lista.
+// UP: o preto da predefinição (#000000) foi suavizado para #4A4A4F, que continua visível no tema escuro.
 // Sem cor na predefinição: Democrata (mantida a cor anterior). Agir usa a do PTC (nome anterior do partido).
 const CORES = {
   agir: "#01369E", avante: "#2EABB1", cidadania: "#EC008C", dc: "#C89721", democrata: "#13617C",
@@ -7,7 +8,7 @@ const CORES = {
   novo: "#EC671C", pcb: "#A8231C", pcdob: "#800314", pco: "#9F030A", pdt: "#FE8E6D", pl: "#30306C",
   pode: "#00D663", podemos: "#00D663", pp: "#54B8EA", prd: "#007C3C", prtb: "#0047AB", psb: "#FFCC00",
   psd: "#FFA400", psdb: "#0F2BC5", psol: "#68018D", pstu: "#C92127", pt: "#C0122D", pv: "#01652F",
-  rede: "#3CA08C", republicanos: "#005CA9", solidariedade: "#F37021", uniao: "#00A0DF", up: "#000000",
+  rede: "#3CA08C", republicanos: "#005CA9", solidariedade: "#F37021", uniao: "#00A0DF", up: "#4A4A4F",
 };
 const SEM_COR = "#8a94a3";
 

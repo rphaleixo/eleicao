@@ -572,3 +572,5 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 
 .g-urnas { fill: none; stroke: #7cc4ff; stroke-width: 2.2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .pt.linha-urnas { background: #7cc4ff; height: 3px; border-radius: 2px; }
+
+.ver-completa { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-weight: 600; font-size: .9rem; color: var(--acento); text-decoration: none; }

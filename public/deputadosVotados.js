@@ -45,7 +45,8 @@ export function cardsMaisVotados(estados, ufs, n = 5) {
   const cards = ufs.map((uf) => mapa.get(uf)).filter(Boolean).map((e) => {
     const v = votadosDoEstado(e, n), max = v[0]?.votos ?? 0;
     return `<li class="card-dv"><div class="cd-topo"><b>${esc(UFS[e.uf] ?? e.uf)}</b><span class="muted">${pct(e.d.pctSecoes)} apurado · ${e.dist?.vagas ?? ""} vagas</span></div>
-      <ol class="lista-dv">${v.length ? v.map((c, i) => linha(c, i, false, max)).join("") : `<li class="muted">Sem votos apurados.</li>`}</ol></li>`;
+      <ol class="lista-dv">${v.length ? v.map((c, i) => linha(c, i, false, max)).join("") : `<li class="muted">Sem votos apurados.</li>`}</ol>
+      <a class="ver-completa" data-ver-completa href="#/estados/${e.uf}/dep-federal">Ver apuração completa de ${esc(UFS[e.uf] ?? e.uf)} ›</a></li>`;
   });
   return cards.length ? `<ul class="cards-estados cards-dv">${cards.join("")}</ul>` : `<p class="muted">Nenhum estado com esses filtros.</p>`;
 }

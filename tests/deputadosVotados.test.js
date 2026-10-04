@@ -25,7 +25,7 @@ test("top 10 do país soma os estados e ordena por votos", () => {
 
 test("cards por estado respeitam a lista de estados filtrada", () => {
   const h = cardsMaisVotados(estados, ["RJ"]);
-  assert.ok(h.includes("Rio de Janeiro") && !h.includes("ANA"));
+  assert.ok(h.includes("Rio de Janeiro") && !h.includes("ANA") && h.includes('href="#/estados/RJ/dep-federal"'));
   assert.match(cardsMaisVotados(estados, []), /Nenhum estado/);
   assert.ok(AGRUP_CAMARA.top10 && AGRUP_CAMARA.votados);
 });
