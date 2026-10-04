@@ -27,13 +27,17 @@ export function quocienteEleitoral(votosValidos, vagas) {
 /**
  * @param {number} vagas
  * @param {{id:string, nome:string, votosLegenda?:number,
- *          candidatos:{id:string, nome:string, votos:number}[]}[]} partidos
+ *          candidatos:{id:string, nome:string, votos:number, elegivel?:boolean}[]}[]} partidos
  * @param {object} regras
  */
 export function distribuirCadeiras(vagas, partidos, regras = REGRAS_STF_2024) {
   const ps = partidos.map((p) => {
-    const candidatos = [...p.candidatos].sort((a, b) => b.votos - a.votos);
-    const nominais = candidatos.reduce((s, c) => s + c.votos, 0);
+    // Candidato sub judice, anulado ou indeferido (elegivel === false) tem os votos
+    // somados ao partido, mas não pode ser eleito: sai da lista de quem disputa a vaga.
+    const candidatos = p.candidatos
+      .filter((c) => c.elegivel !== false)
+      .sort((a, b) => b.votos - a.votos);
+    const nominais = p.candidatos.reduce((s, c) => s + c.votos, 0);
     return {
       id: p.id,
       nome: p.nome,

@@ -9,7 +9,7 @@ const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
 const pct = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-const estado = { cargo: "presidente", uf: "BR", mun: "", municipios: {}, modoRegras: "stf", vagasManual: {} };
+const estado = { cargo: "presidente", uf: "BR", mun: "", municipios: {}, modoRegras: "codigo", vagasManual: {} };
 let timer;
 
 // ---------- navegação (guardada na URL, ex.: #/governador/SP/71072) ----------
@@ -75,20 +75,22 @@ function telaMajoritaria(d) {
   return cabecalhoApuracao(d) + `<div class="card"><h2 style="margin-top:0">${titulo}</h2>${listaCandidatos(d.candidatos)}</div>`;
 }
 
-function vagasDoEstado() {
+// As vagas vêm do próprio arquivo do TSE (campo "nv"). A tabela só entra se faltar.
+function vagasDoEstado(d) {
   const chave = estado.cargo + estado.uf;
   if (estado.vagasManual[chave]) return estado.vagasManual[chave];
-  const fed = estado.vagasManual["dep-federal" + estado.uf] || VAGAS_FEDERAIS[estado.uf] || 0;
+  if (d.vagas) return d.vagas;
+  const fed = VAGAS_FEDERAIS[estado.uf] || 0;
   return estado.cargo === "dep-federal" ? fed : vagasEstaduais(fed);
 }
 
 function telaProporcional(d) {
-  const vagas = vagasDoEstado();
+  const vagas = vagasDoEstado(d);
   const regras = estado.modoRegras === "stf" ? REGRAS_STF_2024 : REGRAS_CODIGO_LITERAL;
 
   let partidos = d.partidos.map((p) => ({
     id: p.id, nome: p.nome, votos: p.votos, votosLegenda: p.votosLegenda,
-    candidatos: p.candidatos.map((c) => ({ id: c.id, nome: c.nome, votos: c.votos })),
+    candidatos: p.candidatos.map((c) => ({ id: c.id, nome: c.nome, votos: c.votos, elegivel: c.elegivel })),
   }));
   const semPartidos = !partidos.length;
   const r = semPartidos ? null : distribuirCadeiras(vagas, partidos, regras);
@@ -101,8 +103,8 @@ function telaProporcional(d) {
       <label>Vagas em disputa<input type="number" id="vagas" min="1" value="${vagas}"></label>
       <label>Regra das sobras
         <select id="modo">
-          <option value="stf" ${estado.modoRegras === "stf" ? "selected" : ""}>Com decisão do STF de 2024 (todos disputam sobras)</option>
-          <option value="codigo" ${estado.modoRegras === "codigo" ? "selected" : ""}>Texto literal do Código (80% partido, 20% candidato)</option>
+          <option value="codigo" ${estado.modoRegras === "codigo" ? "selected" : ""}>Regra aplicada pelo TSE em 2022 e 2024 (80% partido, 20% candidato)</option>
+          <option value="stf" ${estado.modoRegras === "stf" ? "selected" : ""}>Variante: todos os partidos e candidatos disputam as sobras</option>
         </select>
       </label>
     </div>`;
@@ -111,6 +113,7 @@ function telaProporcional(d) {
       <div><span class="muted">Votos válidos (candidatos + legenda)</span><strong>${fmt(r.votosValidos)}</strong></div>
       <div><span class="muted">Quociente eleitoral</span><strong>${fmt(r.qe)}</strong></div>
       <div><span class="muted">10% do quociente</span><strong>${fmt(r.qe * 0.1)}</strong></div>
+      <div><span class="muted">Quociente divulgado pelo TSE</span><strong>${d.qeTse ? fmt(d.qeTse) : "ainda não"}</strong></div>
     </div>`;
   } else {
     html += `<p class="aviso">Este arquivo não trouxe os votos por partido. O cálculo precisa deles (veja o arquivo bruto na página de diagnóstico).</p>`;

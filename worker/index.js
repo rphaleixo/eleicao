@@ -4,11 +4,12 @@
 // não importa quantas pessoas estejam no site.
 
 const ORIGEM_TSE = "https://resultados.tse.jus.br/oficial/";
-const CACHE_SEGUNDOS = 45;
+// O TSE publica cada arquivo com max-age de ~57s; consultar mais rápido não traz dado novo.
+const CACHE_SEGUNDOS = 30;
 
 // Só aceita caminhos de arquivos JSON de apuração (não é um proxy aberto).
 const CAMINHO_VALIDO =
-  /^ele(2022|2026)\/\d{3,6}\/(config|dados|dados-simplificados)\/[a-z0-9_\-/]+\.json$/;
+  /^ele(2022|2024|2026)\/\d{3,6}\/(config|dados|dados-simplificados)\/[a-z0-9_\-/]+\.json$/;
 
 export default {
   async fetch(request, env) {
@@ -40,7 +41,7 @@ export default {
 
     const headers = new Headers({
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": `public, max-age=${CACHE_SEGUNDOS - 15}`,
+      "Cache-Control": `public, max-age=${Math.floor(CACHE_SEGUNDOS / 2)}`,
       "Access-Control-Allow-Origin": "*",
     });
     return new Response(resposta.body, { status: resposta.status, headers });

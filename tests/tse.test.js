@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
-globalThis.location = { search: "?ano=2022&ele=544" };
-const { normalizar, num, urlResultado } = await import("../public/tse.js");
+globalThis.location = { search: "" };
+const { normalizar, num, urlsResultado, urlMunicipios } = await import("../public/tse.js");
+const ler = (nome) => JSON.parse(fs.readFileSync(new URL(`./fixtures/${nome}`, import.meta.url), "utf8"));
 
 test("números no formato do TSE", () => {
   assert.equal(num("48,43"), 48.43);
@@ -10,27 +12,45 @@ test("números no formato do TSE", () => {
   assert.equal(num(""), 0);
 });
 
-test("endereços dos arquivos", () => {
-  assert.equal(urlResultado("presidente", "BR"),
-    "/api/ele2022/544/dados-simplificados/br/br-c0001-e000544-r.json");
-  assert.equal(urlResultado("governador", "SP"),
-    "/api/ele2022/544/dados-simplificados/sp/sp-c0003-e000544-r.json");
-  assert.equal(urlResultado("senador", "SP", "71072"),
-    "/api/ele2022/544/dados/sp/sp71072-c0005-e000544-v.json");
+test("endereços: Presidente usa a eleição federal, demais cargos a estadual", () => {
+  assert.equal(urlsResultado("presidente", "BR")[0],
+    "/api/ele2026/6257/dados/br/br-c0001-e006257-u.json");
+  assert.equal(urlsResultado("presidente", "SP", "71072")[0],
+    "/api/ele2026/6257/dados/sp/sp71072-c0001-e006257-u.json");
+  assert.equal(urlsResultado("governador", "SP")[0],
+    "/api/ele2026/6259/dados/sp/sp-c0003-e006259-u.json");
+  assert.equal(urlsResultado("senador", "SP", "71072")[0],
+    "/api/ele2026/6259/dados/sp/sp71072-c0005-e006259-u.json");
+  assert.equal(urlsResultado("dep-federal", "MG")[0],
+    "/api/ele2026/6259/dados/mg/mg-c0006-e006259-u.json");
+  assert.equal(urlMunicipios(), "/api/ele2026/6259/config/mun-e006259-cm.json");
 });
 
-test("normaliza lista simples de candidatos", () => {
-  const d = normalizar({ pst: "12,5", vv: "1000", cand: [
-    { n: "13", nm: "A", vap: "600", pvap: "60,00", e: "s", sqcand: "1" },
-    { n: "22", nm: "B", vap: "400", pvap: "40,00", e: "n", sqcand: "2" }] });
-  assert.equal(d.pctSecoes, 12.5);
-  assert.equal(d.candidatos[0].votos, 600);
-  assert.equal(d.candidatos[0].eleito, true);
+test("arquivo real de Presidente 2026 (antes da apuração)", () => {
+  const d = normalizar(ler("presidente-br-2026.json"));
+  assert.equal(d.cargoNome, "Presidente");
+  assert.equal(d.vagas, 1);
+  assert.equal(d.candidatos.length, 12);
+  assert.equal(d.pctSecoes, 0);
+  assert.ok(d.candidatos.every((c) => c.votos === 0 && !c.eleito));
+  assert.ok(d.candidatos.some((c) => c.nome === "LULA" && c.numero === "13"));
 });
 
-test("normaliza agrupamentos (deputados)", () => {
-  const d = normalizar({ carg: [{ agr: [{ n: "13", nm: "Federação X", tvtl: "10", tvtn: "90",
-    cand: [{ n: "1300", nm: "Fulano", vap: "90", sqcand: "9" }] }] }] });
-  assert.equal(d.partidos[0].votos, 100);
-  assert.equal(d.candidatos[0].partido, "Federação X");
+test("arquivo real de vereador 2024: federação e partido isolado", () => {
+  const d = normalizar(ler("vereador-amostra-2024.json"));
+  assert.equal(d.vagas, 55);
+  assert.equal(d.qeTse, 105110);
+  const fed = d.partidos.find((p) => p.federacao);
+  assert.equal(fed.votos, fed.votosNominais + fed.votosLegenda);
+  assert.ok(fed.votosLegenda > 0);
+  const isolado = d.partidos.find((p) => !p.federacao);
+  assert.ok(isolado.votos > 0, "partido isolado traz os totais dentro de par[]");
+  const eleito = d.candidatos.find((c) => c.eleito);
+  assert.ok(eleito && /^Eleito/.test(eleito.situacao));
+});
+
+test("candidato sub judice não é elegível", () => {
+  const d = normalizar({ carg: [{ agr: [{ n: "1", nm: "X", tp: "i", par: [{ sg: "X", tvtn: "10", cand: [
+    { sqcand: "1", nmu: "A", vap: "10", dvt: "Anulado sub judice" }] }] }] }] });
+  assert.equal(d.candidatos[0].elegivel, false);
 });

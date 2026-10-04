@@ -52,3 +52,15 @@ test("regra literal do Código exclui partido abaixo de 80% do QE das sobras", (
   const r = distribuirCadeiras(10, partidos, REGRAS_CODIGO_LITERAL);
   assert.equal(r.partidos.find((p) => p.id === "B").eleitos.length, 0);
 });
+
+test("candidato sub judice conta votos para o partido mas não ocupa vaga", () => {
+  // Caso real (Porto Alegre, 2024): o 4º mais votado do MDB estava "anulado sub judice".
+  const a = cands(600, 300, 100);
+  a.push({ id: "sj", nome: "sub judice", votos: 90, elegivel: false });
+  const r = distribuirCadeiras(10, [
+    { id: "A", nome: "A", candidatos: a },                  // 1090 votos, 4º é inelegível
+    { id: "B", nome: "B", candidatos: cands(400, 300, 200) }, // 900
+  ], REGRAS_CODIGO_LITERAL);
+  assert.equal(r.votosValidos, 1990);
+  assert.ok(!r.eleitos.some((e) => e.id === "sj"));
+});
