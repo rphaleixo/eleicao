@@ -366,7 +366,7 @@ function telaMapaMunicipal(v) {
     const d = lerMun(cargo, uf, m.cod);
     const topo = d ? ordenarCandidatos(d.candidatos)[0] : null;
     if (!topo || topo.votos <= 0) { semVotos++; continue; }
-    const l = { cor: corPartido(topo.partido), quem: `${topo.nome} (${topo.partido})` };
+    const l = { cor: corPartido(topo.partido), quem: `${topo.nome} (${topo.partido})`, apurado: d.pctSecoes };
     lideres.set(m.ibge, l); contagem[m.cod] = l;
   }
   const feitos = progresso(cargo, uf, municipios);
@@ -375,7 +375,7 @@ function telaMapaMunicipal(v) {
   const cartao = sel ? `<ul class="cards-estados cartao-mapa">${cardMunicipio(sel.cod, sel.nome, uf, lerMun(cargo, uf, sel.cod) ?? null, cargo)}</ul>` : `<p class="muted dica-mapa">Toque em um município para ver o resultado.</p>`;
   return `${seg}<section class="card"><h2>${esc(CARGOS[cargo].nome)} por município · ${esc(UFS[uf])}</h2>${barra}
     <div class="mapa-area mapa-area-mun">${mapaMunicipal(v.malha, lideres, nomes, estado.munSel)}</div>
-    ${legendaMapa(contarLideres(contagem), { semVotos, unidade: ["município", "municípios"], nota: "Cada município tem a cor de quem lidera nele. Os dados chegam município a município e se atualizam a cada minuto." })}${cartao}</section>`;
+    ${legendaMapa(contarLideres(contagem), { semVotos, unidade: ["município", "municípios"], nota: "Cada município tem a cor de quem lidera nele, mais forte quanto mais seções apuradas. Os dados chegam município a município e se atualizam a cada minuto." })}${cartao}</section>`;
 }
 
 function telaEstados(v) {
@@ -492,8 +492,8 @@ function lideresPorUf(lista, porPartido, maioria = false) {
     const topo = d ? ordenarCandidatos(d.candidatos)[0] : null;
     if (!topo || topo.votos <= 0) { out[uf] = null; continue; }
     out[uf] = maioria && topo.votos * 2 <= d.votosValidos
-      ? { cor: COR_SEGUNDO_TURNO, quem: "Segundo turno", segundo: true }
-      : { cor: corPartido(topo.partido), quem: porPartido ? topo.partido : topo.nome };
+      ? { cor: COR_SEGUNDO_TURNO, quem: "Segundo turno", segundo: true, apurado: d.pctSecoes }
+      : { cor: corPartido(topo.partido), quem: porPartido ? topo.partido : topo.nome, apurado: d.pctSecoes };
   }
   return out;
 }
@@ -524,7 +524,7 @@ function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = fa
       ? `<button type="button" class="chip-exterior${sel === "ZZ" ? " sel" : ""}" data-mapa-uf="ZZ"><i style="background:${lideres.ZZ?.cor ?? "var(--barra)"}"></i>Exterior${lideres.ZZ ? ` · ${esc(lideres.ZZ.quem)}` : ""}</button>` : "";
     const cartao = sel ? `<ul class="cards-estados cartao-mapa">${cardEstado(sel, dDe(sel), ac.ufs[sel.toLowerCase()], cargo, 5, extra(sel))}</ul>` : `<p class="muted dica-mapa">Toque em um estado para ver o resultado.</p>`;
     return `<section class="card">${controles}<div class="mapa-area">${mapaBrasil(lideres, { selecionado: sel, destaque: (regiao && regiao !== "exterior") || filtrando ? dentro : null })}</div>${exteriorChip}
-      ${legendaMapa(contagem, { semVotos, nota: maioria ? "Cada estado ganha a cor do partido quando um candidato tem mais de 50% dos votos válidos. Sem essa maioria, a disputa vai ao 2º turno." : "" })}${cartao}${nota ? `<p class="muted nota">${nota}</p>` : ""}</section>`;
+      ${legendaMapa(contagem, { semVotos, nota: maioria ? "Cada estado ganha a cor do partido quando um candidato tem mais de 50% dos votos válidos. Sem essa maioria, a disputa vai ao 2º turno. A cor fica mais forte conforme avança a apuração." : "A cor fica mais forte conforme avança a apuração do estado." })}${cartao}${nota ? `<p class="muted nota">${nota}</p>` : ""}</section>`;
   }
   const ordenados = ufs.slice().sort(estado.ordem === "pct" ? (a, b) => apurado(b) - apurado(a) : (a, b) => (a === "ZZ") - (b === "ZZ") || (UFS[a] ?? "").localeCompare(UFS[b] ?? "", "pt-BR"));
   if (!ordenados.length) return `<section class="card">${controles}<p class="muted">Nenhum estado com esses filtros.</p></section>`;

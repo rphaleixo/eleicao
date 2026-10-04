@@ -1,7 +1,7 @@
 globalThis.location = { search: "" };
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
-const { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO } = await import("../public/mapa.js");
+const { mapaBrasil, legendaMapa, contarLideres, COR_SEGUNDO_TURNO, alfaApuracao } = await import("../public/mapa.js");
 const { ESTADOS } = await import("../public/mapa-brasil.js");
 const { UFS } = await import("../public/config.js");
 
@@ -43,4 +43,21 @@ test("legenda com partidos, 2º turno e sem votos, nessa ordem", () => {
 test("legenda do mapa por município fala em municípios", () => {
   const h = legendaMapa([{ cor: "#d00", quem: "ANA (PT)", n: 238 }], { semVotos: 1, unidade: ["município", "municípios"] });
   assert.ok(h.includes("238 municípios") && h.includes("1 município<") && !h.includes("estados"));
+});
+
+test("a força da cor acompanha a apuração, nos mapas de estado e de município", async () => {
+  assert.equal(alfaApuracao(0), 0.22);
+  assert.equal(alfaApuracao(100), 1);
+  assert.equal(alfaApuracao(50), 0.61);
+  assert.equal(alfaApuracao(250), 1); // limite
+  assert.equal(alfaApuracao(undefined), 0.22);
+  const h = mapaBrasil({ RJ: { cor: "#d00", quem: "LULA", apurado: 100 }, SP: { cor: "#00d", quem: "FLAVIO", apurado: 0 }, MG: { cor: "#0a0", quem: "X", apurado: 50 }, AC: null });
+  assert.ok(h.includes("fill:#d00;fill-opacity:1") && h.includes("fill:#00d;fill-opacity:0.22") && h.includes("fill:#0a0;fill-opacity:0.61"));
+  assert.ok(h.includes("100,00% apurado") && !/data-mapa-uf="AC"[^>]*fill-opacity/.test(h)); // sem votos: cor neutra, sem transparência
+  const { mapaMunicipal } = await import("../public/mapa.js");
+  const { lerMalha } = await import("../public/municipios.js");
+  const m = lerMalha('<svg viewBox="0 0 1 1"><path id="1" d="M0,0Z" /><path id="2" d="M1,1Z" /></svg>');
+  const hm = mapaMunicipal(m, new Map([["1", { cor: "#d00", quem: "ANA", apurado: 80 }]]), new Map([["1", "Uma"], ["2", "Duas"]]));
+  assert.ok(hm.includes("fill:#d00;fill-opacity:0.84") && hm.includes("80,00% apurado"));
+  assert.ok(legendaMapa([{ cor: "#d00", quem: "ANA", n: 1 }]).includes("escala-apuracao"));
 });

@@ -507,3 +507,6 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .mun { stroke: var(--card); stroke-width: .6; vector-effect: non-scaling-stroke; cursor: pointer; outline: none; transition: filter .15s; } .mun:hover, .mun:focus-visible { filter: brightness(1.25); stroke: var(--txt); } .mun.sel { stroke: var(--txt); stroke-width: 2; }
 .progresso-mun { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: .82rem; color: var(--muted); } .progresso-mun .barra-prog { flex: 1; margin: 0; height: 6px; }
 .sigla:empty { display: none; }
+
+.escala-apuracao { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: .72rem; color: var(--muted); }
+.escala-apuracao i { flex: 1; max-width: 160px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, color-mix(in srgb, var(--acento) 22%, transparent), var(--acento)); }
