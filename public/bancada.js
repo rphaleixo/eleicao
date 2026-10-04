@@ -103,11 +103,12 @@ function tabelaEstados(b) {
     <p class="muted">Cada estado tem 3 senadores em 2027: o eleito em 2022 mais os 2 eleitos agora (projeção: os 2 mais votados).</p>`;
 }
 
-export function telaBancada(b, { versao = "", carregando = false, agrupamento = "partido", filtros = "", totais = null } = {}) {
+export function telaBancada(b, { versao = "", carregando = false, agrupamento = "partido", filtros = "", totais = null, status = "" } = {}) {
   const t = totais ?? b;
   if (carregando) return `<section class="card"><h2>Bancada do Senado em 2027</h2><p class="muted">Carregando a lista de senadores em exercício…</p></section>`;
   const corpo = agrupamento === "estado" ? porEstado(b) : agrupamento === "tabela" ? tabelaEstados(b) : porPartido(b);
   return `<section class="card"><div class="titulo-cadeiras"><h2>Bancada em 2027</h2><span><strong>${t.totalMantem + t.totalEleitos}</strong> <span class="muted">de 81</span></span></div>
+    ${status}
     ${plenario(t)}
     <p class="muted">${t.totalEleitos} dos 54 eleitos hoje projetados + ${t.totalMantem} eleitos em 2022. Maioria: ${MAIORIA_SENADO}.${t.linhas[0] ? ` Maior bancada: <strong>${esc(t.linhas[0].rotulo)}</strong> (${t.linhas[0].total}).` : ""}</p>
     <div class="bancada-topo">${seletorAgrupamento(agrupamento)}</div>

@@ -518,3 +518,5 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .card-camara { gap: 10px; } .cc-vagas { font-size: .9rem; } .cc-vagas strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; } .cc-vagas small { color: var(--muted); }
 .cc-barra { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--barra); gap: 1px; } .cc-barra i { display: block; height: 100%; }
 .cc-chips { display: flex; flex-wrap: wrap; gap: 4px; } .cc-chips .chip { margin: 0; } .cc-chips .chip.mais { background: var(--barra); color: var(--txt); text-shadow: none; }
+.status-proj { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 8px 0 4px; } .status-txt { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hero .status-txt { color: rgba(255,255,255,.8); }
