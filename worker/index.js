@@ -32,6 +32,7 @@ const CACHE_JSON = 10; // segundos
 const CACHE_MUNICIPIO = 60; // um arquivo por município: cache maior, para não sobrecarregar o TSE
 const CODIGO_IBGE = { RO: 11, AC: 12, AM: 13, RR: 14, PA: 15, AP: 16, TO: 17, MA: 21, PI: 22, CE: 23, RN: 24, PB: 25, PE: 26, AL: 27, SE: 28, BA: 29, MG: 31, ES: 32, RJ: 33, SP: 35, PR: 41, SC: 42, RS: 43, MS: 50, MT: 51, GO: 52, DF: 53 };
 const CACHE_FOTO = 86400;
+const TETO = { presidente: 12, governador: 10, eventos: 6 }; // arquivos do TSE buscados por minuto em cada tarefa
 
 export default {
   async fetch(request, env, ctx) {
@@ -79,11 +80,17 @@ export default {
   },
 
   // Rotina agendada (a cada minuto): guarda a foto do andamento de todos os estados.
+  // O plano gratuito do Cloudflare permite 50 consultas por execução (arquivos do TSE e leituras/gravações no KV),
+  // então as tarefas rodam em fila e cada uma tem um teto, somando cerca de 45.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(registrarHistorico(env).then((e) => registrarGovernadores(env, e)).catch((e) => console.error("governadores:", e.message)));
-    ctx.waitUntil(registrarResultados(env).catch((e) => console.error("resultados da presidência:", e.message)));
-    ctx.waitUntil(registrarEventos(env).catch((e) => console.error("definições:", e.message)));
-    ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
+    ctx.waitUntil((async () => {
+      const passo = async (nome, fn) => { try { return await fn(); } catch (e) { console.error(nome + ":", e.message); return null; } };
+      const andamento = await passo("histórico", () => registrarHistorico(env));
+      await passo("resultados da presidência", () => registrarResultados(env, andamento?.f, TETO.presidente));
+      await passo("governadores", () => registrarGovernadores(env, andamento?.e, TETO.governador));
+      await passo("definições", () => registrarEventos(env, TETO.eventos));
+      await passo("carga do banco de candidatos", () => carregarSeed(env));
+    })());
   },
 };
 
@@ -119,29 +126,40 @@ async function buscarAcompanhamento(eleicao) {
   return { pct: pontoDeAcompanhamento(ab), presenca: presencaDeAcompanhamento(ab) };
 }
 
-// Votos de cada candidato a Presidente no Brasil, em cada estado e no exterior.
-export async function registrarResultados(env) {
-  if (!env.HIST) return;
-  const local = ["br", ...UFS_MINUSCULAS];
-  const resp = await Promise.all(local.map(async (l) => {
+// Votos de cada candidato a Presidente no Brasil, em cada estado e no exterior. Só buscamos o que mudou desde a última vez
+// (pelo % de seções), os que mais mudaram primeiro, até o teto da tarefa; o resto mantém o último valor.
+export async function registrarResultados(env, pctFederal, max = 12) {
+  if (!env.HIST || !pctFederal) return;
+  const doc = (await env.HIST.get("presidente", "json")) ?? { cands: {}, pontos: [], pct: {} };
+  const pct = doc.pct ?? {};
+  const mudaram = escolherMudancas(["br", ...UFS_MINUSCULAS], pctFederal, pct, max, "br");
+  if (!mudaram.length) return;
+  const resp = await Promise.all(mudaram.map(async (l) => {
     try {
-      const r = await fetch(`${ORIGEM_TSE}ele${ANO}/${ELEICAO_FEDERAL}/dados/${l === "br" ? "br" : l}/${l}-c0001-e00${ELEICAO_FEDERAL}-u.json`);
+      const r = await fetch(`${ORIGEM_TSE}ele${ANO}/${ELEICAO_FEDERAL}/dados/${l}/${l}-c0001-e00${ELEICAO_FEDERAL}-u.json`);
       return r.ok ? [l, lerResultado(await r.json())] : null;
     } catch { return null; }
   }));
-  const v = {}, nomes = {};
-  for (const x of resp) if (x) { v[x[0]] = x[1].valor; if (x[0] === "br") Object.assign(nomes, x[1].nomes); }
+  const ult = doc.pontos[doc.pontos.length - 1], v = { ...(ult?.v ?? {}) }, nomes = {}, novoPct = { ...pct };
+  for (const x of resp) if (x) { v[x[0]] = x[1].valor; Object.assign(nomes, x[1].nomes); novoPct[x[0]] = pctFederal[x[0]]; }
   if (!v.br) return;
-  const atual = await env.HIST.get("presidente", "json");
-  const { historico, mudou } = acrescentarResultado(atual, v, nomes);
-  if (mudou) await env.HIST.put("presidente", JSON.stringify(historico));
+  const { historico, mudou } = acrescentarResultado({ cands: doc.cands, pontos: doc.pontos }, v, nomes);
+  await env.HIST.put("presidente", JSON.stringify({ ...historico, pct: novoPct }));
+  return mudou;
+}
+
+/** Locais cujo % apurado mudou, os que mais mudaram primeiro (o `primeiro` sempre vai na frente), no máximo `max`. */
+export function escolherMudancas(locais, atual, guardado, max, primeiro = "") {
+  const mud = locais.filter((l) => atual[l] != null && atual[l] !== guardado[l]);
+  mud.sort((a, b) => (a === primeiro ? -1 : b === primeiro ? 1 : Math.abs(atual[b] - (guardado[b] ?? 0)) - Math.abs(atual[a] - (guardado[a] ?? 0))));
+  return mud.slice(0, max);
 }
 
 // Definições (eleito / 2º turno) com a hora em que apareceram. Revezamos os arquivos para não passar do limite de consultas por minuto.
-export async function registrarEventos(env) {
+export async function registrarEventos(env, max = 6) {
   if (!env.HIST) return;
   const estado = (await env.HIST.get("eventos", "json")) ?? { itens: [], visto: {}, fechado: {} };
-  const agora = Date.now(), alvos = escolherAlvos(estado);
+  const agora = Date.now(), alvos = escolherAlvos(estado, max);
   const resp = await Promise.all(alvos.map(async (a) => {
     try {
       const r = await fetch(ORIGEM_TSE + caminhoAlvo(a, ANO, ELEICAO_FEDERAL, ELEICAO_ESTADUAL));
@@ -170,7 +188,7 @@ async function refinarEventos(env, itens) {
   const grupos = new Map();
   for (const e of pendentes) { const id = e.cargo === "presidente" ? "presidente:br" : `${e.cargo}:${e.uf.toLowerCase()}`; grupos.set(id, [...(grupos.get(id) ?? []), e]); }
   const feitos = new Set();
-  for (const [id, evs] of [...grupos].slice(0, 8)) {
+  for (const [id, evs] of [...grupos].slice(0, 2)) {
     const alvo = ALVOS.find((a) => a.id === id);
     try {
       const r = await fetch(ORIGEM_TSE + caminhoAlvo(alvo, ANO, ELEICAO_FEDERAL, ELEICAO_ESTADUAL));
@@ -179,7 +197,7 @@ async function refinarEventos(env, itens) {
       const ordenados = d.candidatos.filter((c) => c.votos > 0 && c.elegivel).sort((a, b) => b.votos - a.votos);
       const votos = ordenados.map((c) => c.votos), chave = alvo.cargo === "presidente" ? "f" : "e", uf = alvo.uf;
       const serie = pontos.map((p) => ({ t: p.t, pct: p[chave]?.[uf] })).filter((p) => p.pct != null);
-      const base = { vv: num(json.v?.vv), te: d.eleitorado?.apto ?? 0, vagas: d.vagas || 1, pctAgora: d.pctSecoes, serie, votos };
+      const base = { vv: num(json.v?.vvc) || num(json.v?.vv), te: d.eleitorado?.apto ?? 0, vagas: d.vagas || 1, pctAgora: d.pctSecoes, serie, votos };
       for (const e of evs) {
         const indice = ordenados.findIndex((c) => c.id === e.c?.[0]?.id);
         const t = estimarInstante({ ...base, tipo: e.tipo, cargo: e.cargo, indice: Math.max(0, indice) });
@@ -209,15 +227,15 @@ export async function registrarHistorico(env) {
   const atual = await env.HIST.get("historico", "json");
   const { historico, mudou } = acrescentar(atual, { f: f?.pct ?? {}, e: e?.pct ?? {}, p: f?.presenca });
   if (mudou) await env.HIST.put("historico", JSON.stringify(historico));
-  return e?.pct ?? null; // % de seções por estado (eleição estadual), para saber quais governos mudaram
+  return { f: f?.pct ?? null, e: e?.pct ?? null }; // % de seções por estado, para saber quais resultados mudaram
 }
 
 // Votos de cada candidato a Governador, por estado. Só buscamos os estados cujo % apurado mudou desde a última vez.
-export async function registrarGovernadores(env, pctEstadual) {
+export async function registrarGovernadores(env, pctEstadual, max = 10) {
   if (!env.HIST || !pctEstadual) return;
   const doc = (await env.HIST.get("governador", "json")) ?? { cands: {}, pontos: [], pct: {} };
   const pct = doc.pct ?? {};
-  const mudaram = UFS_MINUSCULAS.filter((u) => u !== "zz" && pctEstadual[u] != null && pctEstadual[u] !== pct[u]);
+  const mudaram = escolherMudancas(UFS_MINUSCULAS.filter((u) => u !== "zz"), pctEstadual, pct, max);
   if (!mudaram.length) return;
   const resp = await Promise.all(mudaram.map(async (u) => {
     try {

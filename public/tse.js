@@ -140,8 +140,9 @@ export function normalizar(json) {
       for (const c of lideres) { c.sit = "eleito"; c.sitCalculada = true; }
     }
   }
-  // Em todo o site o % do candidato é votos no candidato ÷ votos válidos.
-  const validos = num(v.vv);
+  // Em todo o site o % do candidato é votos no candidato ÷ votos válidos. A base é a do TSE (vvc): válidos mais os anulados
+  // sub judice, cujos candidatos continuam na lista. Sem isso, os percentuais somam mais de 100% e a maioria de 50% se distorce.
+  const validos = num(v.vvc) || num(v.vv);
   if (validos > 0) for (const c of candidatos) c.pct = (c.votos / validos) * 100;
   return {
     cargoNome: cargo.nmn ?? "",
@@ -150,7 +151,7 @@ export function normalizar(json) {
     pctSecoes: num(s.pst),
     secoesApuradas: num(s.st),
     secoesTotal: num(s.ts),
-    votosValidos: num(v.vv),
+    votosValidos: num(v.vvc) || num(v.vv),
     brancos: num(v.vb),
     nulos: num(v.tvn ?? v.vn),
     atualizadoEm: [json.dt, json.ht].filter(Boolean).join(" "),
