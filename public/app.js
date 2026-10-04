@@ -1,13 +1,13 @@
-import { telaMarcha } from "./marcha.js";
+import { telaMarcha, regiaoDe } from "./marcha.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS } from "./config.js";
 import {
-  urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlFoto,
+  urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
 } from "./tse.js";
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
 import { corPartido } from "./cores.js";
-import { linhaEvolucao, sparkline } from "./graficos.js";
+import { linhaEvolucao, linhasResultado, sparkline } from "./graficos.js";
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.round(n).toLocaleString("pt-BR");
@@ -26,6 +26,7 @@ function lerHash() {
   const u = (uf || "BR").toUpperCase();
   estado.uf = u === "BR" || UFS[u] || (u === "ZZ" && (estado.aba === "presidente" || estado.aba === "andamento")) ? u : "BR"; // ZZ = voto no exterior (só Presidente)
   estado.mun = /^\d{5}$/.test(mun || "") && estado.uf !== "BR" ? mun : "";
+  if (estado.uf !== "BR") estado.regiao = regiaoDe(estado.uf); // a região acompanha o estado da URL
 }
 const gravarHash = () => history.replaceState(null, "", "#/" + [estado.aba, estado.uf, estado.mun].filter(Boolean).join("/"));
 const permiteMun = () => ["presidente", "governador", "senador"].includes(estado.aba) && estado.uf !== "BR" && estado.uf !== "ZZ";
@@ -57,6 +58,14 @@ async function obter(cargo, uf, mun) {
   return normalizar(json);
 }
 const obterAcompanhamento = async (cargo) => lerAcompanhamento(await buscarJson(urlAcompanhamento(cargo)));
+
+const memoRP = { t: 0, dados: null };
+async function obterResultadosPresidente() {
+  if (Date.now() - memoRP.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return memoRP.dados;
+  try { memoRP.dados = await buscarJson(urlResultadosPresidente()); } catch { /* segue sem o gráfico */ }
+  memoRP.t = Date.now();
+  return memoRP.dados;
+}
 
 async function obterHistorico() {
   if (Date.now() - memo.historico.t < CONFIG.atualizarHistoricoACadaSegundos * 1000) return memo.historico.dados;
@@ -116,15 +125,15 @@ async function carregarView() {
       return { tipo: "estaduais-lista", ac: e, h };
     }
     const lista = emSegundoPlano("pan-" + aba, CONFIG.atualizarACadaSegundos * 900, () => panorama(aba));
-    const [d, ac, h] = await Promise.all([aba === "presidente" ? obter(aba, "BR") : null, acomp, hist]);
-    return { tipo: "panorama", d, lista, ac, h };
+    const [d, ac, h, rp] = await Promise.all([aba === "presidente" ? obter(aba, "BR") : null, acomp, hist, aba === "presidente" ? obterResultadosPresidente() : null]);
+    return { tipo: "panorama", d, lista, ac, h, rp };
   }
   if (cargo.proporcional) {
     const [d, ac, h] = await Promise.all([obter(aba, uf), acomp, hist]);
     return { tipo: "prop", d, dist: distribuirEstado(d), ac, h };
   }
-  const [d, ac, h] = await Promise.all([obter(aba, uf, mun), acomp, hist]);
-  return { tipo: "maj", d, ac, h };
+  const [d, ac, h, rp] = await Promise.all([obter(aba, uf, mun), acomp, hist, aba === "presidente" ? obterResultadosPresidente() : null]);
+  return { tipo: "maj", d, ac, h, rp };
 }
 
 // ---------- peças de tela ----------
@@ -164,6 +173,12 @@ function blocoProgresso(titulo, d, ac) {
     <div class="barra-prog"><i style="width:${Math.min(100, pc)}%"></i></div>
     <p class="muted">${total ? `${fmt(apur)} de ${fmt(total)} seções apuradas` : ""}${quando ? ` · totalização do TSE: ${esc(quando)}` : ""}</p>
     ${estat}${d ? avisosApuracao(d) : ""}</section>`;
+}
+
+function blocoResultadoEvolucao(rp, local) {
+  const largura = Math.max(300, Math.min(640, document.documentElement.clientWidth - 64));
+  return `<section class="card"><h2>Evolução do resultado</h2>${linhasResultado(rp, local, corPartido, { largura })}
+    <p class="muted">% dos votos válidos de cada candidato, apurado minuto a minuto.</p></section>`;
 }
 
 function blocoEvolucao(titulo, hist, serie, chave) {
@@ -274,15 +289,17 @@ function telaMajoritaria(v) {
   const { d } = v, { aba, uf, mun } = estado;
   const local = mun ? `${nomeUF(uf)}, município ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : nomeUF(uf);
   const titulo = aba === "senador" ? `Senador (${d.vagas || 2} vagas): ${local}` : `${CARGOS[aba].nome}: ${local}`;
-  const evolucao = mun ? "" : blocoEvolucao(`Evolução da apuração em ${nomeUF(uf)}`, v.h, serieDe(aba), chaveUF(uf));
+  const evolucao = mun ? "" : aba === "presidente" ? blocoResultadoEvolucao(v.rp, chaveUF(uf)) : blocoEvolucao(`Evolução da apuração em ${nomeUF(uf)}`, v.h, serieDe(aba), chaveUF(uf));
   return `${blocoProgresso(titulo, d, null)}${evolucao}<section class="card"><h2>Candidatos por votos</h2>${listaMajoritaria(d, aba, uf)}</section>`;
 }
 
 function telaPanorama(v) {
   const { aba } = estado;
-  const topo = v.d ? `${blocoProgresso("Presidente: Brasil", v.d, null)}<section class="card"><h2>Candidatos por votos</h2>${listaMajoritaria(v.d, aba, "BR")}</section>` : blocoProgresso(`${CARGOS[aba].nome}: apuração nos estados`, null, v.ac.ufs.br);
+  const progresso = v.d ? blocoProgresso("Presidente: Brasil", v.d, null) : blocoProgresso(`${CARGOS[aba].nome}: apuração nos estados`, null, v.ac.ufs.br);
+  const lista = v.d ? `<section class="card"><h2>Candidatos por votos</h2>${listaMajoritaria(v.d, aba, "BR")}</section>` : "";
   const nota = aba === "presidente" ? "" : `<p class="aviso">${CARGOS[aba].nome} é eleição estadual: cada estado tem a sua disputa e não existe resultado nacional. O quadro abaixo só reúne os estados.</p>`;
-  return `${topo}${nota}${blocoEvolucao("Evolução da apuração no Brasil", v.h, serieDe(aba), "br")}${tabelaPanorama(aba, v.lista, v.ac)}`;
+  const evolucao = aba === "presidente" ? blocoResultadoEvolucao(v.rp, "br") : blocoEvolucao("Evolução da apuração no Brasil", v.h, serieDe(aba), "br");
+  return `${progresso}${nota}${evolucao}${lista}${tabelaPanorama(aba, v.lista, v.ac)}`;
 }
 
 function telaProporcionalUF(v) {
@@ -340,6 +357,7 @@ function render() {
   if (!v) return;
   const tela = { andamento: (v) => telaMarcha(v, estado), maj: telaMajoritaria, panorama: telaPanorama, prop: telaProporcionalUF, "nacional-prop": telaNacionalProp, "estaduais-lista": telaEstaduaisLista }[v.tipo];
   $("conteudo").innerHTML = tela(v);
+  if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
 }
 
 // ---------- atualização automática (a cada 10 segundos) ----------
@@ -391,7 +409,10 @@ $("conteudo").addEventListener("click", (e) => {
   const it = e.target.closest("[data-sq]");
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const reg = e.target.closest("[data-regiao]");
-  if (reg) { estado.regiao = reg.dataset.regiao; render(); return; }
+  if (reg) { estado.regiao = reg.dataset.regiao; navegar({ uf: "BR", mun: "" }); return; }
+  if (e.target.closest("[data-regiao-inteira]")) { navegar({ uf: "BR", mun: "" }); return; }
+  const nav = e.target.closest("[data-nav-uf]");
+  if (nav) { estado.rolar = true; navegar({ uf: nav.dataset.navUf, mun: "" }); return; }
   const ord = e.target.closest("[data-ordem]");
   if (ord) { estado.ordem = ord.dataset.ordem; render(); return; }
   const ir = e.target.closest("[data-ir]");

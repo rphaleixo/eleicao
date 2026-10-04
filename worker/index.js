@@ -5,6 +5,7 @@
 
 import { fichaDoCandidato } from "./candidato.js";
 import { carregarSeed } from "./carga.js";
+import { acrescentarResultado, lerResultado, UFS_MINUSCULAS } from "./resultados.js";
 import { acrescentar, pontoDeAcompanhamento, presencaDeAcompanhamento } from "./historico.js";
 
 const ORIGEM_TSE = "https://resultados.tse.jus.br/oficial/";
@@ -15,12 +16,12 @@ const ELEICAO_ESTADUAL = "6259"; // Governador, Senador, Deputados
 // O TSE bloqueia por 10 minutos IPs com mais de 100 requisições por segundo ou com
 // muitos erros 404. Só passam endereços no padrão exato dos arquivos que existem:
 // configuração de municípios, resultado (-u), andamento (-ab) e fotos de candidatos.
-const CAMINHO_VALIDO = new RegExp(
+export const CAMINHO_VALIDO = new RegExp(
   "^ele(2022|2024|2026)/\\d{3,6}/(" +
     "config/mun-e\\d{6}-cm\\.json" +
     "|dados/(br/br|[a-z]{2}/[a-z]{2}(\\d{5})?)-c\\d{4}-e\\d{6}-u\\.json" +
     "|dados/br/br-e\\d{6}-ab\\.json" +
-    "|fotos/(br|[a-z]{2})/\\d{12}\\.jpeg" +
+    "|fotos/(br|[a-z]{2})/\\d{9,14}\\.jpeg" +
     ")$"
 );
 
@@ -34,7 +35,8 @@ export default {
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     if (request.method !== "GET") return new Response("Método não permitido", { status: 405 });
 
-    if (url.pathname === "/api/historico") return historico(request, env, ctx);
+    if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] });
+    if (url.pathname === "/api/resultados-presidente") return lerHistorico(request, env, ctx, "presidente", { cands: {}, pontos: [] });
 
     const mCand = /^\/api\/candidato\/(\d{1,15})$/.exec(url.pathname);
     if (mCand) return candidato(env, Number(mCand[1]));
@@ -64,6 +66,7 @@ export default {
   // Rotina agendada (a cada minuto): guarda a foto do andamento de todos os estados.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(registrarHistorico(env));
+    ctx.waitUntil(registrarResultados(env).catch((e) => console.error("resultados da presidência:", e.message)));
     ctx.waitUntil(carregarSeed(env).catch((e) => console.error("carga do banco de candidatos:", e.message)));
   },
 };
@@ -84,6 +87,24 @@ async function buscarAcompanhamento(eleicao) {
   return { pct: pontoDeAcompanhamento(ab), presenca: presencaDeAcompanhamento(ab) };
 }
 
+// Votos de cada candidato a Presidente no Brasil, em cada estado e no exterior.
+export async function registrarResultados(env) {
+  if (!env.HIST) return;
+  const local = ["br", ...UFS_MINUSCULAS];
+  const resp = await Promise.all(local.map(async (l) => {
+    try {
+      const r = await fetch(`${ORIGEM_TSE}ele${ANO}/${ELEICAO_FEDERAL}/dados/${l === "br" ? "br" : l}/${l}-c0001-e00${ELEICAO_FEDERAL}-u.json`);
+      return r.ok ? [l, lerResultado(await r.json())] : null;
+    } catch { return null; }
+  }));
+  const v = {}, nomes = {};
+  for (const x of resp) if (x) { v[x[0]] = x[1].valor; if (x[0] === "br") Object.assign(nomes, x[1].nomes); }
+  if (!v.br) return;
+  const atual = await env.HIST.get("presidente", "json");
+  const { historico, mudou } = acrescentarResultado(atual, v, nomes);
+  if (mudou) await env.HIST.put("presidente", JSON.stringify(historico));
+}
+
 export async function registrarHistorico(env) {
   if (!env.HIST) return;
   const [f, e] = await Promise.all([buscarAcompanhamento(ELEICAO_FEDERAL), buscarAcompanhamento(ELEICAO_ESTADUAL)]);
@@ -93,12 +114,12 @@ export async function registrarHistorico(env) {
   if (mudou) await env.HIST.put("historico", JSON.stringify(historico));
 }
 
-async function historico(request, env, ctx) {
+async function lerHistorico(request, env, ctx, chaveKV, vazio) {
   const cache = caches.default;
-  const chave = new Request(new URL("/api/historico", request.url).toString());
+  const chave = new Request(new URL(request.url).origin + new URL(request.url).pathname);
   const guardado = await cache.match(chave);
   if (guardado) return guardado;
-  const dados = (env.HIST && (await env.HIST.get("historico", "json"))) || { pontos: [] };
+  const dados = (env.HIST && (await env.HIST.get(chaveKV, "json"))) || vazio;
   const resposta = new Response(JSON.stringify(dados), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",

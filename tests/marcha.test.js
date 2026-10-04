@@ -83,3 +83,20 @@ test("cada estado mostra presentes, ausentes e a apurar, que somam 100%", () => 
   const h = telaMarcha(v, est({}));
   assert.ok(h.includes("Presentes <b>40,0%</b>") && h.includes("Ausentes <b>10,0%</b>") && h.includes("A apurar <b>50,0%</b>"));
 });
+
+test("navegação: segunda linha com 'Região inteira' e os estados da região escolhida", () => {
+  const brasil = telaMarcha(v, est({}));
+  assert.ok(!brasil.includes("Região inteira") && brasil.includes('data-regiao="sul"'));
+  const sul = telaMarcha(v, est({ regiao: "sul" }));
+  assert.ok(sul.includes("data-regiao-inteira") && sul.includes('data-nav-uf="RS"') && sul.includes('data-nav-uf="PR"') && !sul.includes('data-nav-uf="SP"'));
+  assert.ok(sul.includes('data-regiao-inteira aria-pressed="true"'));
+  const rs = telaMarcha(v, est({ regiao: "sul", uf: "RS" }));
+  assert.ok(rs.includes('data-nav-uf="RS" aria-pressed="true"') && rs.includes('data-regiao-inteira aria-pressed="false"') && rs.includes("expandido"));
+});
+
+test("o painel acompanha a região escolhida", () => {
+  const sul = telaMarcha(v, est({ regiao: "sul" }));
+  assert.ok(sul.includes("<h2>Sul</h2>") && sul.includes("Região · 3 estados") && sul.includes("<strong>15</strong> de 30 seções"));
+  const ext = telaMarcha(v, est({ regiao: "exterior" }));
+  assert.ok(ext.includes("<h2>Exterior</h2>") && ext.includes("<strong>1</strong> de 5 seções") && !ext.includes("data-nav-uf"));
+});

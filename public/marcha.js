@@ -68,11 +68,24 @@ export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, ext
     <div class="hero-grafico">${graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` })}</div></section>`;
 }
 
-export function chipsRegiao(ac, regiao) {
-  const chip = (id, nome, valor) => `<button type="button" data-regiao="${id}" aria-pressed="${regiao === id}">${nome}${valor == null ? "" : ` <small>${pct(valor, 0)}</small>`}</button>`;
-  const regs = Object.entries(REGIOES).map(([k, r]) => chip(k, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct)).join("");
-  const ext = ac.ufs.zz ? chip("exterior", "Exterior", doEstado(ac.ufs.zz).pct) : "";
-  return `<div class="chips" role="group" aria-label="Filtrar por região">${chip("", "Todos")}${regs}${ext}</div>`;
+/** Regiões aceitas na navegação. O exterior só existe na eleição presidencial. */
+export const regiaoDe = (uf) => Object.entries(REGIOES).find(([, r]) => r.ufs.includes(uf))?.[0] ?? (uf === "ZZ" ? "exterior" : "");
+
+/**
+ * Navegação por região e estado, usada no topo das abas:
+ * 1ª linha: Brasil e regiões (com o % apurado); 2ª linha: "Região inteira" e os estados da região escolhida.
+ */
+export function navegacaoRegional(ac, { regiao, uf, comExterior = true }) {
+  const chip = (attrs, nome, valor, ativo) => `<button type="button" ${attrs} aria-pressed="${ativo}">${nome}${valor == null ? "" : ` <small>${pct(valor, 0)}</small>`}</button>`;
+  const linha1 = chip('data-regiao=""', "Brasil", null, regiao === "")
+    + Object.entries(REGIOES).map(([k, r]) => chip(`data-regiao="${k}"`, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct, regiao === k)).join("")
+    + (comExterior && ac.ufs.zz ? chip('data-regiao="exterior"', "Exterior", doEstado(ac.ufs.zz).pct, regiao === "exterior") : "");
+  const r = REGIOES[regiao];
+  const linha2 = r
+    ? `<div class="chips chips-estados" role="group" aria-label="Estados de ${esc(r.nome)}">${chip("data-regiao-inteira", "Região inteira", null, uf === "BR")}${r.ufs.slice().sort((x, y) => UFS[x].localeCompare(UFS[y], "pt-BR"))
+        .map((u) => chip(`data-nav-uf="${u}"`, esc(UFS[u]), doEstado(ac.ufs[u.toLowerCase()])?.pct ?? 0, uf === u)).join("")}</div>`
+    : "";
+  return `<nav class="navegacao" aria-label="Navegar por região e estado"><div class="chips" role="group" aria-label="Regiões">${linha1}</div>${linha2}</nav>`;
 }
 
 /** Divisão do eleitorado em presentes, ausentes e ainda a apurar (somam 100%). */
@@ -139,16 +152,36 @@ function listaOrdenada(v, estado) {
 }
 
 // ---------- tela ----------
-export function telaMarcha(v, estado) {
-  const ac = v.f, br = ac.ufs.br, e = v.e.ufs.br;
+function situacaoGeral(lista) {
+  const us = lista.filter(Boolean);
+  if (us.length && us.every((u) => u.andamento === "f")) return "f";
+  return us.some((u) => u.andamento === "p" || u.andamento === "f" || u.st > 0) ? "p" : "n";
+}
+
+/** O painel de destaque acompanha a navegação: Brasil, uma região ou o exterior. */
+function escopoDoPainel(v, regiao) {
+  const ac = v.f;
+  if (regiao === "exterior" && ac.ufs.zz) {
+    const u = ac.ufs.zz;
+    return { titulo: "Exterior", subtitulo: "Voto de brasileiros no exterior", a: doEstado(u), andamento: u.andamento, quando: [u.dt, u.ht].filter(Boolean).join(" "), chave: "zz", extra: "" };
+  }
+  if (REGIOES[regiao]) {
+    const us = REGIOES[regiao].ufs.map((x) => ac.ufs[x.toLowerCase()]);
+    return { titulo: REGIOES[regiao].nome, subtitulo: `Região · ${us.length} estados`, a: agregar(us), andamento: situacaoGeral(us), quando: "", chave: REGIOES[regiao].ufs.map((x) => x.toLowerCase()), extra: "" };
+  }
+  const br = ac.ufs.br, e = v.e.ufs.br;
   const todos = agregar([...Object.keys(UFS).map((u) => ac.ufs[u.toLowerCase()]), ac.ufs.zz]);
-  const brasil = br ? { ...todos, ts: br.ts || todos.ts, st: br.st ?? todos.st, pct: br.pct, eleitores: br.eleitores || todos.eleitores } : todos;
-  const extra = e ? `<p class="hero-sub">Eleições estaduais: ${pct(e.pct)} das seções</p>` : "";
-  const hero = heroApuracao({ titulo: "Brasil", subtitulo: "Todas as urnas, com o exterior", a: brasil, andamento: br?.andamento, quando: [br?.dt, br?.ht].filter(Boolean).join(" "), extra, hist: v.h, chave: "br" });
-  return `${hero}
-    <section class="card estados"><div class="estados-topo"><h2>Estados</h2>
+  const a = br ? { ...todos, ts: br.ts || todos.ts, st: br.st ?? todos.st, pct: br.pct, eleitores: br.eleitores || todos.eleitores } : todos;
+  return { titulo: "Brasil", subtitulo: "Todas as urnas, com o exterior", a, andamento: br?.andamento, quando: [br?.dt, br?.ht].filter(Boolean).join(" "), chave: "br",
+    extra: e ? `<p class="hero-sub">Eleições estaduais: ${pct(e.pct)} das seções</p>` : "" };
+}
+
+export function telaMarcha(v, estado) {
+  const p = escopoDoPainel(v, estado.regiao);
+  const hero = heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave });
+  return `${navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf })}${hero}
+    <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
-      ${chipsRegiao(ac, estado.regiao)}
       <ul class="lista-estados">${listaOrdenada(v, estado)}</ul>
       <p class="muted nota">Toque em um estado para ver o resumo da situação e das eleições para Presidente, Governador e Senador. Porcentagens de candidatos: votos no candidato ÷ votos válidos.</p></section>`;
 }
