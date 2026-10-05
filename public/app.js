@@ -1,5 +1,6 @@
 import { blocoDisputas } from "./segundoTurno.js";
 import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
+import { blocoPartido, desempenhoPartido, listaDePartidos } from "./partidos.js";
 import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
@@ -39,7 +40,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" } };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -71,7 +72,7 @@ function montarControles() {
   $("mun").value = estado.mun;
 }
 
-const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "presidente" ? "/" + estado.regiao : ""}${estado.aba === "senadores" ? "/" + estado.visaoSenado : ""}${estado.aba === "governadores" ? "/" + estado.visaoGov : ""}${estado.aba === "estados" && estado.cargo === "mapa" ? "/" + estado.mapaCargo : ""}`; // na aba Presidente a região também muda a carga
+const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "partidos" ? "/" + estado.partido : ""}${estado.aba === "presidente" ? "/" + estado.regiao : ""}${estado.aba === "senadores" ? "/" + estado.visaoSenado : ""}${estado.aba === "governadores" ? "/" + estado.visaoGov : ""}${estado.aba === "estados" && estado.cargo === "mapa" ? "/" + estado.mapaCargo : ""}`; // na aba Presidente a região também muda a carga
 const cacheViews = new Map(); // última resposta de cada tela: aparece na hora, e é atualizada em seguida
 
 function mostrarCarregando() {
@@ -164,6 +165,11 @@ async function panorama(cargo) {
   return ufs.map((uf, i) => ({ uf, d: rs[i].status === "fulfilled" ? rs[i].value : null }));
 }
 
+async function estadosDepEstadual() {
+  const lista = (await panorama("dep-estadual")).filter((x) => x.d);
+  return lista.map(({ uf, d }) => ({ uf, d, dist: distribuirEstado(d) }));
+}
+
 async function estadosDepFederal() {
   const lista = (await panorama("dep-federal")).filter((x) => x.d);
   return lista.map(({ uf, d }) => ({ uf, d, dist: distribuirEstado(d) }));
@@ -207,6 +213,12 @@ async function carregarView(rota) {
     const lista = emSegundoPlano("pan-" + cargo, CONFIG.atualizarACadaSegundos * 900, () => panorama(cargo));
     const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" ? obterMandatos() : null]);
     return { tipo: "cargo-por-estado", cargo, e, lista, mandatos, visao: rota.visaoSenado };
+  }
+  if (aba === "partidos") { // desempenho de um partido: tudo o que está carregado (cada parte chega em segundo plano)
+    const ttl = CONFIG.atualizarNacionalACadaSegundos * 1000;
+    const pres = await obter("presidente", "BR").catch(() => null);
+    return { tipo: "partidos", pres, gov: emSegundoPlano("pan-governador", CONFIG.atualizarACadaSegundos * 900, () => panorama("governador")), sen: emSegundoPlano("pan-senador", CONFIG.atualizarACadaSegundos * 900, () => panorama("senador")),
+      depf: emSegundoPlano("nacional", ttl, estadosDepFederal), depe: emSegundoPlano("nacional-estadual", ttl, estadosDepEstadual) };
   }
   const acomp = obterAcompanhamento(aba === "camara" ? "dep-federal" : aba);
   if (aba === "presidente") {
@@ -718,6 +730,23 @@ function listaDeputadosEleitos(estados, ufs, f) {
     ${boxCandidatos({ titulo: "Deputados federais eleitos", contagem: `${fmt(itens.length)}${buscando(busca) || todos.length !== 513 ? ` de ${fmt(todos.length)}` : " de 513"}`, nota: "Votos nominais de cada eleito e % dos votos válidos do estado. “Projeção” = eleito pela soma dos votos contados até agora; “eleito” = resultado oficial do TSE.", vazio: "Nenhum deputado com esses filtros.", itens, chave: "deps", porPagina: 25, semCartao: true })}`;
 }
 
+/** Aba Partidos: desempenho geral de um partido (majoritárias, deputados e cláusula). */
+function telaPartidos(v) {
+  const dados = { pres: v.pres, gov: v.gov, sen: v.sen, depf: v.depf, depe: v.depe };
+  const partidos = listaDePartidos(dados);
+  if (!partidos.length) return `<section class="card"><h2>Partidos</h2><p class="muted">Carregando os resultados…</p></section>`;
+  const padrao = v.depf ? (calcularClausulaPadrao(v.depf, partidos)) : partidos[0].sigla;
+  const sigla = partidos.some((p) => p.sigla === estado.partido) ? estado.partido : padrao;
+  const seletor = `<label class="f-sel pp-seletor"><span>Partido</span><select data-partido aria-label="Escolher partido">${partidos.map((p) => `<option value="${esc(p.sigla)}"${p.sigla === sigla ? " selected" : ""}>${esc(p.sigla)} (${p.n} candidaturas)</option>`).join("")}</select></label>`;
+  return blocoPartido(desempenhoPartido(sigla, dados), seletor);
+}
+/** O partido que abre por padrão: o de maior bancada federal. */
+function calcularClausulaPadrao(depf, partidos) {
+  const m = new Map();
+  for (const { d, dist } of depf) { const ids = new Set((dist?.eleitos ?? []).map((e) => e.id)); for (const c of d.candidatos) if (ids.has(c.id)) m.set(c.partido, (m.get(c.partido) ?? 0) + 1); }
+  return [...m].sort((a, b) => b[1] - a[1])[0]?.[0] ?? partidos[0].sigla;
+}
+
 function telaNacionalProp(v) {
   const n = v.nacional;
   const p = escopoDoPainel({ f: v.ac, e: { ufs: {} } }, "", "BR");
@@ -811,7 +840,7 @@ function render(forcar = false) {
   if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
   setBase(estado.base); setSemSubJudice(estado.semSJ); aplicarBaseNaView(v); // todos os % da tela seguem a base e o cenário escolhidos
   if (v.tipo === "nacional-prop" && v.estados) v.nacional = consolidarNacional(v.estados); // cadeiras do país seguem o cenário
-  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   reaplicarGraficos($("conteudo"));
@@ -951,6 +980,8 @@ $("conteudo").addEventListener("input", (e) => {
   const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
 });
 $("conteudo").addEventListener("change", (e) => {
+  const pt = e.target.closest?.("[data-partido]");
+  if (pt) { estado.partido = pt.value; gravarHash(); render(true); return; }
   const gEl = e.target.closest?.("[data-cmpg-modo], [data-cmpg-pa], [data-cmpg-pb], [data-cmpg-ordem]");
   if (gEl) {
     if (gEl.matches("[data-cmpg-modo]")) { estado.cmpGov.modo = gEl.value; estado.cmpGov.ordem = gEl.value === "partidos" ? "vantagemA" : "margem"; }

@@ -35,7 +35,7 @@ test("turno: 2º a partir de 25/10 (ou pedido), arquivos, chaves e alvos própri
 });
 
 test("no 1º turno o site segue completo (todas as abas e estados)", () => {
-  assert.equal(TURNO2, false); assert.equal(UFS_GOV.length, 27); assert.equal(ABAS.length, 6);
+  assert.equal(TURNO2, false); assert.equal(UFS_GOV.length, 27); assert.equal(ABAS.length, 7);
 });
 
 test("arquivo do 2º turno não marca '2º turno' de novo", () => {

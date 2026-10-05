@@ -697,3 +697,20 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .cp-dif { grid-column: 1 / -1; flex-direction: row !important; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; } .cp-dif strong { font-size: 1.1rem; }
 @media (min-width: 640px) { .cp-nums { grid-template-columns: repeat(5, minmax(0, 1fr)); } .cp-dif { grid-column: auto; flex-direction: column !important; } }
 .cp-par { font-weight: 600; color: var(--muted); }
+
+/* Aba Partidos */
+.pp-topo { border-top: 4px solid var(--cor, var(--line)); } .pp-cabeca { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .pp-chip { font-size: 1.3rem; padding: 4px 14px; margin: 0; }
+.pp-seletor { margin: 10px 0; max-width: 24rem; }
+.pp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 8px; margin: 10px 0; }
+.pp-tile { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 6px; border-radius: 12px; background: var(--barra); border-top: 3px solid var(--line); }
+.pp-tile strong { font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; } .pp-tile span { font-size: .78rem; } .pp-tile small { font-size: .68rem; color: var(--muted); }
+.pp-tile.eleito, .pp-tile.atingiu { border-top-color: #1a8f4e; } .pp-tile.nao { border-top-color: #c0392b; } .pp-tile.andamento { border-top-color: #c77700; }
+.pp-tabela { width: 100%; border-collapse: collapse; font-size: .86rem; } .pp-tabela th, .pp-tabela td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; } .pp-tabela th:first-child, .pp-tabela td:first-child { text-align: left; }
+.pp-tabela thead th, .pp-tabela tr:first-child th { font-size: .72rem; color: var(--muted); font-weight: 600; } .pp-total th, .pp-total td { font-weight: 700; border-top: 2px solid var(--line); } .pp-v { color: #1a8f4e; }
+.pp-uf td.pp-nomes { white-space: normal; text-align: left; min-width: 10rem; font-size: .78rem; }
+.pp-saldo { margin: 10px 0; padding: 8px 12px; border-radius: 10px; background: var(--barra); }
+.pp-disputas { list-style: none; margin: 6px 0 14px; padding: 0; display: grid; gap: 6px; }
+.pp-d { display: grid; grid-template-columns: 36px 1fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; } .pp-d.vitoria { border-left-color: #1a8f4e; } .pp-d.segundo { border-left-color: #c77700; } .pp-d.derrota { border-left-color: #c0392b; }
+.pp-d .foto { width: 36px; height: 36px; } .pp-d-quem { display: flex; flex-direction: column; min-width: 0; } .pp-d-quem b { overflow: hidden; text-overflow: ellipsis; } .pp-d-num { display: flex; flex-direction: column; align-items: flex-end; } .pp-d-num small { color: var(--muted); font-size: .7rem; }
+.pp-res { font-size: .72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); } .pp-res.vitoria { color: #1a8f4e; border-color: #1a8f4e; background: rgba(26, 143, 78, .12); } .pp-res.segundo { color: #b36b00; border-color: #c77700; background: rgba(199, 119, 0, .12); } .pp-res.derrota { color: #c0392b; border-color: #c0392b; background: rgba(192, 57, 43, .1); }
+@media (max-width: 520px) { .pp-d { grid-template-columns: 36px 1fr auto; } .pp-d .pp-res { grid-column: 2 / -1; justify-self: start; } }

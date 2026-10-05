@@ -40,6 +40,7 @@ const TODAS_ABAS = [
   { id: "governadores", nome: "Governadores" },
   { id: "senadores", nome: "Senadores" },
   { id: "camara", nome: "Deputados" },
+  { id: "partidos", nome: "Partidos" },
   { id: "estados", nome: "Estados" },
 ];
 
