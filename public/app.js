@@ -22,7 +22,8 @@ import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
 import { cargosBarra, barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
-import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, INICIO_APURACAO } from "./config.js";
+import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO } from "./config.js";
+import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
@@ -40,7 +41,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -101,8 +102,8 @@ function navegar(mudanca) {
 }
 
 // ---------- dados ----------
-async function obter(cargo, uf, mun) {
-  const { json } = await buscarPrimeiro(urlsResultado(cargo, uf, mun));
+async function obter(cargo, uf, mun, turno = CONFIG.turno) {
+  const { json } = await buscarPrimeiro(urlsResultado(cargo, uf, mun, turno));
   return normalizar(json);
 }
 const obterAcompanhamento = async (cargo) => lerAcompanhamento(await buscarJson(urlAcompanhamento(cargo)));
@@ -159,19 +160,19 @@ function emSegundoPlano(chave, ttlMs, produtor) {
   return e.dados;
 }
 
-async function panorama(cargo) {
-  const ufs = [...(cargo === "governador" ? UFS_GOV : Object.keys(UFS)), ...(cargo === "presidente" ? ["ZZ"] : [])]; // no 2º turno, só os estados com disputa
-  const rs = await Promise.allSettled(ufs.map((uf) => obter(cargo, uf)));
+async function panorama(cargo, turno = CONFIG.turno) {
+  const ufs = [...(cargo === "governador" ? (turno === 2 ? UFS_GOVERNO_SEGUNDO_TURNO : Object.keys(UFS)) : Object.keys(UFS)), ...(cargo === "presidente" ? ["ZZ"] : [])]; // no 2º turno, só os estados com disputa
+  const rs = await Promise.allSettled(ufs.map((uf) => obter(cargo, uf, undefined, turno)));
   return ufs.map((uf, i) => ({ uf, d: rs[i].status === "fulfilled" ? rs[i].value : null }));
 }
 
-async function estadosDepEstadual() {
-  const lista = (await panorama("dep-estadual")).filter((x) => x.d);
+async function estadosDepEstadual(turno = CONFIG.turno) {
+  const lista = (await panorama("dep-estadual", turno)).filter((x) => x.d);
   return lista.map(({ uf, d }) => ({ uf, d, dist: distribuirEstado(d) }));
 }
 
-async function estadosDepFederal() {
-  const lista = (await panorama("dep-federal")).filter((x) => x.d);
+async function estadosDepFederal(turno = CONFIG.turno) {
+  const lista = (await panorama("dep-federal", turno)).filter((x) => x.d);
   return lista.map(({ uf, d }) => ({ uf, d, dist: distribuirEstado(d) }));
 }
 
@@ -214,11 +215,13 @@ async function carregarView(rota) {
     const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" ? obterMandatos() : null]);
     return { tipo: "cargo-por-estado", cargo, e, lista, mandatos, visao: rota.visaoSenado };
   }
-  if (aba === "partidos") { // desempenho de um partido: tudo o que está carregado (cada parte chega em segundo plano)
-    const ttl = CONFIG.atualizarNacionalACadaSegundos * 1000;
-    const pres = await obter("presidente", "BR").catch(() => null);
-    return { tipo: "partidos", pres, gov: emSegundoPlano("pan-governador", CONFIG.atualizarACadaSegundos * 900, () => panorama("governador")), sen: emSegundoPlano("pan-senador", CONFIG.atualizarACadaSegundos * 900, () => panorama("senador")),
-      depf: emSegundoPlano("nacional", ttl, estadosDepFederal), depe: emSegundoPlano("nacional-estadual", ttl, estadosDepEstadual) };
+  if (aba === "partidos") { // resultado geral: sempre o 1º turno completo; o 2º turno, quando existe, só atualiza as disputas que foram a ele
+    const ttl = CONFIG.atualizarNacionalACadaSegundos * 1000, pan = CONFIG.atualizarACadaSegundos * 900;
+    const pres = await obter("presidente", "BR", undefined, 1).catch(() => null);
+    const seg = SEGUNDO_TURNO_ABERTO || TURNO2; // antes de 25/10 os arquivos do 2º turno não existem
+    return { tipo: "partidos", pres, gov: emSegundoPlano("pan-governador-t1", pan, () => panorama("governador", 1)), sen: emSegundoPlano("pan-senador-t1", pan, () => panorama("senador", 1)),
+      depf: emSegundoPlano("nacional-t1", ttl, () => estadosDepFederal(1)), depe: emSegundoPlano("nacional-estadual-t1", ttl, () => estadosDepEstadual(1)),
+      pres2: seg ? await obter("presidente", "BR", undefined, 2).catch(() => null) : null, gov2: seg ? emSegundoPlano("pan-governador-t2", pan, () => panorama("governador", 2)) : null };
   }
   const acomp = obterAcompanhamento(aba === "camara" ? "dep-federal" : aba);
   if (aba === "presidente") {
@@ -732,13 +735,13 @@ function listaDeputadosEleitos(estados, ufs, f) {
 
 /** Aba Partidos: desempenho geral de um partido (majoritárias, deputados e cláusula). */
 function telaPartidos(v) {
-  const dados = { pres: v.pres, gov: v.gov, sen: v.sen, depf: v.depf, depe: v.depe };
+  const dados = { pres: v.pres, gov: v.gov, sen: v.sen, depf: v.depf, depe: v.depe, pres2: v.pres2, gov2: v.gov2 };
   const partidos = listaDePartidos(dados);
   if (!partidos.length) return `<section class="card"><h2>Partidos</h2><p class="muted">Carregando os resultados…</p></section>`;
   const padrao = v.depf ? (calcularClausulaPadrao(v.depf, partidos)) : partidos[0].sigla;
   const sigla = partidos.some((p) => p.sigla === estado.partido) ? estado.partido : padrao;
   const seletor = `<label class="f-sel pp-seletor"><span>Partido</span><select data-partido aria-label="Escolher partido">${partidos.map((p) => `<option value="${esc(p.sigla)}"${p.sigla === sigla ? " selected" : ""}>${esc(p.sigla)} (${p.n} candidaturas)</option>`).join("")}</select></label>`;
-  return blocoPartido(desempenhoPartido(sigla, dados), seletor);
+  return blocoPartido(desempenhoPartido(sigla, dados), seletor, estado.partidoVisao);
 }
 /** O partido que abre por padrão: o de maior bancada federal. */
 function calcularClausulaPadrao(depf, partidos) {
@@ -1036,6 +1039,8 @@ $("conteudo").addEventListener("click", (e) => {
   if (filtro) { estado.regiao = filtro.dataset.filtroRegiao; navegar({ uf: "BR", mun: "" }); return; }
   const mapaUf = e.target.closest("[data-mapa-uf]");
   if (mapaUf) { estado.mapaUf = estado.mapaUf === mapaUf.dataset.mapaUf ? "" : mapaUf.dataset.mapaUf; render(); return; }
+  const pv = e.target.closest("[data-pvisao]");
+  if (pv) { estado.partidoVisao = pv.dataset.pvisao; render(); return; }
   const cl = e.target.closest("[data-clausula]");
   if (cl) { estado.clausula = cl.dataset.clausula; render(); return; }
   const agrupC = e.target.closest("[data-agrup-camara]");

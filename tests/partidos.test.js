@@ -39,7 +39,19 @@ test("lista de partidos, visão completa e rota do partido", () => {
   const des = desempenhoPartido("PT", dados);
   assert.equal(des.resumo.total.vitorias, 1); assert.equal(des.resumo.total.segundos, 1); assert.equal(des.depf, null);
   const h = blocoPartido(des, "");
-  assert.ok(h.includes("Eleições majoritárias") && h.includes("Saldo nas majoritárias") && h.includes("Carregando deputados federais"));
+  assert.ok(h.includes("Saldo:") && h.includes("Vitórias") && h.includes("No 2º turno") && h.includes("pp-abas"));
+  assert.ok(blocoPartido(des, "", "depf").includes("Carregando deputados federais")); // uma visão por vez
   const rota = lerRota("#/partidos/UNI%C3%83O", { ufs: { SP: "São Paulo" }, ufPadrao: "SP" });
   assert.equal(rota.aba, "partidos"); assert.equal(rota.partido, "UNIÃO"); assert.equal(montarRota({ aba: "partidos", partido: "UNIÃO" }), "#/partidos/UNI%C3%83O");
+});
+
+test("consolida o 2º turno: quem foi a ele vence ou perde lá; sem arquivo do 2º turno, segue 'no 2º turno'", () => {
+  const dados1 = { pres: gov([c("1", "L", "PT", 450, { sit: "segundo" }), c("2", "F", "PL", 470, { sit: "segundo" }), c("3", "Z", "NOVO", 80)]), gov: [], sen: [], depf: null, depe: null };
+  assert.equal(desempenhoPartido("PT", dados1).pres[0].resultado, "segundo");
+  const d2 = gov([c("1", "L", "PT", 520, { sit: "eleito" }), c("2", "F", "PL", 480)]);
+  const pt = desempenhoPartido("PT", { ...dados1, pres2: d2 }), pl = desempenhoPartido("PL", { ...dados1, pres2: d2 });
+  assert.equal(pt.pres[0].resultado, "vitoria"); assert.equal(pt.pres[0].turno2.pct, 52); assert.equal(pl.pres[0].resultado, "derrota");
+  assert.equal(desempenhoPartido("NOVO", { ...dados1, pres2: d2 }).pres[0].resultado, "derrota"); // eliminado no 1º turno
+  assert.equal(pt.resumo.total.vitorias, 1); assert.equal(pt.resumo.total.segundos, 0);
+  assert.ok(blocoPartido(pt, "", "maj").includes("venceu o 2º turno"));
 });

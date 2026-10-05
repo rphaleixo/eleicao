@@ -714,3 +714,22 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .pp-d .foto { width: 36px; height: 36px; } .pp-d-quem { display: flex; flex-direction: column; min-width: 0; } .pp-d-quem b { overflow: hidden; text-overflow: ellipsis; } .pp-d-num { display: flex; flex-direction: column; align-items: flex-end; } .pp-d-num small { color: var(--muted); font-size: .7rem; }
 .pp-res { font-size: .72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); } .pp-res.vitoria { color: #1a8f4e; border-color: #1a8f4e; background: rgba(26, 143, 78, .12); } .pp-res.segundo { color: #b36b00; border-color: #c77700; background: rgba(199, 119, 0, .12); } .pp-res.derrota { color: #c0392b; border-color: #c0392b; background: rgba(192, 57, 43, .1); }
 @media (max-width: 520px) { .pp-d { grid-template-columns: 36px 1fr auto; } .pp-d .pp-res { grid-column: 2 / -1; justify-self: start; } }
+
+/* Aba Partidos, versão compacta */
+.pp-cabeca { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; } .pp-cabeca .pp-seletor { margin: 0 0 0 auto; min-width: 11rem; flex: 1 1 11rem; max-width: 18rem; }
+.pp-chip { font-size: 1.15rem !important; padding: 3px 12px !important; }
+.pp-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 10px 0 0; } @media (min-width: 640px) { .pp-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.pp-tile { padding: 6px 4px; } .pp-tile strong { font-size: 1.35rem; } .pp-tile span { font-size: .7rem; } .pp-tile small { font-size: .62rem; line-height: 1.2; }
+.pp-tiles-peq { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0 0 8px; } @media (min-width: 640px) { .pp-tiles-peq { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.pp-abas { margin-bottom: 10px; } .pp-corpo { padding-top: 10px; }
+.pp-saldo { margin: 8px 0; padding: 6px 10px; font-size: .86rem; }
+.pp-grupo { margin: 6px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); } .pp-grupo > summary { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; list-style: none; } .pp-grupo > summary::-webkit-details-marker { display: none; }
+.pp-grupo > summary::after { content: "▾"; color: var(--muted); margin-left: 8px; } .pp-grupo[open] > summary::after { content: "▴"; }
+.pp-n { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
+.pp-grupo.vitoria > summary { border-left: 4px solid #1a8f4e; border-radius: 12px 0 0 12px; } .pp-grupo.segundo > summary { border-left: 4px solid #c77700; border-radius: 12px 0 0 12px; } .pp-grupo.derrota > summary { border-left: 4px solid #c0392b; border-radius: 12px 0 0 12px; }
+.pp-grupo .tab-scroll { padding: 0 8px 8px; }
+.pp-disputas { margin: 0; padding: 0 8px 8px; gap: 4px; }
+.pp-d { grid-template-columns: 30px 1fr auto auto; gap: 8px; padding: 5px 8px; border-left-width: 3px; } .pp-d .sigla { width: 30px; height: 30px; font-size: .64rem; border-radius: 8px; } .pp-d-quem b { font-size: .86rem; } .pp-d-quem small { font-size: .68rem; } .pp-d-num strong { font-size: .92rem; }
+@media (max-width: 520px) { .pp-d { grid-template-columns: 30px 1fr auto; } .pp-d .pp-res { grid-column: 2 / -1; justify-self: start; margin-top: -2px; } }
+@media (min-width: 760px) { .pp-disputas { grid-template-columns: 1fr 1fr; display: grid; } }
+.pp-d { grid-template-columns: 30px 1fr auto !important; }

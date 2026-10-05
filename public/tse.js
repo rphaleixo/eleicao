@@ -5,16 +5,18 @@ import { CONFIG, CARGOS } from "./config.js";
 
 const pad6 = (e) => String(e).padStart(6, "0");
 const c4 = (cargo) => String(CARGOS[cargo].cod).padStart(4, "0");
-const codEleicao = (cargo) =>
-  CARGOS[cargo].federal ? CONFIG.eleicaoFederal : CONFIG.eleicaoEstadual;
+// Códigos por turno. Para o turno em exibição valem os da configuração (inclusive ?fed= e ?est=); o outro usa os padrões.
+const CODIGOS = { 1: { federal: "6257", estadual: "6259" }, 2: { federal: "6258", estadual: "6260" } };
+const codEleicao = (cargo, turno = CONFIG.turno) =>
+  turno === CONFIG.turno ? (CARGOS[cargo].federal ? CONFIG.eleicaoFederal : CONFIG.eleicaoEstadual) : CARGOS[cargo].federal ? CODIGOS[turno].federal : CODIGOS[turno].estadual;
 
 /**
  * Endereço do arquivo de resultado (EA20, sufixo -u). O TSE bloqueia IPs que
  * geram muitos erros 404, então só montamos endereços que sabemos que existem:
  * Brasil, estado e município (código de município sempre com 5 dígitos).
  */
-export function urlsResultado(cargo, uf, municipio) {
-  const e = codEleicao(cargo);
+export function urlsResultado(cargo, uf, municipio, turno = CONFIG.turno) {
+  const e = codEleicao(cargo, turno);
   const base = `/api/ele${CONFIG.ano}/${e}`;
   const arq = (sigla) => `${sigla}-c${c4(cargo)}-e${pad6(e)}`;
   if (uf === "BR") return [`${base}/dados/br/${arq("br")}-u.json`];

@@ -25,6 +25,8 @@ export const CONFIG = {
 // Os gráficos de evolução começam às 17h (Brasília) do dia da eleição, quando o TSE inicia a divulgação.
 export const INICIO_APURACAO = Date.parse(turno === 2 ? "2026-10-25T17:00:00-03:00" : "2026-10-04T17:00:00-03:00");
 export const TURNO2 = turno === 2;
+/** O 2º turno já começou (a partir de 25/10): só então vale buscar os arquivos dele para consolidar o resultado geral. */
+export const SEGUNDO_TURNO_ABERTO = typeof location !== "undefined" && Date.now() >= INICIO_DIA_SEGUNDO_TURNO;
 
 export const CARGOS = {
   presidente: { cod: 1, nome: "Presidente", nacional: true, federal: true },
@@ -45,7 +47,7 @@ const TODAS_ABAS = [
 ];
 
 // No 2º turno só há Presidente e o governo de sete estados: sem Senado nem deputados.
-export const ABAS = TURNO2 ? TODAS_ABAS.filter((a) => ["andamento", "presidente", "governadores", "estados"].includes(a.id)) : TODAS_ABAS;
+export const ABAS = TURNO2 ? TODAS_ABAS.filter((a) => ["andamento", "presidente", "governadores", "partidos", "estados"].includes(a.id)) : TODAS_ABAS;
 
 export const UFS = {
   AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",
