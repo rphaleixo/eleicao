@@ -1,6 +1,7 @@
 import { blocoDisputas } from "./segundoTurno.js";
 import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
 import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartidos.js";
+import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
 import { acFinal, telaCompleta as telaCompletaPura } from "./encerramento.js";
 import { telaCenario } from "./cenariosView.js";
 import { CENARIOS, recalcularEstados, compararBancadas, mudancasPorEstado, candidatosQueMudam } from "./cenarios.js";
@@ -45,7 +46,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -733,6 +734,7 @@ function telaProporcionalUF(v) {
     ${boxEleitos(d, dist)}
     ${blocoBarrados(dist)}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
+    ${blocoGraficoPartidos(barrasPartidos(d, dist, { metrica: estado.gp.metrica, ordem: estado.gp.ordem, semSubJudice: semSubJudice() }), { ...estado.gp, titulo: `Gráfico: votos por partido em ${nomeUF(uf)}` })}
     ${blocoDesempenhoPartidos(desempenhoPartidos([{ uf, d }], { semSubJudice: semSubJudice() }), { titulo: `Desempenho dos partidos em ${nomeUF(uf)}`, nota: "Votos em candidatos, votos na legenda e os 3 candidatos mais votados de cada partido ou federação, com o % dos votos válidos. O “não voto” (brancos, nulos e abstenções) aparece como se fosse mais um partido, com % dos aptos." })}
     ${cartoesVotacao(d, { proporcional: true })}
     ${maisVotados(d, "Candidatos por votos", new Set(dist.eleitos.map((e) => e.id)), new Map(dist.barrados.map((b) => [b.id, b])))}`;
@@ -1113,6 +1115,10 @@ $("conteudo").addEventListener("click", (e) => {
   if (cz) { estado.cenario = cz.dataset.cenario; gravarHash(); render(); return; }
   const pv = e.target.closest("[data-pvisao]");
   if (pv) { estado.partidoVisao = pv.dataset.pvisao; render(); return; }
+  const gpM = e.target.closest("[data-gp-metrica]"), gpO = e.target.closest("[data-gp-ordem]"), gpA = e.target.closest("[data-gp-alt]");
+  if (gpM) { estado.gp.metrica = gpM.dataset.gpMetrica; render(true); return; }
+  if (gpO) { estado.gp.ordem = gpO.dataset.gpOrdem; render(true); return; }
+  if (gpA) { const id = gpA.dataset.gpAlt; if (id === "__todas") estado.gp.ocultos.clear(); else if (!estado.gp.ocultos.delete(id)) estado.gp.ocultos.add(id); render(true); return; }
   const cl = e.target.closest("[data-clausula]");
   if (cl) { estado.clausula = cl.dataset.clausula; render(); return; }
   const agrupC = e.target.closest("[data-agrup-camara]");

@@ -765,3 +765,14 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .dp-top li { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; padding: 3px 0; border-top: 1px dashed var(--line); cursor: pointer; counter-increment: dp; }
 .dp-top li::before { content: counter(dp) "."; color: var(--muted); width: 1.4em; flex: none; }
 .dp-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .dp-v { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Gráfico de barras editável dos partidos */
+.gp-controles { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 10px 0; } .gp-controles > div { display: flex; align-items: center; gap: 8px; } .gp-leg { font-size: .78rem; color: var(--muted); }
+.gp-barras { list-style: none; margin: 8px 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.gp-linha { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; align-items: baseline; }
+.gp-rotulo { min-width: 0; overflow-wrap: anywhere; }
+.gp-valor { font-variant-numeric: tabular-nums; font-size: .88rem; text-align: right; white-space: nowrap; }
+.gp-trilho { grid-column: 1 / -1; height: 14px; background: var(--barra); border-radius: 7px; overflow: hidden; order: 3; } .gp-trilho i { display: block; height: 100%; background: var(--cor); border-radius: 7px; }
+.gp-escolha summary { cursor: pointer; font-size: .85rem; color: var(--muted); padding: 6px 0; } .gp-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 4px; }
+.gp-chip { border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-size: .78rem; padding: 4px 9px; border-radius: 999px; cursor: pointer; }
+.gp-chip[aria-pressed="true"] { background: color-mix(in srgb, var(--cor) 20%, transparent); border-color: var(--cor); color: var(--txt); font-weight: 600; }

@@ -38,3 +38,19 @@ test("o bloco mostra o não voto como um partido e as porcentagens com 2 casas",
   assert.match(html, /30,00%/);
   assert.match(html, /data-sq="1"/);
 });
+
+import { barrasPartidos, blocoGraficoPartidos } from "../public/graficoPartidos.js";
+test("gráfico: partidos com cadeira, demais agrupados e não voto, com % do mesmo total", () => {
+  const dd = d(1000, [A, B, { sigla: "CCC", votosNominais: 50, votosLegenda: 50, votosSJ: 0, candidatos: [] }]);
+  const dist = { linhas: [{ sigla: "AAA", vagas: 3 }, { sigla: "BBB", vagas: 1 }, { sigla: "CCC", vagas: 0 }] };
+  const r = barrasPartidos(dd, dist);
+  assert.deepEqual(r.itens.map((i) => i.id), ["AAA", "BBB", "__outros", "__naovoto"].sort((a, b) => r.itens.findIndex((x) => x.id === b) - r.itens.findIndex((x) => x.id === a)).reverse());
+  assert.equal(r.itens.find((i) => i.id === "__outros").votos, 100);
+  assert.equal(r.itens.find((i) => i.id === "__naovoto").votos, 60);
+  assert.equal(r.base, 700 + 300 + 100 + 60);
+  assert.deepEqual(barrasPartidos(dd, dist, { metrica: "legenda" }).itens.find((i) => i.id === "AAA").votos, 100);
+  assert.equal(barrasPartidos(dd, dist, { ordem: "az" }).itens[0].id, "AAA");
+  const html = blocoGraficoPartidos(r, { metrica: "total", ordem: "votos", ocultos: new Set(["BBB"]), titulo: "T" });
+  assert.match(html, /3 de 4 barras/);
+  assert.doesNotMatch(html, /gp-rotulo"><b>BBB/);
+});
