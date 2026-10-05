@@ -617,3 +617,25 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 
 .g-dif rect { fill: var(--barra); stroke: var(--line); } .g-dif text { fill: var(--txt); font-size: 11.5px; font-weight: 600; }
 .g-dif-info { flex: 1 0 100%; font-weight: 600; }
+
+/* Resumo nacional (governadores e senadores) */
+.rn-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: 8px; margin: 12px 0 6px; }
+.rn-tile { display: flex; flex-direction: column; align-items: center; padding: 10px 6px; border-radius: 12px; background: var(--barra); border-top: 3px solid var(--line); }
+.rn-tile strong { font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; } .rn-tile span { font-size: .75rem; color: var(--muted); }
+.rn-tile.eleito { border-top-color: #1a8f4e; } .rn-tile.segundo { border-top-color: #c77700; } .rn-tile.aberta { border-top-color: var(--muted); }
+.rn-lista { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.rn-linha { display: grid; grid-template-columns: 40px 1fr auto; grid-template-areas: "s e a" "s c c"; gap: 4px 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 14px; background: var(--card); cursor: pointer; transition: background .12s, border-color .12s; }
+.rn-linha:hover { background: var(--barra); }
+.rn-linha.eleito { border-left-color: #1a8f4e; } .rn-linha.segundo { border-left-color: #c77700; }
+.rn-linha .sigla { grid-area: s; width: 40px; height: 40px; font-size: .78rem; border-radius: 10px; align-self: start; }
+.rn-estado { grid-area: e; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-width: 0; } .rn-estado > b { font-size: 1.02rem; }
+.rn-selo { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.rn-selo i { font-style: normal; font-weight: 800; }
+.rn-selo.eleito { color: #1a8f4e; border-color: #1a8f4e; background: rgba(26, 143, 78, .12); } .rn-selo.segundo { color: #b36b00; border-color: #c77700; background: rgba(199, 119, 0, .12); }
+.rn-selo.aberta { border-style: dashed; }
+.rn-corpo { grid-area: c; display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 2px; }
+.rn-cand { display: inline-flex; align-items: center; gap: 8px; min-width: 0; cursor: pointer; } .rn-cand .foto { width: 34px; height: 34px; flex: none; }
+.rn-nome { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.25; } .rn-nome b { font-size: .92rem; } .rn-nome .chip { margin-top: 2px; } .rn-nome small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.rn-falta { flex: 1 0 100%; margin: 4px 0 0; font-size: .78rem; color: var(--muted); }
+.rn-apurado { grid-area: a; display: flex; flex-direction: column; align-items: flex-end; min-width: 5.2rem; } .rn-apurado strong { font-variant-numeric: tabular-nums; } .rn-apurado small { color: var(--muted); font-size: .7rem; }
+.rn-apurado .mini-barra { width: 100%; margin: 4px 0 0; }

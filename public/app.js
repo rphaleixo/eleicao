@@ -460,34 +460,41 @@ function telaEleitos(v, cargo) {
   const dDe = (u) => v.lista.find((x) => x.uf === u)?.d ?? null;
   const todas = Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
   const ufs = filtrarUfs(todas, f, (u) => statusEleicao(dDe(u)));
-  const nome = (c) => `<b class="link-cand" data-sq="${esc(c.id)}" role="button" tabindex="0" style="--cor:${corPartido(c.partido)}">${esc(c.nome)}</b> <span class="muted">${esc(c.partido)}</span>`;
-  const situacaoDe = (d) => {
+  const mini = (c, uf, extra = "") => `<span class="rn-cand" data-sq="${esc(c.id)}" role="button" tabindex="0" style="--cor:${corPartido(c.partido)}" title="Ver ficha do candidato">
+    <img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+    <span class="rn-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${extra}</span></span>`;
+  const situacaoDe = (d, uf) => {
     const ordenados = ordenarCandidatos(d.candidatos).filter((c) => c.votos > 0 && c.elegivel);
     const eleitos = ordenados.filter((c) => c.sit === "eleito"), segundos = ordenados.filter((c) => c.sit === "segundo");
-    if (!ordenados.length) return `<span class="muted">Sem votos apurados</span>`;
-    if (!senador && segundos.length) return `<span class="selo-sit segundo"><i aria-hidden="true">2º</i>2º turno</span> ${segundos.map(nome).join(" × ")}`;
+    if (!ordenados.length) return { classe: "vazio", selo: `<span class="rn-selo vazio">Sem votos</span>`, corpo: "" };
+    if (!senador && segundos.length) return { classe: "segundo", selo: `<span class="rn-selo segundo"><i aria-hidden="true">2º</i>turno</span>`, corpo: segundos.map((c) => mini(c, uf, `<small>${pct(c.pct)}</small>`)).join("") };
     if (eleitos.length) {
       const falta = senador ? (d.vagas || 2) - eleitos.length : 0;
       const lider = falta > 0 ? ordenados.filter((c) => !c.sit).slice(0, falta) : [];
-      return `<span class="selo-sit eleito"><i aria-hidden="true">✓</i>${eleitos.length > 1 ? "Eleitos" : "Eleito"}</span> ${eleitos.map(nome).join(" e ")}${falta > 0 ? `<br><span class="muted">${falta} vaga${falta > 1 ? "s" : ""} em aberto${lider.length ? ` · à frente: ${lider.map(nome).join(", ")}` : ""}</span>` : ""}`;
+      return { classe: "eleito", selo: `<span class="rn-selo eleito"><i aria-hidden="true">✓</i>${eleitos.length > 1 ? "Eleitos" : "Eleito"}</span>`,
+        corpo: eleitos.map((c) => mini(c, uf, `<small>${pct(c.pct)}</small>`)).join("") + (falta > 0 ? `<p class="rn-falta">${falta} vaga${falta > 1 ? "s" : ""} em aberto${lider.length ? " · à frente:" : ""}</p>${lider.map((c) => mini(c, uf, `<small>${pct(c.pct)}</small>`)).join("")}` : "") };
     }
-    const topo = ordenados.slice(0, senador ? d.vagas || 2 : 2);
-    return `<span class="selo-sit projetado"><i aria-hidden="true">…</i>Em aberto</span> ${topo.map((c) => `${nome(c)} <span class="muted">${pct(c.pct)}</span>`).join(senador ? ", " : " × ")}`;
+    return { classe: "aberta", selo: `<span class="rn-selo aberta"><i aria-hidden="true">…</i>Em aberto</span>`, corpo: ordenados.slice(0, senador ? d.vagas || 2 : 2).map((c) => mini(c, uf, `<small>${pct(c.pct)}</small>`)).join("") };
   };
+  const contagem = { definida: 0, segundo: 0, aberta: 0 };
   const linhas = ufs.map((uf) => {
     const d = dDe(uf);
     if (!d) return "";
-    return `<tr class="clicavel" data-uf="${uf}"><td class="uf-nome">${esc(UFS[uf])}</td><td style="text-align:left;white-space:normal">${situacaoDe(d)}</td>
-      <td><span class="mini-barra"><i style="width:${Math.min(100, d.pctSecoes)}%"></i></span>${pct(d.pctSecoes)}</td></tr>`;
+    contagem[statusEleicao(d)]++;
+    const sit = situacaoDe(d, uf);
+    return `<li class="rn-linha ${sit.classe}" data-uf="${uf}" role="button" tabindex="0" title="Ver ${esc(UFS[uf])}">
+      <span class="sigla">${uf}</span>
+      <span class="rn-estado"><b>${esc(UFS[uf])}</b>${sit.selo}</span>
+      <span class="rn-corpo">${sit.corpo}</span>
+      <span class="rn-apurado"><strong>${pct(d.pctSecoes)}</strong><small>urnas apuradas</small><span class="mini-barra"><i style="width:${Math.min(100, d.pctSecoes)}%"></i></span></span></li>`;
   }).join("");
-  const contagem = { definida: 0, segundo: 0, aberta: 0 };
-  ufs.forEach((u) => { const d = dDe(u); if (d) contagem[statusEleicao(d)]++; });
-  const resumo = [`${contagem.definida} com eleição definida`, !senador && contagem.segundo ? `${contagem.segundo} com 2º turno` : "", `${contagem.aberta} em aberto`].filter(Boolean).join(" · ");
+  const tile = (n, rotulo, classe) => `<div class="rn-tile ${classe}"><strong>${n}</strong><span>${rotulo}</span></div>`;
+  const tiles = `<div class="rn-tiles">${tile(contagem.definida, "definidas", "eleito")}${senador ? "" : tile(contagem.segundo, "2º turno", "segundo")}${tile(contagem.aberta, "em aberto", "aberta")}</div>`;
   return `<section class="card"><div class="titulo-cadeiras"><h2>Resumo nacional · ${nomePlural}</h2><span class="muted">${ufs.length} estados</span></div>
-    ${statusAcompanhamento(v.e)}
-    <p class="muted">${resumo}.${senador ? " Cada estado elege 2 senadores." : ""}</p>
+    ${statusAcompanhamento(v.e)}${tiles}
+    ${senador ? `<p class="muted">Cada estado elege 2 senadores.</p>` : ""}
     ${barraFiltros(f, { comSegundo: !senador })}
-    <div class="tab-scroll"><table><tr><th>Estado</th><th>Situação no momento</th><th>Urnas apuradas</th></tr>${linhas || `<tr><td colspan="3" class="muted" style="text-align:left">Nenhum estado com esses filtros.</td></tr>`}</table></div></section>`;
+    ${linhas ? `<ul class="rn-lista">${linhas}</ul>` : `<p class="muted">Nenhum estado com esses filtros.</p>`}</section>`;
 }
 
 function telaPresidente(v) {
