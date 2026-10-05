@@ -308,8 +308,9 @@ function dadosEleitos(d, dist) {
 /** Box dos eleitos: 15 por página, com a paginação dentro do próprio box. */
 function boxEleitos(d, dist) {
   const { usaOficial, base: completa } = dadosEleitos(d, dist);
-  const busca = estado.busca, numeros = new Map(d.candidatos.map((c) => [c.id, c.numero]));
-  const base = buscando(busca) ? completa.filter((b) => passaBusca({ ...b, numero: numeros.get(b.id) }, busca)) : completa;
+  // Os eleitos vêm com a sigla da federação; a busca olha o candidato de verdade (partido, federação, número).
+  const busca = estado.busca, porId = new Map(d.candidatos.map((c) => [c.id, c]));
+  const base = buscando(busca) ? completa.filter((b) => porId.has(b.id) && passaBusca(porId.get(b.id), busca)) : completa;
   const paginas = Math.max(1, Math.ceil(base.length / POR_PAGINA));
   const pag = Math.min(Math.max(0, estado.pagEleitos), paginas - 1);
   const ini = pag * POR_PAGINA, fatia = base.slice(ini, ini + POR_PAGINA);

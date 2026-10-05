@@ -92,7 +92,8 @@ export function normalizar(json) {
 
   for (const a of cargo.agr ?? []) {
     const pars = a.par ?? [];
-    const cands = pars.flatMap((p) => (p.cand ?? []).map((c) => lerCandidato(c, p)));
+    const fed = a.tp === "f" ? a.com || a.nm : ""; // federação do candidato ("" se o partido concorre sozinho)
+    const cands = pars.flatMap((p) => (p.cand ?? []).map((c) => ({ ...lerCandidato(c, p), federacao: fed })));
     // Federação traz os totais em "agr"; partido isolado, dentro de "par".
     const soma = (campo) =>
       a[campo] != null ? num(a[campo]) : pars.reduce((s, p) => s + num(p[campo]), 0);
