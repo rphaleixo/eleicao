@@ -44,7 +44,11 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/_seed/")) return new Response("Não encontrado", { status: 404 });
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (!url.pathname.startsWith("/api/")) {
+      // Página dos cenários "e se...": no subdomínio ese.* a raiz abre /ese/ (o endereço continua o mesmo, sem redirecionar).
+      if (/^ese\./.test(url.hostname) && (url.pathname === "/" || url.pathname === "/index.html")) return env.ASSETS.fetch(new Request(new URL("/ese/", url), request));
+      return env.ASSETS.fetch(request);
+    }
     if (request.method !== "GET") return new Response("Método não permitido", { status: 405 });
 
     if (url.pathname === "/api/meu-estado") { // estado de quem acessa, para abrir a visão por estado já no lugar certo

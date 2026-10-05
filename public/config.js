@@ -25,6 +25,8 @@ export const CONFIG = {
 // Os gráficos de evolução começam às 17h (Brasília) do dia da eleição, quando o TSE inicia a divulgação.
 export const INICIO_APURACAO = Date.parse(turno === 2 ? "2026-10-25T17:00:00-03:00" : "2026-10-04T17:00:00-03:00");
 export const TURNO2 = turno === 2;
+/** Página dos cenários "e se...": no subdomínio ese.* ou em /ese. Só tem a aba de cenários. */
+export const MODO_ESE = typeof location !== "undefined" && (/^ese\./.test(location.hostname) || /^\/ese(\/|\/index\.html)?$/.test(location.pathname));
 /** O 2º turno já começou (a partir de 25/10): só então vale buscar os arquivos dele para consolidar o resultado geral. */
 export const SEGUNDO_TURNO_ABERTO = typeof location !== "undefined" && Date.now() >= INICIO_DIA_SEGUNDO_TURNO;
 
@@ -43,11 +45,12 @@ const TODAS_ABAS = [
   { id: "senadores", nome: "Senadores" },
   { id: "camara", nome: "Deputados" },
   { id: "partidos", nome: "Partidos" },
+  { id: "cenarios", nome: "E se…" },
   { id: "estados", nome: "Estados" },
 ];
 
 // No 2º turno só há Presidente e o governo de sete estados: sem Senado nem deputados.
-export const ABAS = TURNO2 ? TODAS_ABAS.filter((a) => ["andamento", "presidente", "governadores", "partidos", "estados"].includes(a.id)) : TODAS_ABAS;
+export const ABAS = MODO_ESE ? TODAS_ABAS.filter((a) => a.id === "cenarios") : TURNO2 ? TODAS_ABAS.filter((a) => ["andamento", "presidente", "governadores", "partidos", "cenarios", "estados"].includes(a.id)) : TODAS_ABAS;
 
 export const UFS = {
   AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",

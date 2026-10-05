@@ -9,7 +9,7 @@ import { distribuirCadeiras, REGRAS_2026, REGRAS_CODIGO_LITERAL, REGRAS_STF_2024
  */
 export function distribuirEstado(d, modo = "2026", vagasManual = 0, semSubJudice = false, acrescimos = null) {
   const vagas = vagasManual || d.vagas;
-  const regras = modo === "variante" ? REGRAS_STF_2024 : modo === "codigo" ? REGRAS_CODIGO_LITERAL : REGRAS_2026;
+  const regras = typeof modo === "object" && modo ? modo : modo === "variante" ? REGRAS_STF_2024 : modo === "codigo" ? REGRAS_CODIGO_LITERAL : REGRAS_2026; // modo pode ser um objeto de regras (cenários)
   const entrada = d.partidos.map((p) => ({
     id: p.id, nome: p.sigla || p.nome, votos: (semSubJudice ? Math.max(0, p.votos - (p.votosSJ || 0)) : p.votos) + (acrescimos?.[p.id] || 0), // acrescimos: votos hipotéticos por partido (usado para saber o máximo possível) // sem sub judice: tira os votos desses candidatos do partido
     candidatos: p.candidatos.map((c) => ({ id: c.id, nome: c.nome, votos: c.votos, elegivel: c.elegivel })),

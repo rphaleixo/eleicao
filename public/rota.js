@@ -1,5 +1,5 @@
 // Endereço da página (#/aba/estado/...), com a leitura e a montagem em um só lugar.
-export const ABAS_IDS = ["andamento", "presidente", "governadores", "senadores", "camara", "partidos", "estados"];
+export const ABAS_IDS = ["andamento", "presidente", "governadores", "senadores", "camara", "partidos", "cenarios", "estados"];
 export const CARGOS_ESTADO = ["resumo", "governador", "senador", "dep-federal", "dep-estadual", "presidente", "mapa"];
 const COM_MUNICIPIO = ["governador", "senador", "presidente"];
 
@@ -13,6 +13,7 @@ export function lerRota(hash, { ufs, ufPadrao }) {
   else if (a === "governador" || a === "senador" || a === "dep-estadual") { aba = "estados"; cargo = a; }
   else if (a === "dep-federal") { if (uf === "BR") aba = "camara"; else { aba = "estados"; cargo = "dep-federal"; } }
   if (!ABAS_IDS.includes(aba)) aba = "andamento";
+  if (aba === "cenarios") return { aba, uf: "BR", cargo, mun: "", ...(u ? { cenario: u.toLowerCase() } : {}) }; // #/cenarios/psol-pt
   if (aba === "partidos") { let partido = ""; try { partido = decodeURIComponent(u || ""); } catch { /* endereço malformado */ } return { aba, uf: "BR", cargo, mun: "", ...(partido ? { partido } : {}) }; } // #/partidos/PT: o 2º trecho é o partido
 
   if (aba === "estados") {
@@ -27,7 +28,8 @@ export function lerRota(hash, { ufs, ufPadrao }) {
   return { aba, uf, cargo, mun };
 }
 
-export function montarRota({ aba, uf, cargo, mun, partido }) {
+export function montarRota({ aba, uf, cargo, mun, partido, cenario }) {
+  if (aba === "cenarios") return "#/cenarios" + (cenario ? "/" + cenario : "");
   if (aba === "partidos") return "#/partidos" + (partido ? "/" + encodeURIComponent(partido) : "");
   if (aba === "estados") return "#/" + ["estados", uf, cargo !== "resumo" ? cargo : "", cargo !== "resumo" ? mun : ""].filter(Boolean).join("/");
   return "#/" + [aba, uf, mun].filter(Boolean).join("/");
