@@ -17,7 +17,7 @@ export function lerResultado(json) {
     nomes[id] = { n: cand.nmu || cand.nm || "", p: p.sg ?? "" };
   }
   // Base dos percentuais = a do TSE: votos válidos mais os anulados sub judice (vvc), que ainda podem ser validados.
-  return { valor: { vv: num(json?.v?.vvc) || num(json?.v?.vv), c }, nomes };
+  return { valor: { vv: num(json?.v?.vvc) || num(json?.v?.vv), es: num(json?.e?.est), c }, nomes }; // es = eleitores aptos das seções apuradas (base dos votos totais)
 }
 
 /**

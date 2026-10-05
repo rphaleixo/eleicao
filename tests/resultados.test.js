@@ -7,7 +7,7 @@ const json = { v: { vv: "300" }, carg: [{ agr: [{ par: [{ sg: "PT", cand: [{ sqc
 
 test("lê votos e nomes dos candidatos", () => {
   const { valor, nomes } = lerResultado(json);
-  assert.deepEqual(valor, { vv: 300, c: { 280001: 200, 280002: 100 } });
+  assert.deepEqual(valor, { vv: 300, es: 0, c: { 280001: 200, 280002: 100 } });
   assert.deepEqual(nomes["280002"], { n: "B", p: "PL" });
 });
 

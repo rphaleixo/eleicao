@@ -1,3 +1,4 @@
+import { getBase } from "./base.js";
 // Soma o resultado de vários locais (estados de uma região) em um único resultado, no mesmo
 // formato de normalizar() em tse.js, para mostrar uma região como se fosse uma "eleição".
 /** O mais recente de vários "dd/mm/aaaa hh:mm:ss". */
@@ -17,7 +18,12 @@ export function agregarResultados(lista) {
   const soma = (campo) => ds.reduce((s, d) => s + (d[campo] || 0), 0);
   const votosValidos = soma("votosValidos");
   const candidatos = [...mapa.values()].sort((x, y) => y.votos - x.votos || Number(x.numero) - Number(y.numero));
-  for (const c of candidatos) c.pct = votosValidos ? (c.votos / votosValidos) * 100 : 0;
+  const apuradas = ds.reduce((t, d) => t + (d.eleitorado?.apuradas || 0), 0);
+  for (const c of candidatos) {
+    c.pctValido = votosValidos ? (c.votos / votosValidos) * 100 : 0;
+    c.pctTotal = apuradas ? (c.votos / apuradas) * 100 : null;
+    c.pct = getBase() === "totais" && c.pctTotal != null ? c.pctTotal : c.pctValido;
+  }
   const secoesTotal = soma("secoesTotal"), secoesApuradas = soma("secoesApuradas");
   return {
     cargoNome: ds[0].cargoNome, vagas: ds[0].vagas, candidatos, partidos: [],

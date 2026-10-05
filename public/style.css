@@ -639,3 +639,13 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 .rn-falta { flex: 1 0 100%; margin: 4px 0 0; font-size: .78rem; color: var(--muted); }
 .rn-apurado { grid-area: a; display: flex; flex-direction: column; align-items: flex-end; min-width: 5.2rem; } .rn-apurado strong { font-variant-numeric: tabular-nums; } .rn-apurado small { color: var(--muted); font-size: .7rem; }
 .rn-apurado .mini-barra { width: 100%; margin: 4px 0 0; }
+
+.g-naovoto { stroke: #8a94a3; stroke-dasharray: 5 4; } .g-nv-ponto { fill: #8a94a3; } .pt-nv { background: #8a94a3; }
+
+/* Switch de base e "candidatos" sintéticos (brancos, nulos, abstenções, não voto) */
+.base-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 2px auto 4px; } .base-barra .seg { flex: none; }
+.base-nota { margin: 0; font-size: .78rem; flex: 1 1 14rem; }
+.foto-sint { display: inline-flex; align-items: center; justify-content: center; background: var(--barra) !important; color: var(--muted); font-weight: 800; font-size: 1.4rem; }
+.sintetico { opacity: .92; } .sintetico .pod-nome, .sintetico b { color: var(--muted); }
+.pod.sintetico { border-top-color: var(--muted); } .cr.sintetico .cr-nome .muted { font-size: .75rem; margin-left: 6px; }
+.cu-dest.sintetico .cu-foto { width: 44px; height: 44px; font-size: 1.1rem; }

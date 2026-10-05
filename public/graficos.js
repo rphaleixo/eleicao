@@ -96,12 +96,12 @@ export function nomeCurto(n) {
 }
 
 /** Texto da diferença entre os dois primeiros colocados naquele instante: "FLAVIO +3,91 p.p. · 4.512.300 votos". */
-export function textoDiferenca(r, nome) {
+export function textoDiferenca(r, nome, base = r.vv) {
   const ord = Object.entries(r.c).sort((a, b) => b[1] - a[1]);
-  if (ord.length < 2 || !r.vv) return "";
+  if (ord.length < 2 || !base) return "";
   const [[id1, v1], [, v2]] = ord, dif = v1 - v2;
   if (dif <= 0) return "Empatados";
-  return `${nomeCurto(nome(id1))} +${pct((dif / r.vv) * 100).replace("%", " p.p.")} · ${fmt(dif)} votos`;
+  return `${nomeCurto(nome(id1))} +${pct((dif / base) * 100).replace("%", " p.p.")} · ${fmt(dif)} votos`;
 }
 
 /**
@@ -110,22 +110,31 @@ export function textoDiferenca(r, nome) {
  * @param {string|string[]} local "br", "rj", "zz"... (lista = soma dos locais)
  * @param {(sigla:string)=>string} cor cor do partido
  */
-export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6, inicio = 0, ate = 0 } = {}) {
+/** Os pontos do histórico trazem os eleitores aptos apurados (es)? Sem isso, a visão de votos totais não tem como ser desenhada. */
+export function temTotais(rp, local, inicio = 0) {
+  const locais = [].concat(local);
+  return (rp?.pontos ?? []).some((p) => p.t * 1000 >= inicio && locais.every((l) => p.v?.[l]?.es > 0));
+}
+
+export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6, inicio = 0, ate = 0, base = "validos" } = {}) {
+  const totais = base === "totais" && temTotais(rp, local, inicio); // % sobre todos os aptos apurados, com a linha "Não voto"
   const locais = [].concat(local); // lista = soma de vários locais (estados de uma região)
   const junta = (v) => {
     const rs = locais.map((l) => v?.[l]).filter(Boolean);
     if (!rs.length) return null;
     const c = {};
     for (const r of rs) for (const [id, n] of Object.entries(r.c)) c[id] = (c[id] ?? 0) + n;
-    return { vv: rs.reduce((t, r) => t + r.vv, 0), c };
+    return { vv: rs.reduce((t, r) => t + r.vv, 0), es: rs.reduce((t, r) => t + (r.es || 0), 0), c };
   };
-  const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: junta(p.v) })).filter((p) => p.r && p.r.vv > 0 && p.t >= inicio);
+  const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: junta(p.v) })).filter((p) => p.r && p.r.vv > 0 && p.t >= inicio && (!totais || p.r.es > 0));
   if (ate && pts.length && ate > pts[pts.length - 1].t) pts.push({ ...pts[pts.length - 1], t: ate });
   if (pts.length < 1) return `<p class="muted vazio-grafico">O gráfico começa quando os primeiros votos forem apurados. O resultado é registrado a cada minuto.</p>`;
   const ult = pts[pts.length - 1].r;
   const ids = Object.keys(ult.c).sort((a, b) => ult.c[b] - ult.c[a]).slice(0, max);
-  const pc = (r, id) => ((r.c[id] ?? 0) / r.vv) * 100;
-  const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => ids.map((id) => pc(p.r, id)))) / 10) * 10);
+  const den = (r) => (totais ? r.es : r.vv);
+  const pc = (r, id) => ((r.c[id] ?? 0) / den(r)) * 100;
+  const pcNv = (r) => ((r.es - r.vv) / r.es) * 100; // não voto: brancos + nulos + abstenções
+  const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => [...ids.map((id) => pc(p.r, id)), ...(totais ? [pcNv(p.r)] : [])])) / 10) * 10);
   const m = { e: 56, d: 12, c: 34, b: 24 }; // a faixa de cima abriga a etiqueta da diferença
   altura += 24;
   const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, ate, t0 + 60000);
@@ -140,10 +149,12 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
     const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(pc(p.r, id)).toFixed(1)}`).join(" ");
     return `<path class="g-cand" d="${d}" style="stroke:${cor(partido(id))}"/><circle cx="${x(pts[pts.length - 1].t).toFixed(1)}" cy="${y(pc(ult, id)).toFixed(1)}" r="3.5" style="fill:${cor(partido(id))}"/>`;
   }).join("");
-  const legenda = ids.map((id) => `<span><i class="pt" style="background:${cor(partido(id))}"></i>${nome(id)} <b>${pct(pc(ult, id))}</b></span>`).join("");
-  const rot = pts.map((p) => textoDiferenca(p.r, nome));
-  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })), { rot });
+  const linhaNv = totais ? `<path class="g-cand g-naovoto" d="${pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(pcNv(p.r)).toFixed(1)}`).join(" ")}"/><circle cx="${x(pts[pts.length - 1].t).toFixed(1)}" cy="${y(pcNv(ult)).toFixed(1)}" r="3.5" class="g-nv-ponto"/>` : "";
+  const legenda = ids.map((id) => `<span><i class="pt" style="background:${cor(partido(id))}"></i>${nome(id)} <b>${pct(pc(ult, id))}</b></span>`).join("")
+    + (totais ? `<span><i class="pt pt-nv"></i>Não voto <b>${pct(pcNv(ult))}</b></span>` : "");
+  const rot = pts.map((p) => textoDiferenca(p.r, nome, den(p.r)));
+  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [...ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })), ...(totais ? [{ n: "Não voto", cor: "#8a94a3", v: pts.map((p) => pcNv(p.r)), y: [0, topo] }] : [])], { rot });
   const ultRot = rot[rot.length - 1];
   const etiqueta = ultRot ? `<g class="g-dif"><rect x="${m.e}" y="5" width="${Math.min(largura - m.e - m.d, ultRot.length * 6.9 + 20)}" height="22" rx="11"/><text x="${m.e + 9}" y="20">${esc(ultRot)}</text></g>` : "";
-  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
+  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}${linhaNv}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
 }

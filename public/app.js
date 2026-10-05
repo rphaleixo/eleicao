@@ -6,6 +6,7 @@ import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { statusProjecao } from "./status.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
+import { aplicarBaseNaView, baseTotal, getBase, setBase } from "./base.js";
 import { blocoClausula, calcularClausula } from "./clausula.js";
 import { barraBusca, buscaVazia, filtrando as buscando, passaBusca } from "./buscaCandidatos.js";
 import { blocoTop10, cardsMaisVotados } from "./deputadosVotados.js";
@@ -25,7 +26,7 @@ import {
 } from "./tse.js";
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
 import { corPartido, ajustarContrasteChips } from "./cores.js";
-import { linhaEvolucao, linhasResultado } from "./graficos.js";
+import { linhaEvolucao, linhasResultado, temTotais } from "./graficos.js";
 import { atualizarFaixa } from "./eventos.js";
 import { iniciarGraficos, reaplicarGraficos } from "./graficoInterativo.js";
 
@@ -34,7 +35,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const hora = (d) => d.toLocaleTimeString("pt-BR");
 const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos" };
+/** Base escolhida (válidos ou totais), lembrada neste navegador. */
+function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pagEleitos: 0, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva() };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -239,11 +242,11 @@ function blocoProgresso(titulo, d, ac) {
 function blocoResultadoEvolucao(rp, local, final = false) {
   const largura = Math.max(300, Math.min(640, document.documentElement.clientWidth - 64));
   const grafico = rp === undefined ? `<p class="muted vazio-grafico">Carregando o histórico…</p>`
-    : linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO, ate: final ? 0 : Date.now() });
+    : linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO, ate: final ? 0 : Date.now(), base: getBase() });
   const primeiro = rp?.pontos?.[0]?.t * 1000;
   const parcial = primeiro && primeiro > INICIO_APURACAO + 5 * 60000 ? ` O registro deste gráfico começou às ${new Date(primeiro).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}, quando o site passou a guardá-lo.` : "";
   return `<section class="card"><h2>Evolução do resultado</h2>${grafico}
-    <p class="muted">% dos votos válidos de cada candidato, minuto a minuto. A etiqueta mostra a diferença entre os dois primeiros (em pontos percentuais e em votos). Toque no gráfico para ver um momento.${parcial}</p></section>`;
+    <p class="muted">% ${getBase() === "totais" && temTotais(rp, local, INICIO_APURACAO) ? "dos eleitores aptos apurados (a linha cinza é o “não voto”: brancos, nulos e abstenções)" : "dos votos válidos"} de cada candidato, minuto a minuto. A etiqueta mostra a diferença entre os dois primeiros (em pontos percentuais e em votos). Toque no gráfico para ver um momento.${parcial}</p></section>`;
 }
 
 function blocoEvolucao(titulo, hist, serie, chave) {
@@ -288,9 +291,9 @@ const COMO = `<details class="como"><summary>Como as cadeiras são calculadas</s
 function tabelaPartidos(dist, d) {
   const final = d.totalizacaoFinal;
   const linhas = dist.linhas.filter((l) => l.votos > 0 || l.vagas > 0).map((l) => `<tr>
-    <td><span class="chip" style="--cor:${corPartido(l.sigla)}">${esc(l.sigla)}</span></td><td>${fmt(l.votos)}</td><td>${pct(l.pctVotos)}</td>
+    <td><span class="chip" style="--cor:${corPartido(l.sigla)}">${esc(l.sigla)}</span></td><td>${fmt(l.votos)}</td><td>${pct(getBase() === "totais" && baseTotal(d) ? (l.votos / baseTotal(d)) * 100 : l.pctVotos)}</td>
     <td><strong>${l.vagas}</strong></td><td>${l.qp}</td><td>${l.porQuociente}</td><td>${l.porSobras}</td>${final ? `<td>${l.oficial ?? ""}</td>` : ""}</tr>`).join("");
-  return `<div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Votos</th><th>% dos votos</th><th>Cadeiras</th><th>QP</th><th>Por quociente</th><th>Por sobras</th>${final ? "<th>Oficial TSE</th>" : ""}</tr>${linhas}</table></div>`;
+  return `<div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Votos</th><th>% ${getBase() === "totais" ? "dos aptos" : "dos votos"}</th><th>Cadeiras</th><th>QP</th><th>Por quociente</th><th>Por sobras</th>${final ? "<th>Oficial TSE</th>" : ""}</tr>${linhas}</table></div>`;
 }
 
 const POR_PAGINA = 15;
@@ -366,7 +369,7 @@ function resumoEstado(v) {
     cardCargo({ titulo: "Presidente no estado", aba: "presidente", uf, d: dt.pres }),
   ];
   return `${hero}<div class="carrossel carrossel-estado" role="region" aria-label="Resumo das eleições em ${esc(UFS[uf])}">${cards.join("")}</div>
-    <p class="muted nota-estado">Deslize para ver todas as eleições. Porcentagens de candidatos: votos no candidato ÷ votos válidos.</p>`;
+    <p class="muted nota-estado">Deslize para ver todas as eleições. Porcentagens de candidatos: votos no candidato ÷ ${getBase() === "totais" ? "eleitores aptos das seções apuradas" : "votos válidos"}.</p>`;
 }
 
 function telaMapaMunicipal(v) {
@@ -710,6 +713,7 @@ function render(forcar = false) {
   const v = estado.view;
   if (!v) return;
   if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
+  setBase(estado.base); aplicarBaseNaView(v); // todos os % da tela seguem a base escolhida
   const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
@@ -754,6 +758,22 @@ function mostrarStatus() {
 async function carregarMunicipios() {
   try { estado.municipios = lerMunicipios(await buscarJson(urlMunicipios())); montarControles(); } catch { /* segue sem a lista */ }
 }
+
+// ---------- base dos percentuais (votos válidos x votos totais) ----------
+function montarBase() {
+  const b = estado.base;
+  $("basebar").innerHTML = `<div class="seg mini" role="group" aria-label="Base dos percentuais">
+      <button type="button" data-base="validos" aria-pressed="${b === "validos"}">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}">Votos totais</button></div>
+    ${b === "totais" ? `<p class="muted base-nota">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}`;
+}
+$("basebar").addEventListener("click", (e) => {
+  const bt = e.target.closest("[data-base]");
+  if (!bt || bt.dataset.base === estado.base) return;
+  estado.base = bt.dataset.base;
+  try { localStorage.setItem("base", estado.base); } catch { /* sem armazenamento: vale só nesta visita */ }
+  montarBase(); render(true);
+});
+montarBase();
 
 // ---------- eventos ----------
 $("abas").addEventListener("click", (e) => { const b = e.target.closest("[data-aba]"); if (b) { estado.regiao = ""; estado.filtros = filtrosVazios(); navegar({ aba: b.dataset.aba, uf: "BR", cargo: "resumo", mun: "" }); window.scrollTo({ top: 0 }); } }); // trocar de aba recomeça do Brasil, sem carregar o estado da aba anterior

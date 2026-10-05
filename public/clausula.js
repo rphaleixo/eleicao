@@ -68,6 +68,7 @@ export function blocoClausula(c, filtro = "todos", seletor = "", status = "") {
     <p class="muted">Para ter acesso ao Fundo Partidário e ao tempo gratuito de rádio e TV, o partido (ou a federação, que conta como um só) precisa cumprir uma das duas condições nestas eleições:</p>
     <ul class="cl-regra"><li><b>Votos:</b> ao menos ${pct(regra.pctNacional)} dos votos válidos para a Câmara no país, com pelo menos ${pct(regra.pctPorUf)} em cada uma de ${regra.ufsMin} UFs (um terço das 27: nove estados ou oito estados e o Distrito Federal).</li>
       <li><b>Cadeiras:</b> ao menos ${regra.deputados} deputados federais eleitos, distribuídos em pelo menos ${regra.ufsMin} UFs.</li></ul>
+    <p class="muted nota">A cláusula é medida sobre votos válidos para a Câmara, por regra legal: o seletor de base não altera estes números.</p>
     <p class="cl-resumo"><b>${n("atingiu")}</b> atingiram${c.final ? "" : " na projeção"} · <b>${n(c.final ? "nao" : "andamento")}</b> ${c.final ? "não atingiram" : "ainda não atingiram"} · ${c.oficiais} de ${c.ufs} estados com totalização final.</p>
     ${c.final ? "" : `<p class="muted">Enquanto a apuração não termina, é uma projeção com os votos contados até agora: o resultado de cada partido ainda muda. Regra da Emenda Constitucional 97/2017.</p>`}
     <p class="muted nota">Federações (Cidadania-PSDB, PSOL-Rede, PT-PCdoB-PV, PRD-Solidariedade, União-PP) contam como uma única agremiação.</p>

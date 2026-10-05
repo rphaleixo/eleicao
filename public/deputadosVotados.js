@@ -4,6 +4,7 @@ import { urlFoto } from "./tse.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { seloSit, seloProjetado } from "./situacao.js";
+import { getBase, rotuloBase } from "./base.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -27,7 +28,7 @@ const selo = (c) => (c.oficial ? seloSit({ sit: "eleito" }, { curto: true }) : c
 const linha = (c, i, comUf, max) => `<li class="dv" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
   <span class="pos">${i + 1}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto("dep-federal", c.uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
   <span class="dv-quem"><b>${esc(c.nome)}</b><span class="muted">${comUf ? `${esc(UFS[c.uf] ?? c.uf)} · ` : ""}<span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span></span></span>
-  <span class="dv-votos"><strong>${fmt(c.votos)}</strong><small>${pct(c.pct)} dos válidos</small>${selo(c)}</span>
+  <span class="dv-votos"><strong>${fmt(c.votos)}</strong><small>${pct(c.pct)} ${rotuloBase()}</small>${selo(c)}</span>
   <span class="cr-barra"><i style="width:${max ? (c.votos / max) * 100 : 0}%"></i></span></li>`;
 
 /** Bloco "Top 10 do país". */
@@ -36,7 +37,7 @@ export function blocoTop10(estados, status = "") {
   const max = top[0]?.votos ?? 0;
   return `<div class="titulo-cadeiras"><h2>Top 10 deputados federais mais votados</h2><span class="muted">no país</span></div>${status}
     ${top.length ? `<ol class="lista-dv">${top.map((c, i) => linha(c, i, true, max)).join("")}</ol>` : `<p class="muted">Ainda sem votos apurados.</p>`}
-    <p class="muted nota">Votos nominais de cada candidato, somando o que já foi apurado. % sobre os votos válidos do estado dele.</p>`;
+    <p class="muted nota">Votos nominais de cada candidato, somando o que já foi apurado. % sobre ${getBase() === "totais" ? "os eleitores aptos" : "os votos válidos"} do estado dele.</p>`;
 }
 
 /** Cards "Mais votados por estado": os 5 primeiros de cada estado. */

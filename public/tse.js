@@ -144,7 +144,10 @@ export function normalizar(json) {
   // Em todo o site o % do candidato é votos no candidato ÷ votos válidos. A base é a do TSE (vvc): válidos mais os anulados
   // sub judice, cujos candidatos continuam na lista. Sem isso, os percentuais somam mais de 100% e a maioria de 50% se distorce.
   const validos = num(v.vvc) || num(v.vv);
+  const totalApuradas = num(json.e?.est); // eleitores aptos das seções apuradas: base da visão de votos totais
+  for (const c of candidatos) c.pctTotal = totalApuradas > 0 ? (c.votos / totalApuradas) * 100 : null;
   if (validos > 0) for (const c of candidatos) c.pct = (c.votos / validos) * 100;
+  for (const c of candidatos) c.pctValido = c.pct;
   return {
     cargoNome: cargo.nmn ?? "",
     vagas: num(cargo.nv),
