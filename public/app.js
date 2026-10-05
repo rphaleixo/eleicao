@@ -1,5 +1,6 @@
 import { blocoDisputas } from "./segundoTurno.js";
 import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
+import { telaCompleta as telaCompletaPura } from "./encerramento.js";
 import { blocoPartido, desempenhoPartido, listaDePartidos } from "./partidos.js";
 import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
@@ -106,7 +107,7 @@ async function obter(cargo, uf, mun, turno = CONFIG.turno) {
   const { json } = await buscarPrimeiro(urlsResultado(cargo, uf, mun, turno));
   return normalizar(json);
 }
-const obterAcompanhamento = async (cargo) => lerAcompanhamento(await buscarJson(urlAcompanhamento(cargo)));
+const obterAcompanhamento = async (cargo, turno = CONFIG.turno) => lerAcompanhamento(await buscarJson(urlAcompanhamento(cargo, turno)));
 
 const malhas = new Map();
 async function obterMalha(uf) {
@@ -217,9 +218,11 @@ async function carregarView(rota) {
   }
   if (aba === "partidos") { // resultado geral: sempre o 1º turno completo; o 2º turno, quando existe, só atualiza as disputas que foram a ele
     const ttl = CONFIG.atualizarNacionalACadaSegundos * 1000, pan = CONFIG.atualizarACadaSegundos * 900;
-    const pres = await obter("presidente", "BR", undefined, 1).catch(() => null);
     const seg = SEGUNDO_TURNO_ABERTO || TURNO2; // antes de 25/10 os arquivos do 2º turno não existem
-    return { tipo: "partidos", pres, gov: emSegundoPlano("pan-governador-t1", pan, () => panorama("governador", 1)), sen: emSegundoPlano("pan-senador-t1", pan, () => panorama("senador", 1)),
+    const [pres, ac1F, ac1E, ac2F, ac2E] = await Promise.all([obter("presidente", "BR", undefined, 1).catch(() => null), obterAcompanhamento("presidente", 1).catch(() => null), obterAcompanhamento("governador", 1).catch(() => null),
+      seg ? obterAcompanhamento("presidente", 2).catch(() => null) : null, seg ? obterAcompanhamento("governador", 2).catch(() => null) : null]);
+    const final = acFinal(ac1F) && acFinal(ac1E) && (!seg || (acFinal(ac2F) && acFinal(ac2E))); // só para de buscar quando o 1º e, se já começou, o 2º turno terminaram
+    return { tipo: "partidos", pres, final, gov: emSegundoPlano("pan-governador-t1", pan, () => panorama("governador", 1)), sen: emSegundoPlano("pan-senador-t1", pan, () => panorama("senador", 1)),
       depf: emSegundoPlano("nacional-t1", ttl, () => estadosDepFederal(1)), depe: emSegundoPlano("nacional-estadual-t1", ttl, () => estadosDepEstadual(1)),
       pres2: seg ? await obter("presidente", "BR", undefined, 2).catch(() => null) : null, gov2: seg ? emSegundoPlano("pan-governador-t2", pan, () => panorama("governador", 2)) : null };
   }
@@ -859,15 +862,22 @@ function telaAguardandoSegundoTurno() {
   return `<section class="card"><h2>Apuração do 2º turno</h2><p class="muted">O TSE ainda não publicou os resultados do 2º turno. A apuração começa em 25/10/2026, às 17h (Brasília), e esta página passa a mostrar tudo sozinha, atualizando a cada poucos segundos.</p></section>${blocoDisputas()}`;
 }
 
+// ---------- fim da apuração: sem mais requisições ----------
+const encerradas = new Set(); // telas cujos dados já são os finais
+const spCompletos = (chaves) => chaves.every((k) => segundoPlano[k]?.dados != null);
+
 async function atualizar() {
+  const chave0 = chaveRota();
+  if (encerradas.has(chave0)) return; // apuração encerrada: nada novo a buscar; recarregue ou use "atualizar agora" na barra de status
   obterEventos().then((d) => atualizarFaixa($("faixa"), d)).catch(() => {});
-  const chave = chaveRota();
+  const chave = chave0;
   if (emVoo.has(chave)) return; // esta tela já está sendo carregada
   emVoo.add(chave);
   const rota = { ...estado };
   try {
     const v = await carregarView(rota);
     cacheViews.set(chave, v);
+    if (telaCompletaPura(v, rota, spCompletos)) encerradas.add(chave);
     if (chave === chaveRota()) { estado.view = v; render(); memo.ultima = new Date(); memo.erro = ""; }
   } catch (e) {
     if (chave === chaveRota()) {
@@ -885,6 +895,11 @@ function mostrarStatus() {
   const el = $("status");
   const seg = Math.max(0, Math.ceil((memo.proxima - Date.now()) / 1000));
   el.classList.toggle("erro", !!memo.erro);
+  if (encerradas.has(chaveRota()) && memo.ultima) { // apuração encerrada: sem atualização automática
+    el.classList.remove("erro");
+    el.innerHTML = `Apuração encerrada · atualizado às ${hora(memo.ultima)} · <button type="button" class="link" data-reabrir>atualizar agora</button>`;
+    return;
+  }
   el.textContent = memo.ultima
     ? `Atualizado às ${hora(memo.ultima)} · próxima em ${seg}s${memo.erro ? " · falha na última tentativa: " + memo.erro : ""}`
     : memo.erro || "Carregando…";
@@ -1091,3 +1106,4 @@ if (!ufGuardada()) {
 atualizar();
 setInterval(atualizar, CONFIG.atualizarACadaSegundos * 1000);
 setInterval(mostrarStatus, 1000);
+$("status").addEventListener("click", (e) => { if (e.target.closest("[data-reabrir]")) { encerradas.delete(chaveRota()); atualizar(); } }); // busca de novo, uma vez, se a pessoa quiser conferir

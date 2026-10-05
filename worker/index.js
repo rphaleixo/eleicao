@@ -93,11 +93,13 @@ export default {
     ctx.waitUntil((async () => {
       const passo = async (nome, fn) => { try { return await fn(); } catch (e) { console.error(nome + ":", e.message); return null; } };
       const T = contextoDoTurno(); // 1º turno até 24/10; a partir de 25/10, o 2º (chaves e arquivos próprios)
+      if (env.HIST && (await env.HIST.get("encerrado" + T.sufixo))) return; // apuração finalizada neste turno: não busca mais nada no TSE
       const andamento = await passo("histórico", () => registrarHistorico(env, T));
       await passo("resultados da presidência", () => registrarResultados(env, andamento?.f, TETO.presidente, T));
       await passo("governadores", () => registrarGovernadores(env, andamento?.e, TETO.governador, T));
       await passo("definições", () => registrarEventos(env, TETO.eventos, T));
       await passo("carga do banco de candidatos", () => carregarSeed(env));
+      if (andamento?.final && env.HIST) await passo("encerramento", () => env.HIST.put("encerrado" + T.sufixo, new Date().toISOString())); // última rodada feita: as seguintes não consultam o TSE
     })());
   },
 };
@@ -131,7 +133,8 @@ async function buscarAcompanhamento(eleicao) {
   const r = await fetch(`${ORIGEM_TSE}ele${ANO}/${eleicao}/dados/br/br-e00${eleicao}-ab.json`);
   if (!r.ok) return null;
   const ab = await r.json();
-  return { pct: pontoDeAcompanhamento(ab), presenca: presencaDeAcompanhamento(ab) };
+  const br = (ab.abr ?? []).find((a) => String(a.cdabr).toLowerCase() === "br");
+  return { pct: pontoDeAcompanhamento(ab), presenca: presencaDeAcompanhamento(ab), final: br?.and === "f" }; // "f" = apuração finalizada, segundo o TSE
 }
 
 // Votos de cada candidato a Presidente no Brasil, em cada estado e no exterior. Só buscamos o que mudou desde a última vez
@@ -235,7 +238,7 @@ export async function registrarHistorico(env, T = TURNOS[1]) {
   const atual = await env.HIST.get("historico" + T.sufixo, "json");
   const { historico, mudou } = acrescentar(atual, { f: f?.pct ?? {}, e: e?.pct ?? {}, p: f?.presenca });
   if (mudou) await env.HIST.put("historico" + T.sufixo, JSON.stringify(historico));
-  return { f: f?.pct ?? null, e: e?.pct ?? null }; // % de seções por estado, para saber quais resultados mudaram
+  return { f: f?.pct ?? null, e: e?.pct ?? null, final: !!f?.final && !!e?.final }; // % de seções por estado, para saber quais resultados mudaram
 }
 
 // Votos de cada candidato a Governador, por estado. Só buscamos os estados cujo % apurado mudou desde a última vez.

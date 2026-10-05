@@ -26,8 +26,8 @@ export function urlsResultado(cargo, uf, municipio, turno = CONFIG.turno) {
 }
 
 /** Andamento de todos os estados (EA14): um arquivo por eleição. Presidente é a eleição federal. */
-export function urlAcompanhamento(cargo) {
-  const e = codEleicao(cargo);
+export function urlAcompanhamento(cargo, turno = CONFIG.turno) {
+  const e = codEleicao(cargo, turno);
   return `/api/ele${CONFIG.ano}/${e}/dados/br/br-e${pad6(e)}-ab.json`;
 }
 

@@ -43,12 +43,13 @@ export function ufsVisiveis(regiao) {
   return regiao ? base : [...base, "ZZ"];
 }
 
-/** "N votos apurados | M eleitores aptos": votos = comparecimento nas seções já totalizadas. Sem comparecimento, só os aptos. */
+/** "N votos apurados | A ausentes | M eleitores aptos": votos = comparecimento nas seções já totalizadas; ausentes = abstenção nelas. */
 export function textoAptos(a, { forte = true } = {}) {
   if (!a?.eleitores) return "";
   const n = (v) => (forte ? `<strong>${fmt(v)}</strong>` : fmt(v));
   const votos = a.comparecimento > 0 ? `${n(a.comparecimento)} votos apurados | ` : "";
-  return `${votos}${n(a.eleitores)} eleitores aptos`;
+  const ausentes = a.abstencao > 0 ? `${n(a.abstencao)} ausentes | ` : ""; // quem faltou, nas seções já apuradas
+  return `${votos}${ausentes}${n(a.eleitores)} eleitores aptos`;
 }
 
 const selo = (a) => `<span class="selo ${a === "p" || a === "f" ? a : ""}">${TEXTO_SITUACAO[a] ?? TEXTO_SITUACAO.n}</span>`;
