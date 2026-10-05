@@ -753,3 +753,15 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .cn-cands { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; } .cn-cands li { padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); cursor: pointer; line-height: 1.5; }
 .ese .abas { display: none; } /* a página dos cenários tem uma aba só */
 .ese #basebar { display: none; }
+
+/* Desempenho dos partidos: votos em candidatos x legenda e top 3 */
+.dp-lista { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.dp-item { border: 1px solid var(--line); border-left: 4px solid var(--cor, var(--line)); border-radius: 12px; padding: 10px 12px; background: var(--card); display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
+.dp-nv { --cor: var(--muted); }
+.dp-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.dp-total { display: grid; text-align: right; font-variant-numeric: tabular-nums; } .dp-total small { color: var(--muted); }
+.dp-duas { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .86rem; color: var(--muted); font-variant-numeric: tabular-nums; } .dp-duas b { color: var(--txt); font-weight: 600; }
+.dp-top { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: dp; }
+.dp-top li { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; padding: 3px 0; border-top: 1px dashed var(--line); cursor: pointer; counter-increment: dp; }
+.dp-top li::before { content: counter(dp) "."; color: var(--muted); width: 1.4em; flex: none; }
+.dp-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .dp-v { font-variant-numeric: tabular-nums; white-space: nowrap; }

@@ -1,5 +1,6 @@
 import { blocoDisputas } from "./segundoTurno.js";
 import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
+import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartidos.js";
 import { acFinal, telaCompleta as telaCompletaPura } from "./encerramento.js";
 import { telaCenario } from "./cenariosView.js";
 import { CENARIOS, recalcularEstados, compararBancadas, mudancasPorEstado, candidatosQueMudam } from "./cenarios.js";
@@ -732,6 +733,7 @@ function telaProporcionalUF(v) {
     ${boxEleitos(d, dist)}
     ${blocoBarrados(dist)}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
+    ${blocoDesempenhoPartidos(desempenhoPartidos([{ uf, d }], { semSubJudice: semSubJudice() }), { titulo: `Desempenho dos partidos em ${nomeUF(uf)}`, nota: "Votos em candidatos, votos na legenda e os 3 candidatos mais votados de cada partido ou federação, com o % dos votos válidos. O “não voto” (brancos, nulos e abstenções) aparece como se fosse mais um partido, com % dos aptos." })}
     ${cartoesVotacao(d, { proporcional: true })}
     ${maisVotados(d, "Candidatos por votos", new Set(dist.eleitos.map((e) => e.id)), new Map(dist.barrados.map((b) => [b.id, b])))}`;
 }
@@ -837,6 +839,8 @@ function telaNacionalProp(v) {
   } else if (agrup === "clausula") {
     const seg = seletorVisao("data-clausula", estado.clausula, [["todos", "Todos"], ["atingiu", "Atingiram"], ["andamento", "Ainda podem"], ["nao", "Não atingiram"]]);
     corpo = blocoClausula(calcularClausula(v.estados), estado.clausula, seg, statusAcompanhamento(v.ac));
+  } else if (agrup === "desempenho") {
+    corpo = blocoDesempenhoPartidos(desempenhoPartidos(v.estados, { semSubJudice: semSubJudice() }), { titulo: "Desempenho nacional dos partidos", comUf: true, nota: "Soma dos 27 estados na eleição de deputado federal: votos em candidatos, votos na legenda e os 3 candidatos mais votados do país em cada partido ou federação, com o % dos votos válidos do estado dele. O “não voto” (brancos, nulos e abstenções) aparece como mais um partido, com % dos aptos." });
   } else if (agrup === "top10") {
     corpo = blocoTop10(v.estados, statusAcompanhamento(v.ac));
   } else if (agrup === "votados") {
@@ -867,7 +871,7 @@ function usaRegiao() {
   const { aba } = estado;
   if (aba === "andamento" || aba === "presidente" || aba === "governadores") return true;
   if (aba === "senadores") return !(estado.visaoSenado === "bancada" && estado.agrupBancada === "partido");
-  if (aba === "camara") return !["partido", "top10", "clausula"].includes(estado.agrupCamara);
+  if (aba === "camara") return !["partido", "desempenho", "top10", "clausula"].includes(estado.agrupCamara);
   return false;
 }
 let navAnterior = "", subAnterior = "";

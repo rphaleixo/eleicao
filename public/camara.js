@@ -5,7 +5,7 @@ import { UFS } from "./config.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const MAIORIA_CAMARA = 257;
-export const AGRUP_CAMARA = { partido: "Por partido", estado: "Por estado", mapa: "Mapa", tabela: "Tabela", top10: "Top 10 do país", votados: "Mais votados por estado", clausula: "Cláusula de desempenho", eleitos: "Deputados eleitos", barrados: "Barrados (10% do QE)" };
+export const AGRUP_CAMARA = { partido: "Por partido", desempenho: "Desempenho", estado: "Por estado", mapa: "Mapa", tabela: "Tabela", top10: "Top 10 do país", votados: "Mais votados por estado", clausula: "Cláusula de desempenho", eleitos: "Deputados eleitos", barrados: "Barrados (10% do QE)" };
 
 export function seletorAgrupCamara(agrup) {
   return `<div class="seg mini seg-rolavel" role="group" aria-label="Visão da Câmara">${Object.entries(AGRUP_CAMARA).map(([k, nome]) => `<button type="button" data-agrup-camara="${k}" aria-pressed="${k === agrup}">${nome}</button>`).join("")}</div>`;
