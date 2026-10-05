@@ -453,10 +453,31 @@ function telaBancadaSenado(v) {
   return `${seletorSenado("bancada")}${telaBancada(bf, { versao: v.mandatos.versao, agrupamento: estado.agrupBancada, filtros: barra, totais: b, status: statusAcompanhamento(v.e) })}`;
 }
 
+/** Governos por partido: em quantos estados cada um elegeu o governador e em quantos chegou ao 2º turno. */
+function blocoPartidosGoverno(lista) {
+  if (!lista) return "";
+  const m = new Map(), vazio = () => ({ eleitos: [], segundos: [] });
+  for (const { uf, d } of lista) for (const c of d?.candidatos ?? []) {
+    if (c.sit === "eleito") (m.get(c.partido) ?? m.set(c.partido, vazio()).get(c.partido)).eleitos.push(uf);
+    else if (c.sit === "segundo") (m.get(c.partido) ?? m.set(c.partido, vazio()).get(c.partido)).segundos.push(uf);
+  }
+  const linhas = [...m].sort((a, b) => b[1].eleitos.length - a[1].eleitos.length || b[1].segundos.length - a[1].segundos.length || a[0].localeCompare(b[0], "pt-BR"));
+  if (!linhas.length) return `<section class="card"><h2>Governos por partido</h2><p class="muted">Nenhum governador definido ainda.</p></section>`;
+  const eleitos = linhas.reduce((t, [, x]) => t + x.eleitos.length, 0), segundos = linhas.reduce((t, [, x]) => t + x.segundos.length, 0);
+  const ufs = (l, classe) => l.sort().map((u) => `<span class="gp-uf ${classe}">${u}</span>`).join("");
+  const itens = linhas.map(([partido, x]) => `<li class="gp-linha" style="--cor:${corPartido(partido)}"><span class="chip" style="--cor:${corPartido(partido)}">${esc(partido)}</span>
+    <span class="gp-num"><strong>${x.eleitos.length}</strong><small>${x.eleitos.length === 1 ? "eleito" : "eleitos"}</small></span>
+    ${TURNO2 ? "" : `<span class="gp-num seg"><strong>${x.segundos.length}</strong><small>no 2º turno</small></span>`}
+    <span class="gp-ufs">${ufs(x.eleitos, "eleito")}${TURNO2 ? "" : ufs(x.segundos, "segundo")}</span></li>`).join("");
+  return `<section class="card"><div class="titulo-cadeiras"><h2>Governos por partido</h2><span class="muted">${eleitos} eleitos${TURNO2 ? "" : ` · ${segundos} em 2º turno`}</span></div>
+    <p class="muted">${TURNO2 ? "Estados com governador já definido no 2º turno." : "Em quantos estados cada partido já elegeu o governador e em quantos tem candidato no 2º turno (cada disputa tem dois)."}</p>
+    <ul class="gp-lista">${itens}</ul></section>`;
+}
+
 function telaCargoPorEstado(v) {
   if (v.cargo === "senador" && estado.visaoSenado === "bancada") return telaBancadaSenado(v);
   if (v.cargo === "senador" && estado.visaoSenado === "eleitos") return `${seletorSenado("eleitos")}${telaEleitos(v, "senador")}`;
-  if (v.cargo === "governador" && estado.visaoGov === "eleitos") return `${seletorGovernador("eleitos")}${telaEleitos(v, "governador")}`;
+  if (v.cargo === "governador" && estado.visaoGov === "eleitos") return `${seletorGovernador("eleitos")}${blocoPartidosGoverno(v.lista)}${telaEleitos(v, "governador")}`;
   const { regiao } = estado, cargo = v.cargo, governador = cargo === "governador";
   const plural = governador ? "Governadores" : "Senadores", singular = governador ? "governador" : "senador";
   const ds = v.lista ? v.lista.map((x) => x.d).filter(Boolean) : [];
@@ -470,7 +491,7 @@ function telaCargoPorEstado(v) {
   const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
   const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra,
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
-  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
+  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
 }
 
 /** Resumo nacional (senadores ou governadores): uma linha por estado com a situação no momento e o % de urnas apuradas. */
@@ -694,7 +715,7 @@ function telaNacionalProp(v) {
       ? `<p class="muted">A lista de deputados eleitos está disponível na base de votos válidos. Troque a base no seletor abaixo das abas.</p>`
       : listaDeputadosEleitos(v.estados, ufs, f);
   } else if (agrup === "clausula") {
-    const seg = seletorVisao("data-clausula", estado.clausula, [["todos", "Todos"], ["atingiu", "Atingiram"], ["nao", "Não atingiram"]]);
+    const seg = seletorVisao("data-clausula", estado.clausula, [["todos", "Todos"], ["atingiu", "Atingiram"], ["andamento", "Ainda podem"], ["nao", "Não atingiram"]]);
     corpo = blocoClausula(calcularClausula(v.estados), estado.clausula, seg, statusAcompanhamento(v.ac));
   } else if (agrup === "top10") {
     corpo = blocoTop10(v.estados, statusAcompanhamento(v.ac));

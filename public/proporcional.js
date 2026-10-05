@@ -7,11 +7,11 @@ import { distribuirCadeiras, REGRAS_2026, REGRAS_CODIGO_LITERAL, REGRAS_STF_2024
  * @param {"2026"|"codigo"|"variante"} modo regra das sobras (padrão: regra de 2026, em duas rodadas)
  * @param {number} vagasManual se informado, substitui o número de vagas do arquivo
  */
-export function distribuirEstado(d, modo = "2026", vagasManual = 0, semSubJudice = false) {
+export function distribuirEstado(d, modo = "2026", vagasManual = 0, semSubJudice = false, acrescimos = null) {
   const vagas = vagasManual || d.vagas;
   const regras = modo === "variante" ? REGRAS_STF_2024 : modo === "codigo" ? REGRAS_CODIGO_LITERAL : REGRAS_2026;
   const entrada = d.partidos.map((p) => ({
-    id: p.id, nome: p.sigla || p.nome, votos: semSubJudice ? Math.max(0, p.votos - (p.votosSJ || 0)) : p.votos, // sem sub judice: tira os votos desses candidatos do partido
+    id: p.id, nome: p.sigla || p.nome, votos: (semSubJudice ? Math.max(0, p.votos - (p.votosSJ || 0)) : p.votos) + (acrescimos?.[p.id] || 0), // acrescimos: votos hipotéticos por partido (usado para saber o máximo possível) // sem sub judice: tira os votos desses candidatos do partido
     candidatos: p.candidatos.map((c) => ({ id: c.id, nome: c.nome, votos: c.votos, elegivel: c.elegivel })),
   }));
   const r = distribuirCadeiras(vagas, entrada, regras);

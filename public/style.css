@@ -669,3 +669,13 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .dp-foto { width: 64px; height: 64px; } .dp-x { align-self: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); }
 .dp-rodape { display: block; font-size: .78rem; color: var(--muted); text-align: center; } .dp-rodape u { color: var(--acento); text-decoration: none; font-weight: 600; }
 .turno-chave { display: inline-flex; }
+.cl-motivo { margin: 8px 0 0; padding: 6px 10px; border-radius: 8px; background: rgba(192, 57, 43, .1); font-size: .82rem; }
+
+/* Governos por partido */
+.gp-lista { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.gp-linha { display: grid; grid-template-columns: auto auto auto 1fr; gap: 6px 14px; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-left: 4px solid var(--cor, var(--line)); border-radius: 12px; background: var(--card); }
+.gp-linha .chip { margin: 0; font-size: .8rem; }
+.gp-num { display: flex; flex-direction: column; align-items: center; line-height: 1.1; } .gp-num strong { font-size: 1.3rem; font-variant-numeric: tabular-nums; } .gp-num small { font-size: .68rem; color: var(--muted); } .gp-num.seg strong { color: #b36b00; }
+.gp-ufs { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; }
+.gp-uf { font-size: .68rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); } .gp-uf.eleito { color: #1a8f4e; border-color: #1a8f4e; } .gp-uf.segundo { color: #b36b00; border-color: #c77700; }
+@media (max-width: 520px) { .gp-linha { grid-template-columns: auto auto auto; } .gp-ufs { grid-column: 1 / -1; justify-content: flex-start; } }
