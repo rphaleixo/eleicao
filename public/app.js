@@ -6,7 +6,7 @@ import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { statusProjecao } from "./status.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
-import { aplicarBaseNaView, baseTotal, getBase, setBase } from "./base.js";
+import { aplicarBaseNaView, baseTotal, getBase, naoVoto, setBase } from "./base.js";
 import { blocoClausula, calcularClausula } from "./clausula.js";
 import { barraBusca, buscaVazia, filtrando as buscando, passaBusca } from "./buscaCandidatos.js";
 import { blocoTop10, cardsMaisVotados } from "./deputadosVotados.js";
@@ -293,7 +293,11 @@ function tabelaPartidos(dist, d) {
   const linhas = dist.linhas.filter((l) => l.votos > 0 || l.vagas > 0).map((l) => `<tr>
     <td><span class="chip" style="--cor:${corPartido(l.sigla)}">${esc(l.sigla)}</span></td><td>${fmt(l.votos)}</td><td>${pct(getBase() === "totais" && baseTotal(d) ? (l.votos / baseTotal(d)) * 100 : l.pctVotos)}</td>
     <td><strong>${l.vagas}</strong></td><td>${l.qp}</td><td>${l.porQuociente}</td><td>${l.porSobras}</td>${final ? `<td>${l.oficial ?? ""}</td>` : ""}</tr>`).join("");
-  return `<div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Votos</th><th>% ${getBase() === "totais" ? "dos aptos" : "dos votos"}</th><th>Cadeiras</th><th>QP</th><th>Por quociente</th><th>Por sobras</th>${final ? "<th>Oficial TSE</th>" : ""}</tr>${linhas}</table></div>`;
+  // Votos totais: brancos, nulos, abstenções e a soma dos três ("não voto") entram na tabela, sem cadeiras.
+  const nv = getBase() === "totais" ? naoVoto(d) : null, colunas = final ? 5 : 4;
+  const linhaNv = (nome, desc, votos, p, forte = false) => `<tr class="nv${forte ? " nv-soma" : ""}"><td><span class="chip chip-nv">${nome}</span><small class="muted"> ${desc}</small></td><td>${fmt(votos)}</td><td>${pct(p)}</td><td colspan="${colunas}" class="muted" style="text-align:left">sem cadeiras</td></tr>`;
+  const linhasNaoVoto = nv ? `<tr class="nv-sep"><td colspan="${3 + colunas}">Não voto</td></tr>${linhaNv("Brancos", "votos em branco", nv.brancos, nv.pctBrancos)}${linhaNv("Nulos", "votos nulos", nv.nulos, nv.pctNulos)}${linhaNv("Abstenções", "eleitores que faltaram", nv.abstencao, nv.pctAbstencao)}${linhaNv("Não voto", "soma dos três", nv.soma, nv.pctSoma, true)}` : "";
+  return `<div class="tab-scroll"><table><tr><th>Partido / federação</th><th>Votos</th><th>% ${getBase() === "totais" ? "dos aptos" : "dos votos"}</th><th>Cadeiras</th><th>QP</th><th>Por quociente</th><th>Por sobras</th>${final ? "<th>Oficial TSE</th>" : ""}</tr>${linhas}${linhasNaoVoto}</table></div>`;
 }
 
 const POR_PAGINA = 15;

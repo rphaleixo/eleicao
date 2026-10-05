@@ -649,3 +649,7 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 .sintetico { opacity: .92; } .sintetico .pod-nome, .sintetico b { color: var(--muted); }
 .pod.sintetico { border-top-color: var(--muted); } .cr.sintetico .cr-nome .muted { font-size: .75rem; margin-left: 6px; }
 .cu-dest.sintetico .cu-foto { width: 44px; height: 44px; font-size: 1.1rem; }
+
+/* Tabela de partidos: linhas de não voto */
+.chip-nv { background: var(--muted); } tr.nv td { color: var(--txt); } tr.nv-soma td { font-weight: 700; border-top: 1px solid var(--line); }
+tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
