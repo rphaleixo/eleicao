@@ -88,6 +88,13 @@ export const CENARIOS = {
     uniao: { termos: ["PT", "PSOL"], rotulo: "PCDOB / PT / PV / PSOL / REDE" },
     regras: REGRAS_2026,
   },
+  "pdt-psol-rede-pt": {
+    titulo: "PDT, PSOL e Rede com o PT",
+    pergunta: "E se o PDT, o PSOL e a Rede estivessem todos na federação do PT (com PCdoB e PV)?",
+    descricao: "Uma federação única de PT, PCdoB, PV, PSOL, Rede e PDT em todos os estados: os votos são somados, o quociente partidário e as sobras são recalculados para o conjunto e dentro dele elege quem tem mais votos.",
+    uniao: { termos: ["PT", "PSOL", "REDE", "PDT"], rotulo: "PCDOB / PT / PV / PSOL / REDE / PDT" },
+    regras: REGRAS_2026,
+  },
   "sem-minimo": {
     titulo: "Sem mínimo individual",
     pergunta: "E se não houvesse regra de desempenho mínimo individual?",

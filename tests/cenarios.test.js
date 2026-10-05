@@ -54,3 +54,16 @@ test("sem mínimo individual: candidatos abaixo de 10% do QE passam a poder ser 
   assert.equal(mud.entram.length, mud.saem.length); // o total de cadeiras é o mesmo
 
 });
+
+test("PDT, PSOL e Rede com o PT: uma federação só, com os três somados", () => {
+  const c = CENARIOS["pdt-psol-rede-pt"];
+  assert.deepEqual(c.uniao.termos, ["PT", "PSOL", "REDE", "PDT"]);
+  const { d } = estado("SP");
+  d.partidos.push(part("4", "PDT", [cand("pdt1", 100, "PDT")]));
+  d.candidatos = d.partidos.flatMap((p) => p.candidatos);
+  const u = unirNoEstado(d, c.uniao.termos, c.uniao.rotulo);
+  assert.equal(u.partidos.length, 2); // PL e a federação gigante
+  const j = u.partidos.find((p) => p.sigla === c.uniao.rotulo);
+  assert.equal(j.votos, 750); assert.equal(j.candidatos.length, 5);
+  assert.equal(rotuloNoCenario("PDT", c.uniao), c.uniao.rotulo); assert.equal(rotuloNoCenario("PSOL / REDE", c.uniao), c.uniao.rotulo); assert.equal(rotuloNoCenario("PL", c.uniao), "PL");
+});
