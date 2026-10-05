@@ -696,3 +696,4 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .cp-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .cp-dif { grid-column: 1 / -1; flex-direction: row !important; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; } .cp-dif strong { font-size: 1.1rem; }
 @media (min-width: 640px) { .cp-nums { grid-template-columns: repeat(5, minmax(0, 1fr)); } .cp-dif { grid-column: auto; flex-direction: column !important; } }
+.cp-par { font-weight: 600; color: var(--muted); }

@@ -1,5 +1,5 @@
 import { blocoDisputas } from "./segundoTurno.js";
-import { blocoComparar } from "./comparar.js";
+import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
 import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
@@ -39,7 +39,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" } };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" } };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -369,7 +369,7 @@ function telaMajoritaria(v) {
   const local = mun ? `${nomeUF(uf)}, município ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : nomeUF(uf);
   const titulo = aba === "senador" ? `Senador (${d.vagas || 2} vagas): ${local}` : `${CARGOS[aba].nome}: ${local}`;
   const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, locaisResultado(uf, ""), d.totalizacaoFinal, d) : !mun && aba === "governador" ? blocoResultadoEvolucao(v.rp, [uf.toLowerCase()], d.totalizacaoFinal, d) : "";
-  return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${rankingMajoritario(d, { aba, uf })}</section>${cartoesVotacao(d)}${evolucao}`;
+  return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${rankingMajoritario(d, { aba, uf })}</section>${aba === "governador" && !mun ? blocoCompararEstado(d, uf) : ""}${cartoesVotacao(d)}${evolucao}`;
 }
 
 function resumoEstado(v) {
@@ -492,7 +492,7 @@ function telaCargoPorEstado(v) {
   const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
   const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra,
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
-  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
+  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${governador ? blocoCompararGovernadores(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
 }
 
 /** Resumo nacional (senadores ou governadores): uma linha por estado com a situação no momento e o % de urnas apuradas. */
@@ -538,6 +538,25 @@ function telaEleitos(v, cargo) {
     ${senador ? `<p class="muted">Cada estado elege 2 senadores.</p>` : ""}
     ${barraFiltros(f, { comSegundo: !senador, ufsOk: senador ? null : UFS_GOV })}
     ${linhas ? `<ul class="rn-lista">${linhas}</ul>` : `<p class="muted">Nenhum estado com esses filtros.</p>`}</section>`;
+}
+
+/** Comparar candidatos nos governos: os dois mais votados (ou dois partidos) em cada estado. */
+function blocoCompararGovernadores(lista) {
+  if (!lista) return "";
+  const cont = new Map();
+  for (const { d } of lista) for (const c of d?.candidatos ?? []) if (c.elegivel && !c.subJudice && c.votos > 0) { const x = cont.get(c.partido) ?? { n: 0, votos: 0 }; x.n++; x.votos += c.votos; cont.set(c.partido, x); }
+  const partidos = [...cont].map(([sigla, x]) => ({ sigla, ...x })).sort((a, b) => a.sigla.localeCompare(b.sigla, "pt-BR"));
+  return blocoCompararGoverno({ lista, cmp: estado.cmpGov, partidos });
+}
+
+/** Comparar candidatos na página de um estado (governador): dois candidatos escolhidos, com os demais e o não voto. */
+function blocoCompararEstado(d, uf) {
+  const reais = candidatosReais(d).filter((c) => c.votos > 0);
+  if (reais.length < 2) return "";
+  const ord = reais.slice().sort((a, b) => b.votos - a.votos);
+  const cmp = { a: estado.cmp.a, b: estado.cmp.b, ordem: "az" };
+  const h = blocoComparar({ candidatos: ord, local: { rotulo: nomeUF(uf), uf, d }, itens: [], cmp: { a: ord.some((c) => c.id === cmp.a) ? cmp.a : ord[0].id, b: ord.some((c) => c.id === cmp.b) ? cmp.b : ord[1].id, ordem: "az" } });
+  return h.replace(/<label class="f-sel cp-ordem">.*?<\/label>/s, ""); // um estado só: sem ordenação
 }
 
 /** Bloco "Comparar candidatos" da aba Presidente: Brasil (ou a região) e a lista de estados. */
@@ -932,6 +951,14 @@ $("conteudo").addEventListener("input", (e) => {
   const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
 });
 $("conteudo").addEventListener("change", (e) => {
+  const gEl = e.target.closest?.("[data-cmpg-modo], [data-cmpg-pa], [data-cmpg-pb], [data-cmpg-ordem]");
+  if (gEl) {
+    if (gEl.matches("[data-cmpg-modo]")) { estado.cmpGov.modo = gEl.value; estado.cmpGov.ordem = gEl.value === "partidos" ? "vantagemA" : "margem"; }
+    else if (gEl.matches("[data-cmpg-pa]")) estado.cmpGov.pa = gEl.value;
+    else if (gEl.matches("[data-cmpg-pb]")) estado.cmpGov.pb = gEl.value;
+    else estado.cmpGov.ordem = gEl.value;
+    render(true); return;
+  }
   const cmpEl = e.target.closest?.("[data-cmp-a], [data-cmp-b], [data-cmp-ordem]");
   if (cmpEl) {
     if (cmpEl.matches("[data-cmp-a]")) estado.cmp.a = cmpEl.value;

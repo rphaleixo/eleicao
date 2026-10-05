@@ -31,3 +31,23 @@ test("bloco: dois candidatos em destaque, demais e não voto, linha do total e e
   const igual = blocoComparar({ candidatos, local: { rotulo: "Brasil", uf: "BR", d: dDe(1, 1, 1) }, itens: [], cmp: { a: "1", b: "1", ordem: "az" } });
   assert.ok(igual.includes('value="1" selected')); // B repetido cai em outro candidato
 });
+
+import { parDoEstado, blocoCompararGoverno } from "../public/comparar.js";
+const cand = (id, nome, partido, votos) => ({ id, nome, partido, votos, elegivel: true });
+const gov = (cs, apurado = 100) => ({ pctSecoes: apurado, brancos: 30, nulos: 20, abstencao: 150, eleitorado: { apuradas: cs.reduce((t, c) => t + c.votos, 0) + 200 }, candidatos: cs });
+
+test("governo: par do estado pelos dois mais votados ou por partido", () => {
+  const d = gov([cand("1", "ANA", "PT", 400), cand("2", "BIA", "PL", 300), cand("3", "CAIO", "PSD", 100)]);
+  assert.deepEqual(parDoEstado(d, "top2").map((c) => c.id), ["1", "2"]);
+  assert.deepEqual(parDoEstado(d, "partidos", "PSD", "PT").map((c) => c.id), ["3", "1"]);
+  assert.equal(parDoEstado(d, "partidos", "PT", "NOVO"), null); // um dos partidos não disputa
+});
+
+test("governo: bloco com um par por estado, ordenado pela diferença", () => {
+  const lista = [{ uf: "SP", d: gov([cand("1", "ANA", "PT", 400), cand("2", "BIA", "PL", 300)]) }, { uf: "RJ", d: gov([cand("3", "DUDA", "PSD", 360), cand("4", "EDU", "PP", 350)]) }, { uf: "AC", d: null }];
+  const partidos = [{ sigla: "PL", n: 1 }, { sigla: "PP", n: 1 }, { sigla: "PSD", n: 1 }, { sigla: "PT", n: 1 }];
+  const h = blocoCompararGoverno({ lista, cmp: { modo: "top2", ordem: "margem" }, partidos });
+  assert.ok(h.indexOf("Rio de Janeiro") < h.indexOf("São Paulo") && h.includes("PSD × PP") && h.includes("PT × PL") && !h.includes("Acre"));
+  const hp = blocoCompararGoverno({ lista, cmp: { modo: "partidos", pa: "PT", pb: "PL", ordem: "vantagemA" }, partidos });
+  assert.ok(hp.includes("São Paulo") && !hp.includes("Rio de Janeiro") && hp.includes("data-cmpg-pa"));
+});
