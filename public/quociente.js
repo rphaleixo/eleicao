@@ -61,7 +61,7 @@ export function distribuirCadeiras(vagas, partidos, regras = REGRAS_2026) {
 
   const votosValidos = ps.reduce((s, p) => s + p.votos, 0);
   const qe = quocienteEleitoral(votosValidos, vagas);
-  const resultado = { vagas, votosValidos, qe, partidos: ps, eleitos: [], sobras: [] };
+  const resultado = { vagas, votosValidos, qe, partidos: ps, eleitos: [], sobras: [], barrados: [] };
   if (!qe) return resultado;
 
   // Etapa 1 (arts. 107 e 108): quociente partidário e candidatos com >= 10% do QE.
@@ -71,6 +71,10 @@ export function distribuirCadeiras(vagas, partidos, regras = REGRAS_2026) {
     const aptos = p.candidatos.filter((c) => c.votos >= minimo);
     const n = Math.min(p.qp, aptos.length);
     p.eleitos = aptos.slice(0, n).map((c) => ({ ...c, via: "quociente" }));
+    // Barrados: o partido tinha cadeira pelo quociente partidário, mas estes candidatos, que ocupariam a vaga pela ordem de votos,
+    // ficaram abaixo de 10% do quociente eleitoral (art. 108) e não podem ser eleitos. A cadeira vai para as sobras.
+    p.barrados = p.candidatos.slice(aptos.length, p.qp).filter((c) => c.votos > 0).map((c) => ({ ...c, minimo: Math.ceil(minimo), faltam: Math.max(1, Math.ceil(minimo) - c.votos) }));
+    p.cadeirasSemCandidato = Math.max(0, p.qp - aptos.length); // vagas do quociente partidário que o partido não conseguiu preencher
   }
 
   // Proteção contra arredondamento para baixo do QE gerar mais cadeiras que vagas.
@@ -135,6 +139,8 @@ export function distribuirCadeiras(vagas, partidos, regras = REGRAS_2026) {
   }
   resultado.proximoFora = proximoFora;
 
+  resultado.barrados = ps.flatMap((p) => p.barrados.map((c) => ({ ...c, partido: p.nome, partidoId: p.id, qp: p.qp })))
+    .sort((a, b) => b.votos - a.votos);
   ps.sort((a, b) => b.eleitos.length - a.eleitos.length || b.votos - a.votos);
   resultado.eleitos = ps
     .flatMap((p) => p.eleitos.map((c) => ({ ...c, partido: p.nome })))

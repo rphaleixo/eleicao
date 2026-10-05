@@ -1,6 +1,6 @@
 import { blocoDisputas } from "./segundoTurno.js";
 import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
-import { telaCompleta as telaCompletaPura } from "./encerramento.js";
+import { acFinal, telaCompleta as telaCompletaPura } from "./encerramento.js";
 import { blocoPartido, desempenhoPartido, listaDePartidos } from "./partidos.js";
 import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
@@ -42,7 +42,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -90,7 +90,7 @@ function navegar(mudanca) {
   if (estado.uf === "ZZ" && estado.aba !== "presidente" && estado.aba !== "andamento") estado.uf = "BR";
   if (mudanca.aba || mudanca.uf || mudanca.cargo) estado.mun = mudanca.mun ?? "";
   if (estado.aba === "estados") { guardarUf(estado.uf); estado.ufPadrao = estado.uf; }
-  estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0 };
+  estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0, barr: 0 };
   if (mudanca.uf || mudanca.cargo || mudanca.aba) estado.busca = buscaVazia();
   if (mudanca.uf || mudanca.cargo || mudanca.aba) estado.munSel = "";
   gravarHash(); montarControles();
@@ -370,8 +370,12 @@ function boxCandidatos({ titulo, contagem, nota = "", vazio, itens, chave, porPa
 }
 
 /** Todos os candidatos do estado, do mais votado ao menos votado; a posição é a da fila completa, mesmo com a busca ativa. */
-function maisVotados(d, rotulo = "Candidatos por votos", projetados = null) {
-  const selo = (c) => c.sit ? seloSit(c, { rotulo: rotuloEleito(c), curto: true }) : projetados?.has(c.id) ? seloProjetado({ curto: true }) : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
+/** Texto curto da regra dos 10%, usado nas dicas. */
+const dicaBarrado = (b) => `Tinha vaga pelo quociente do partido (${b.qp} ${b.qp === 1 ? "cadeira" : "cadeiras"}), mas teve ${fmt(b.votos)} votos: faltaram ${fmt(b.faltam)} para os 10% do quociente eleitoral (${fmt(b.minimo)} votos). Sem isso não pode ser eleito.`;
+const seloBarrado = (b) => `<span class="badge barrado" title="${esc(dicaBarrado(b))}">Barrado: faltaram ${fmt(b.faltam)} votos (10% do QE)</span>`;
+
+function maisVotados(d, rotulo = "Candidatos por votos", projetados = null, barrados = new Map()) {
+  const selo = (c) => barrados.has(c.id) ? seloBarrado(barrados.get(c.id)) : c.sit ? seloSit(c, { rotulo: rotuloEleito(c), curto: true }) : projetados?.has(c.id) ? seloProjetado({ curto: true }) : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
   const reais = candidatosReais(d), todos = reais.map((c, i) => ({ c, pos: i + 1 }));
   const itens = todos.filter(({ c }) => passaBusca(c, estado.busca)).map(({ c, pos }) => ({ id: c.id, nome: c.nome, partido: c.partido, votos: c.votos, pos, sub: `nº ${c.numero} · ${pct(c.pct)}`, selo: selo(c) }));
   return boxCandidatos({ titulo: rotulo, contagem: buscando(estado.busca) ? `${fmt(itens.length)} na busca · ${fmt(reais.length)} no total` : `${fmt(reais.length)} candidatos`,
@@ -695,6 +699,15 @@ function tabelaPresidentePorEstado(v, uf, ufsRegiao) {
     nota: "Toque em um estado para ver o resultado dele. O resultado final da eleição presidencial é nacional." });
 }
 
+/** Candidatos que o quociente do partido colocaria na vaga, mas que não chegaram a 10% do quociente eleitoral. */
+function blocoBarrados(dist) {
+  if (!dist.barrados?.length) return "";
+  const itens = dist.barrados.map((b) => `<li class="bq-linha" data-sq="${esc(b.id)}" role="button" tabindex="0" title="${esc(dicaBarrado(b))}"><span class="bq-nome"><b>${esc(b.nome)}</b><span class="muted">${esc(b.partido)}</span></span><span class="bq-num"><strong>${fmt(b.votos)}</strong><small>faltaram ${fmt(b.faltam)}</small></span></li>`).join("");
+  return `<section class="card"><div class="titulo-cadeiras"><h2>Barrados pela regra dos 10%</h2><span class="muted">${dist.barrados.length}</span></div>
+    <p class="muted">O partido tinha cadeira pelo quociente partidário, mas estes candidatos, que ocupariam a vaga pela ordem de votos, ficaram abaixo de 10% do quociente eleitoral (${fmt(dist.minimoIndividual)} votos neste estado). A cadeira segue para as sobras.</p>
+    <ul class="bq-lista">${itens}</ul></section>`;
+}
+
 function telaProporcionalUF(v) {
   const { d, dist } = v, { uf } = estado, aba = cargoAtivo();
   const quando = d.atualizadoEm ? ` · totalização do TSE: ${esc(d.atualizadoEm)}` : "";
@@ -710,9 +723,23 @@ function telaProporcionalUF(v) {
     ${dist.art111 ? aviso("Nenhum partido ou federação alcançou o quociente eleitoral. Pelo art. 111 do Código Eleitoral, as vagas ficam com os candidatos mais votados.") : ""}
     ${barraBusca(candidatosReais(d), estado.busca, candidatosReais(d).filter((c) => passaBusca(c, estado.busca)).length)}
     ${boxEleitos(d, dist)}
+    ${blocoBarrados(dist)}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
     ${cartoesVotacao(d, { proporcional: true })}
-    ${maisVotados(d, "Candidatos por votos", new Set(dist.eleitos.map((e) => e.id)))}`;
+    ${maisVotados(d, "Candidatos por votos", new Set(dist.eleitos.map((e) => e.id)), new Map(dist.barrados.map((b) => [b.id, b])))}`;
+}
+
+/** Deputados federais barrados pela regra dos 10% do quociente eleitoral, de todos os estados. */
+function listaBarradosNacional(estados, ufs, f) {
+  const dentro = new Set(ufs);
+  const todos = [];
+  for (const { uf, dist } of estados ?? []) {
+    if (!dentro.has(uf)) continue;
+    for (const b of dist.barrados ?? []) todos.push({ id: b.id, uf, cargo: "dep-federal", nome: b.nome, partido: b.partido, votos: b.votos, sub: `${UFS[uf]} · ${b.qp} ${b.qp === 1 ? "cadeira" : "cadeiras"} do partido pelo quociente`, selo: `<span class="badge barrado" title="${esc(dicaBarrado(b))}">faltaram ${fmt(b.faltam)} votos</span>` });
+  }
+  todos.sort((a, b) => b.votos - a.votos);
+  todos.forEach((t, i) => { t.pos = i + 1; });
+  return `${barraFiltros(f, { comSegundo: false })}${boxCandidatos({ titulo: "Barrados pela regra dos 10%", contagem: `${todos.length} candidatos`, nota: "Candidatos que o quociente do partido colocaria na vaga, mas que não chegaram a 10% do quociente eleitoral do estado (art. 108 do Código Eleitoral, com a Lei 14.211/2021). A cadeira passa às sobras. Valem as regras vigentes: sobras em três etapas, com a decisão do STF nas ADIs 7228, 7263 e 7325 para a etapa final.", vazio: "Nenhum candidato barrado pela regra dos 10% com esses filtros.", itens: todos, chave: "barr", porPagina: 25, semCartao: true })}`;
 }
 
 /** Todos os deputados federais eleitos (oficiais ou projetados), do mais votado ao menos votado, com a votação de cada um. */
@@ -779,6 +806,8 @@ function telaNacionalProp(v) {
       ${sel ? `<div class="cartao-mapa">${cardsEstadosCamara(n, [sel])}</div>` : `<p class="muted dica-mapa">Toque em um estado para ver a bancada dele.</p>`}`;
   } else if (agrup === "tabela") {
     corpo = `${filtros}${tabelaEstadosCamara(n, ufs)}`;
+  } else if (agrup === "barrados") {
+    corpo = listaBarradosNacional(v.estados, ufs, f);
   } else if (agrup === "eleitos") {
     corpo = getBase() === "totais"
       ? `<p class="muted">A lista de deputados eleitos está disponível na base de votos válidos. Troque a base no seletor abaixo das abas.</p>`
@@ -993,7 +1022,7 @@ $("conteudo").addEventListener("input", (e) => {
   const campo = e.target.closest?.("[data-busca-texto]");
   if (!campo) return;
   const pos = campo.selectionStart;
-  estado.busca.texto = campo.value; estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0 };
+  estado.busca.texto = campo.value; estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0, barr: 0 };
   render(true);
   const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
 });
@@ -1016,7 +1045,7 @@ $("conteudo").addEventListener("change", (e) => {
     render(true); return;
   }
   const bp = e.target.closest?.("[data-busca-partido]");
-  if (bp) { estado.busca.partido = bp.value; estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0 }; render(true); return; }
+  if (bp) { estado.busca.partido = bp.value; estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0, barr: 0 }; render(true); return; }
   const os = e.target.closest?.("[data-ordem-sel]");
   if (os) { estado.ordem = os.value; render(true); return; }
   const fs = e.target.closest?.("[data-f-status]");
@@ -1033,7 +1062,7 @@ $("conteudo").addEventListener("keydown", (e) => {
   if (it && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); }
 });
 $("conteudo").addEventListener("click", (e) => {
-  if (e.target.closest("[data-busca-limpar]")) { estado.busca = buscaVazia(); estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0 }; render(true); return; }
+  if (e.target.closest("[data-busca-limpar]")) { estado.busca = buscaVazia(); estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0, barr: 0 }; render(true); return; }
   if (e.target.closest("[data-ver-completa]")) { window.scrollTo({ top: 0 }); return; } // o endereço (#/estados/UF/dep-federal) abre a apuração
   const it = e.target.closest("[data-sq]");
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }

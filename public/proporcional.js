@@ -25,14 +25,14 @@ export function distribuirEstado(d, modo = "2026", vagasManual = 0, semSubJudice
     return {
       id: p.id, sigla: orig.sigla || orig.nome, nome: orig.nomeCompleto, federacao: orig.federacao,
       votos: p.votos, pctVotos: r.votosValidos ? (p.votos / r.votosValidos) * 100 : 0,
-      projecao: p.eleitos.length, porQuociente, porSobras: p.eleitos.length - porQuociente, qp: p.qp,
+      projecao: p.eleitos.length, porQuociente, porSobras: p.eleitos.length - porQuociente, qp: p.qp, barrados: p.barrados?.length || 0, cadeirasSemCandidato: p.cadeirasSemCandidato || 0,
       oficial: orig.vagasTse ?? null,
       vagas: oficial ? orig.vagasTse : p.eleitos.length,
     };
   });
   linhas.sort((a, b) => b.vagas - a.vagas || b.votos - a.votos);
   return {
-    vagas, qe: r.qe, votosValidos: r.votosValidos, linhas, eleitos: r.eleitos,
+    vagas, qe: r.qe, votosValidos: r.votosValidos, linhas, eleitos: r.eleitos, barrados: r.barrados ?? [], minimoIndividual: Math.ceil(r.qe * 0.1),
     proximoFora: r.proximoFora, oficial, art111: r.eleitos.some((e) => e.via === "art. 111"),
   };
 }

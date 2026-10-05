@@ -65,7 +65,7 @@ function eleitosDoEstado(d, dist) {
 /** Deputados do partido: eleitos, candidatos, votos nominais, bancada da federação e o detalhe por estado. */
 export function desempenhoDeputados(sigla, estados) {
   let eleitos = 0, candidatos = 0, votosNominais = 0, validos = 0, vagas = 0, oficiais = 0, bancadaFed = 0, votosFed = 0, federacao = "";
-  const porUf = [];
+  const porUf = [], barrados = [];
   for (const { uf, d, dist } of estados ?? []) {
     const meus = reais(d).filter((c) => c.partido === sigla);
     validos += dist?.votosValidos || 0; vagas += dist?.vagas || d.vagas || 0;
@@ -74,6 +74,7 @@ export function desempenhoDeputados(sigla, estados) {
     const { ids, oficial } = eleitosDoEstado(d, dist);
     if (oficial) oficiais++;
     const ele = meus.filter((c) => ids.has(c.id));
+    for (const b of dist?.barrados ?? []) if (meus.some((c) => c.id === b.id)) barrados.push({ uf, ...b }); // barrado pela regra dos 10% do quociente
     const linhaFed = dist?.linhas?.find((l) => l.sigla === (meus[0].federacao || sigla));
     bancadaFed += linhaFed?.vagas || 0; votosFed += linhaFed?.votos || 0;
     const votos = meus.reduce((t, c) => t + c.votos, 0);
@@ -81,7 +82,7 @@ export function desempenhoDeputados(sigla, estados) {
     porUf.push({ uf, eleitos: ele.length, candidatos: meus.length, votos, pct: dist?.votosValidos ? (votos / dist.votosValidos) * 100 : 0, nomes: ele.sort((a, b) => b.votos - a.votos).map((c) => c.nome), vagasUf: dist?.vagas || d.vagas || 0, bancadaFed: linhaFed?.vagas || 0 });
   }
   porUf.sort((a, b) => b.eleitos - a.eleitos || b.votos - a.votos);
-  return { eleitos, candidatos, votosNominais, pctNominais: validos ? (votosNominais / validos) * 100 : 0, vagas, federacao, bancadaFed, votosFed, pctFed: validos ? (votosFed / validos) * 100 : 0, estados: porUf.length, oficiais, porUf };
+  return { eleitos, candidatos, votosNominais, pctNominais: validos ? (votosNominais / validos) * 100 : 0, vagas, federacao, bancadaFed, votosFed, pctFed: validos ? (votosFed / validos) * 100 : 0, estados: porUf.length, oficiais, porUf, barrados };
 }
 
 /** Visão completa de um partido com tudo o que está carregado. Qualquer parte pode faltar (null) enquanto carrega. */
@@ -116,7 +117,7 @@ const SIGLA_CARGO = { presidente: "PR", governador: "Gov", senador: "Sen" };
 /** Linha compacta (sem foto): sigla do local, candidato, colocação, % e resultado. Toque abre a ficha. */
 const linhaCompacta = (l) => `<li class="pp-d ${l.resultado}" data-sq="${esc(l.c.id)}" role="button" tabindex="0" title="Ver ficha de ${esc(l.c.nome)}">
   <span class="sigla">${l.uf === "BR" ? "BR" : l.uf}</span>
-  <span class="pp-d-quem"><b>${esc(l.c.nome)}</b><small class="muted">${SIGLA_CARGO[l.cargo]}${l.pos ? ` · ${l.pos}º colocado` : ""}${l.subJudice ? " · sub judice" : ""}${l.turno2 ? ` · ${l.resultado === "vitoria" ? "venceu" : l.resultado === "derrota" ? "perdeu" : "disputa"} o 2º turno (${pct(l.turno2.pct)})` : ""}</small></span>
+  <span class="pp-d-quem"><b>${esc(l.c.nome)}</b><small class="muted">${SIGLA_CARGO[l.cargo]}${l.cargo === "senador" ? " · 2 vagas" : ""}${l.pos ? ` · ${l.pos}º colocado` : ""}${l.subJudice ? " · sub judice" : ""}${l.turno2 ? ` · ${l.resultado === "vitoria" ? "venceu" : l.resultado === "derrota" ? "perdeu" : "disputa"} o 2º turno (${pct(l.turno2.pct)})` : ""}</small></span>
   <span class="pp-d-num"><strong>${pct(l.pct)}</strong></span></li>`; // o grupo já diz se é vitória, derrota ou 2º turno
 
 /** Todas as candidaturas majoritárias em grupos: vitórias e 2º turno abertos; derrotas e em aberto recolhidos. */
@@ -132,9 +133,10 @@ function gruposDisputas(des) {
 function blocoDeputados(rotulo, dd) {
   if (!dd) return carregando(rotulo.toLowerCase());
   if (!dd.candidatos) return `<p class="muted">O partido não teve candidatos neste cargo.</p>`;
-  const linhas = dd.porUf.map((u) => `<tr><td><b>${u.uf}</b></td><td><b class="pp-v">${u.eleitos}</b></td><td>${u.candidatos}</td><td>${fmt(u.votos)}</td><td>${pct(u.pct)}</td><td class="pp-nomes">${u.nomes.map(esc).join(", ") || "–"}</td></tr>`).join("");
-  return `<div class="pp-tiles pp-tiles-peq">${tile(dd.eleitos, dd.eleitos === 1 ? "eleito" : "eleitos", dd.oficiais === dd.estados ? "oficial" : "projeção", "eleito")}${tile(dd.candidatos, "candidatos", `${dd.estados} estados`)}${tile(fmt(dd.votosNominais), "votos nominais", `${pct(dd.pctNominais)} dos válidos`)}${dd.federacao ? tile(dd.bancadaFed, "da federação", `${esc(dd.federacao)} · ${pct(dd.pctFed)}`) : ""}</div>
-    ${linhas ? `<details class="pp-grupo"><summary><b>Por estado</b><span class="pp-n">${dd.porUf.length}</span></summary><div class="tab-scroll"><table class="pp-tabela pp-uf"><tr><th>UF</th><th>Eleitos</th><th>Cand.</th><th>Votos nominais</th><th>% válidos</th><th>Quem foi eleito</th></tr>${linhas}</table></div></details>` : ""}
+  const linhas = dd.porUf.map((u) => `<tr><td><b>${u.uf}</b></td><td class="pp-vagas"><b class="pp-v">${u.eleitos}</b> <span class="muted">de ${u.vagasUf}</span></td><td>${u.candidatos}</td><td>${fmt(u.votos)}</td><td>${pct(u.pct)}</td><td class="pp-nomes">${u.nomes.map(esc).join(", ") || "–"}</td></tr>`).join("");
+  return `<div class="pp-tiles pp-tiles-peq">${tile(dd.eleitos, dd.eleitos === 1 ? "eleito" : "eleitos", `de ${fmt(dd.vagas)} vagas em disputa · ${dd.oficiais === dd.estados ? "oficial" : "projeção"}`, "eleito")}${tile(dd.candidatos, "candidatos", `${dd.estados} estados`)}${tile(fmt(dd.votosNominais), "votos nominais", `${pct(dd.pctNominais)} dos válidos`)}${dd.federacao ? tile(dd.bancadaFed, "da federação", `${esc(dd.federacao)} · ${pct(dd.pctFed)}`) : ""}${dd.barrados?.length ? tile(dd.barrados.length, "barrados", "abaixo de 10% do QE", "nao") : ""}</div>
+    ${dd.barrados?.length ? `<p class="pp-saldo">Barrados pela regra dos 10% do quociente eleitoral: ${dd.barrados.map((b) => `<b>${esc(b.nome)}</b> (${esc(b.uf)}, ${fmt(b.votos)} votos, faltaram ${fmt(b.faltam)})`).join("; ")}.</p>` : ""}
+    ${linhas ? `<details class="pp-grupo"><summary><b>Por estado</b><span class="pp-n">${dd.porUf.length}</span></summary><div class="tab-scroll"><table class="pp-tabela pp-uf"><tr><th>UF</th><th title="Eleitos do partido e vagas em disputa no estado">Eleitos / vagas</th><th>Cand.</th><th>Votos nominais</th><th>% válidos</th><th>Quem foi eleito</th></tr>${linhas}</table></div></details>` : ""}
     <p class="muted nota">As cadeiras são da federação (ou do partido, se concorreu sozinho); aqui contam os candidatos eleitos do partido.</p>`;
 }
 
@@ -143,15 +145,15 @@ export function blocoPartido(des, seletor = "", visao = "maj") {
   const r = des.resumo, gov = r.gov, sen = r.sen, cl = des.clausula;
   const v = VISOES_PARTIDO.some(([k]) => k === visao) ? visao : "maj";
   const tiles = `<div class="pp-tiles">
-    ${tile(gov ? gov.vitorias : "…", "governos", gov ? `${gov.segundos ? `${gov.segundos} no 2º turno · ` : ""}${gov.candidaturas} cand.` : "", "eleito")}
-    ${tile(sen ? sen.vitorias : "…", "senadores", sen ? `${sen.candidaturas} candidaturas` : "", "eleito")}
-    ${tile(des.depf ? des.depf.eleitos : "…", "dep. federais", des.depf ? `${des.depf.candidatos} candidatos` : "", "eleito")}
-    ${tile(des.depe ? des.depe.eleitos : "…", "dep. estaduais", des.depe ? `${des.depe.candidatos} candidatos` : "", "eleito")}
+    ${tile(gov ? gov.vitorias : "…", "governos", gov ? `de 27 vagas · ${gov.segundos ? `${gov.segundos} no 2º turno · ` : ""}${gov.candidaturas} cand.` : "", "eleito")}
+    ${tile(sen ? sen.vitorias : "…", "senadores", sen ? `de 54 vagas · ${sen.candidaturas} cand.` : "", "eleito")}
+    ${tile(des.depf ? des.depf.eleitos : "…", "dep. federais", des.depf ? `de ${fmt(des.depf.vagas)} vagas · ${des.depf.candidatos} cand.` : "", "eleito")}
+    ${tile(des.depe ? des.depe.eleitos : "…", "dep. estaduais", des.depe ? `de ${fmt(des.depe.vagas)} vagas · ${des.depe.candidatos} cand.` : "", "eleito")}
     ${cl ? tile(cl.status === "atingiu" ? "✓" : cl.status === "nao" ? "✕" : "…", "cláusula", cl.status === "atingiu" ? "atingiu" : cl.status === "nao" ? "não atingiu" : "pode atingir", cl.status) : des.depf ? tile("–", "cláusula", "sem dep. federal") : ""}
     ${r.total.candidaturas ? tile(`${r.total.vitorias}×${r.total.derrotas}`, "vitórias × derrotas", "majoritárias", r.total.vitorias >= r.total.derrotas ? "atingiu" : "") : ""}</div>`;
   const abas = `<div class="seg mini seg-rolavel pp-abas" role="tablist" aria-label="Visão do partido">${VISOES_PARTIDO.map(([k, n]) => `<button type="button" role="tab" data-pvisao="${k}" aria-pressed="${k === v}">${n}</button>`).join("")}</div>`;
   const corpo = v === "maj"
-    ? ((r.pres || r.gov || r.sen) ? `${tabelaMajoritaria(r)}<p class="pp-saldo">Saldo: <b>${r.total.vitorias}</b> vitória${r.total.vitorias === 1 ? "" : "s"} × <b>${r.total.derrotas}</b> derrota${r.total.derrotas === 1 ? "" : "s"}${r.total.segundos ? ` · ${r.total.segundos} no 2º turno` : ""}${r.total.abertas ? ` · ${r.total.abertas} em aberto` : ""}</p>${gruposDisputas(des)}` : carregando("as eleições majoritárias"))
+    ? ((r.pres || r.gov || r.sen) ? `${tabelaMajoritaria(r)}<p class="muted nota">Vagas em disputa: 1 de presidente, 27 de governador (1 por estado) e 54 de senador (2 por estado).</p><p class="pp-saldo">Saldo: <b>${r.total.vitorias}</b> vitória${r.total.vitorias === 1 ? "" : "s"} × <b>${r.total.derrotas}</b> derrota${r.total.derrotas === 1 ? "" : "s"}${r.total.segundos ? ` · ${r.total.segundos} no 2º turno` : ""}${r.total.abertas ? ` · ${r.total.abertas} em aberto` : ""}</p>${gruposDisputas(des)}` : carregando("as eleições majoritárias"))
     : v === "depf" ? blocoDeputados("deputados federais", des.depf)
     : v === "depe" ? blocoDeputados("deputados estaduais", des.depe)
     : `${cl ? `<ul class="cards-estados cards-cl">${cardClausula(cl, des.clausulaFinal)}</ul>` : des.depf ? `<p class="muted">O partido não teve candidatos a deputado federal.</p>` : carregando("a cláusula")}<p class="muted nota">Medida sobre os votos válidos para a Câmara, por regra legal. A federação conta como um só partido.</p>`;

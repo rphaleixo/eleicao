@@ -733,3 +733,9 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 @media (max-width: 520px) { .pp-d { grid-template-columns: 30px 1fr auto; } .pp-d .pp-res { grid-column: 2 / -1; justify-self: start; margin-top: -2px; } }
 @media (min-width: 760px) { .pp-disputas { grid-template-columns: 1fr 1fr; display: grid; } }
 .pp-d { grid-template-columns: 30px 1fr auto !important; }
+
+/* Barrados pela regra dos 10% */
+.badge.barrado { background: rgba(192, 57, 43, .12); color: #c0392b; border: 1px solid rgba(192, 57, 43, .5); font-weight: 700; }
+.bq-lista { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.bq-linha { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-left: 4px solid #c0392b; border-radius: 12px; background: var(--card); cursor: pointer; }
+.bq-nome { display: flex; flex-direction: column; min-width: 0; } .bq-num { display: flex; flex-direction: column; align-items: flex-end; } .bq-num small { color: var(--muted); font-size: .72rem; }
