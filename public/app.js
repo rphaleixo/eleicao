@@ -1,3 +1,4 @@
+import { blocoDisputas } from "./segundoTurno.js";
 import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
@@ -17,9 +18,9 @@ import { ordenarCandidatos } from "./ranking.js";
 import { faixaDefinicao, legendaSituacao, TEXTO_SIT, situacaoEleicao, seloSit, seloProjetado, rotuloEleito } from "./situacao.js";
 import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
-import { barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js";
+import { cargosBarra, barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
-import { CONFIG, CARGOS, ABAS, UFS, INICIO_APURACAO } from "./config.js";
+import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, INICIO_APURACAO } from "./config.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
@@ -48,6 +49,12 @@ const cargoAtivo = () => (estado.aba === "estados" ? estado.cargo : estado.aba);
 
 function lerHash() {
   Object.assign(estado, lerRota(location.hash, { ufs: UFS, ufPadrao: estado.ufPadrao }));
+  if (TURNO2) { // no 2º turno só há Presidente e governo dos estados com disputa: o resto volta ao início
+    if (!ABAS.some((a) => a.id === estado.aba)) Object.assign(estado, { aba: "andamento", uf: "BR", cargo: "resumo", mun: "" });
+    if (estado.aba === "estados" && !cargosBarra(estado.uf).some(([id]) => id === estado.cargo)) Object.assign(estado, { cargo: "resumo", mun: "" });
+    if (estado.mapaCargo === "senador" || (estado.mapaCargo === "governador" && !UFS_GOV.includes(estado.uf))) estado.mapaCargo = "presidente";
+    history.replaceState(null, "", montarRota(estado)); // endereço antigo de Senado/deputados vira o início, sem ficar na barra
+  }
   if (estado.uf !== "BR" && estado.uf !== "ZZ") estado.regiao = regiaoDe(estado.uf); // a região acompanha o estado da URL
   if (estado.aba === "estados" && location.hash.split("/")[2]) guardarUf(estado.uf); // só guarda o que a pessoa escolheu, não o padrão
 }
@@ -151,7 +158,7 @@ function emSegundoPlano(chave, ttlMs, produtor) {
 }
 
 async function panorama(cargo) {
-  const ufs = [...Object.keys(UFS), ...(cargo === "presidente" ? ["ZZ"] : [])];
+  const ufs = [...(cargo === "governador" ? UFS_GOV : Object.keys(UFS)), ...(cargo === "presidente" ? ["ZZ"] : [])]; // no 2º turno, só os estados com disputa
   const rs = await Promise.allSettled(ufs.map((uf) => obter(cargo, uf)));
   return ufs.map((uf, i) => ({ uf, d: rs[i].status === "fulfilled" ? rs[i].value : null }));
 }
@@ -164,8 +171,9 @@ async function estadosDepFederal() {
 async function detalhesEstado(uf, comDeputados = false) {
   const talvez = (cargo) => obter(cargo, uf).catch(() => null);
   const bancada = async (cargo) => { const d = await talvez(cargo); return d ? { d, dist: distribuirEstado(d) } : null; };
-  const [pres, gov, sen, depf, depe] = await Promise.all([talvez("presidente"), uf === "ZZ" ? null : talvez("governador"), uf === "ZZ" ? null : talvez("senador"),
-    comDeputados ? bancada("dep-federal") : null, comDeputados ? bancada("dep-estadual") : null]);
+  // No 2º turno só existem Presidente e o governo dos estados com disputa: não buscamos o que não foi publicado (o TSE bloqueia quem gera muitos 404).
+  const [pres, gov, sen, depf, depe] = await Promise.all([talvez("presidente"), uf === "ZZ" || !UFS_GOV.includes(uf) ? null : talvez("governador"), uf === "ZZ" || TURNO2 ? null : talvez("senador"),
+    comDeputados && !TURNO2 ? bancada("dep-federal") : null, comDeputados && !TURNO2 ? bancada("dep-estadual") : null]);
   return { pres, gov, sen, depf, depe };
 }
 
@@ -382,7 +390,7 @@ function resumoEstado(v) {
 
 function telaMapaMunicipal(v) {
   const { uf } = estado, cargo = v.cargoMapa ?? estado.mapaCargo;
-  const seg = `<div class="seg visao-mapa" role="group" aria-label="Eleição no mapa">${[["governador", "Governador"], ["presidente", "Presidente"], ["senador", "Senador"]].map(([k, n]) => `<button type="button" data-mapa-cargo="${k}" aria-pressed="${k === cargo}">${n}</button>`).join("")}</div>`;
+  const seg = `<div class="seg visao-mapa" role="group" aria-label="Eleição no mapa">${[["governador", "Governador"], ["presidente", "Presidente"], ["senador", "Senador"]].filter(([k]) => !TURNO2 || (k === "presidente" || (k === "governador" && UFS_GOV.includes(uf)))).map(([k, n]) => `<button type="button" data-mapa-cargo="${k}" aria-pressed="${k === cargo}">${n}</button>`).join("")}</div>`;
   if (v.malha?.erro) return `${seg}<section class="card">${aviso(v.malha.erro)}</section>`;
   const municipios = estado.municipios[uf] ?? [];
   if (!municipios.length) return `${seg}<section class="card"><p class="muted">A lista de municípios ainda não foi carregada. Tente de novo em instantes.</p></section>`;
@@ -457,12 +465,12 @@ function telaCargoPorEstado(v) {
   // Governadores: só os cards. Senadores: o painel geral continua.
   const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, regiao === "exterior" ? "" : regiao, "BR");
   const hero = governador ? "" : heroApuracao({ ...p, titulo: regiao ? p.titulo : plural, subtitulo: regiao ? p.subtitulo : "2 vagas por estado, 54 no total", extra: v.lista ? `<p class="hero-sub">${resumo}</p>` : "", grafico: false, hist: [] });
-  const ufs = (regiao && REGIOES[regiao] ? REGIOES[regiao].ufs : Object.keys(UFS)).slice();
+  const ufs = (regiao && REGIOES[regiao] ? REGIOES[regiao].ufs : Object.keys(UFS)).filter((u) => !governador || UFS_GOV.includes(u));
   const de2022 = new Map((v.mandatos?.senadores ?? []).map((x) => [x.uf, x]));
   const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
   const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra,
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
-  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
+  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
 }
 
 /** Resumo nacional (senadores ou governadores): uma linha por estado com a situação no momento e o % de urnas apuradas. */
@@ -471,7 +479,7 @@ function telaEleitos(v, cargo) {
   const nomePlural = senador ? "Senadores" : "Governadores";
   if (!v.lista) return carregandoEstados(`Resumo nacional · ${nomePlural}`);
   const dDe = (u) => v.lista.find((x) => x.uf === u)?.d ?? null;
-  const todas = Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
+  const todas = (senador ? Object.keys(UFS) : UFS_GOV).slice().sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
   const ufs = filtrarUfs(todas, f, (u) => statusEleicao(dDe(u)));
   const mini = (c, uf, extra = "") => `<span class="rn-cand" data-sq="${esc(c.id)}" role="button" tabindex="0" style="--cor:${corPartido(c.partido)}" title="Ver ficha do candidato">
     <img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
@@ -506,7 +514,7 @@ function telaEleitos(v, cargo) {
   return `<section class="card"><div class="titulo-cadeiras"><h2>Resumo nacional · ${nomePlural}</h2><span class="muted">${ufs.length} estados</span></div>
     ${statusAcompanhamento(v.e)}${tiles}
     ${senador ? `<p class="muted">Cada estado elege 2 senadores.</p>` : ""}
-    ${barraFiltros(f, { comSegundo: !senador })}
+    ${barraFiltros(f, { comSegundo: !senador, ufsOk: senador ? null : UFS_GOV })}
     ${linhas ? `<ul class="rn-lista">${linhas}</ul>` : `<p class="muted">Nenhum estado com esses filtros.</p>`}</section>`;
 }
 
@@ -539,7 +547,7 @@ function telaPresidente(v) {
     ? `${faixaDefinicao(d)}${avisosApuracao(d)}${rankingMajoritario(d, { aba: "presidente", uf: "BR" })}`
     : `<p class="muted">${carregando ? "Carregando…" : "Resultado indisponível no momento."}</p>`;
   const grafico = mun ? "" : blocoResultadoEvolucao(v.rpLocais === locaisGrafico.join(",") ? v.rp : undefined, locaisGrafico, d?.totalizacaoFinal);
-  return `${hero}
+  return `${hero}${TURNO2 && uf === "BR" && !regiao ? blocoDisputas("presidente") : ""}
     <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${d ? cartoesVotacao(d) : ""}${grafico}${quadroPorRegiao(v, uf)}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
 }
 
@@ -567,7 +575,7 @@ function lideresPorUf(lista, porPartido, maioria = false) {
 function blocoPorEstado({ titulo, cargo, lista, ac, ufs, regiao, porPartido = false, maioria = false, extra = () => "", nota = "", comRegioes = false, exterior = false }) {
   const visao = estado.visaoEstados;
   const seg = (attr, valor, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === valor}">${n}</button>`).join("")}</div>`;
-  const chips = barraFiltros(filtrosAtuais(), { comSegundo: cargo !== "senador", ordem: visao === "cards" ? estado.ordem : null });
+  const chips = barraFiltros(filtrosAtuais(), { comSegundo: cargo !== "senador", ufsOk: cargo === "governador" ? UFS_GOV : null, ordem: visao === "cards" ? estado.ordem : null });
   const controles = `<div class="estados-topo"><h2>${esc(titulo)}</h2>${seg("data-visao-estados", visao, [["cards", "Cards"], ["mapa", "Mapa"]])}</div>${chips}`;
   if (!lista) return `<section class="card">${controles}<p class="muted">Carregando os estados…</p></section>`;
   const dDe = (u) => lista.find((x) => x.uf === u)?.d ?? null;
@@ -726,7 +734,7 @@ let ultimoAc = null; // andamento por estado mais recente, para a navegação ap
 function renderNavegacao(v) {
   ultimoAc = v?.f ?? v?.ac ?? v?.e ?? ultimoAc;
   const nav = usaRegiao() && ultimoAc
-    ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf, comExterior: estado.aba === "andamento" || estado.aba === "presidente", comEstados: estado.aba === "andamento" || estado.aba === "presidente", aberto: estado.navAberta }) : "";
+    ? navegacaoRegional(ultimoAc, { regiao: estado.regiao, uf: estado.uf, comExterior: estado.aba === "andamento" || estado.aba === "presidente", comEstados: estado.aba === "andamento" || estado.aba === "presidente", aberto: estado.navAberta, soComDados: TURNO2 && (estado.aba === "governadores") }) : "";
   const sub = estado.aba === "estados" ? barraEstado(estado.uf, estado.cargo) : "";
   const preserva = (el, html, anterior) => {
     if (html === anterior) return anterior;
@@ -759,6 +767,11 @@ function render(forcar = false) {
 // ---------- atualização automática (a cada 10 segundos) ----------
 // Cada tela carrega por conta própria: trocar de visão nunca espera uma carga anterior terminar.
 const emVoo = new Set();
+/** 2º turno ainda sem arquivos do TSE (antes das 17h de 25/10): mostra as disputas definidas e avisa quando começa. */
+function telaAguardandoSegundoTurno() {
+  return `<section class="card"><h2>Apuração do 2º turno</h2><p class="muted">O TSE ainda não publicou os resultados do 2º turno. A apuração começa em 25/10/2026, às 17h (Brasília), e esta página passa a mostrar tudo sozinha, atualizando a cada poucos segundos.</p></section>${blocoDisputas()}`;
+}
+
 async function atualizar() {
   obterEventos().then((d) => atualizarFaixa($("faixa"), d)).catch(() => {});
   const chave = chaveRota();
@@ -772,7 +785,8 @@ async function atualizar() {
   } catch (e) {
     if (chave === chaveRota()) {
       memo.erro = e.message;
-      if (!cacheViews.has(chave)) $("conteudo").innerHTML = `<section class="card">${aviso(`${e.message} Tentaremos de novo automaticamente.`)}<button type="button" class="link" data-tentar>Tentar agora</button></section>`;
+      if (!cacheViews.has(chave)) $("conteudo").innerHTML = TURNO2 && /404|não publicado/i.test(e.message) ? telaAguardandoSegundoTurno()
+        : `<section class="card">${aviso(`${e.message} Tentaremos de novo automaticamente.`)}<button type="button" class="link" data-tentar>Tentar agora</button></section>`;
     }
   } finally {
     emVoo.delete(chave);
@@ -796,13 +810,20 @@ async function carregarMunicipios() {
 // ---------- base dos percentuais (votos válidos x votos totais) ----------
 function montarBase() {
   const b = estado.base;
-  $("basebar").innerHTML = `<div class="seg mini" role="group" aria-label="Base dos percentuais">
+  $("basebar").innerHTML = `<div class="seg mini turno-chave" role="group" aria-label="Turno da eleição">
+      <button type="button" data-turno="1" aria-pressed="${!TURNO2}">1º turno</button><button type="button" data-turno="2" aria-pressed="${TURNO2}">2º turno</button></div>
+    <div class="seg mini" role="group" aria-label="Base dos percentuais">
       <button type="button" data-base="validos" aria-pressed="${b === "validos"}">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}">Votos totais</button></div>
     ${b === "validos" ? `<button type="button" class="chave-sj" data-sj aria-pressed="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><i aria-hidden="true"></i>Sem sub judice</button>` : ""}
     ${b === "validos" && estado.semSJ ? `<p class="muted base-nota">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
     ${b === "totais" ? `<p class="muted base-nota">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}`;
 }
 $("basebar").addEventListener("click", (e) => {
+  const tn = e.target.closest("[data-turno]");
+  if (tn) { // o turno muda os arquivos do TSE: recarrega a página com ?turno=, mantendo o endereço atual
+    if (Number(tn.dataset.turno) === (TURNO2 ? 2 : 1)) return;
+    const u = new URL(location.href); u.searchParams.set("turno", tn.dataset.turno); location.href = u.toString(); return;
+  }
   if (e.target.closest("[data-sj]")) { estado.semSJ = !estado.semSJ; montarBase(); render(true); return; }
   const bt = e.target.closest("[data-base]");
   if (!bt || bt.dataset.base === estado.base) return;

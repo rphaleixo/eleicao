@@ -28,10 +28,10 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
  * Barra de filtros do bloco: Situação, Estado e (opcional) Ordem. A região não está aqui: é escolhida
  * uma única vez, nos botões do topo da página; `filtros.regiao` só limita a lista de estados.
  */
-export function barraFiltros(filtros, { comSegundo = true, statusTodos = "Todas", ordem = null } = {}) {
+export function barraFiltros(filtros, { comSegundo = true, statusTodos = "Todas", ordem = null, ufsOk = null } = {}) {
   const lista = (attr, rotulo, itens, atual) => `<label class="f-sel"><span>${rotulo}</span><select ${attr} aria-label="${rotulo}">${itens.map(([k, n]) => `<option value="${k}"${k === atual ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`;
   const status = [["", statusTodos], ["definida", STATUS.definida], ["aberta", STATUS.aberta], ...(comSegundo ? [["segundo", STATUS.segundo]] : [])];
-  const doRegiao = filtros.regiao && REGIOES[filtros.regiao] ? REGIOES[filtros.regiao].ufs : Object.keys(UFS);
+  const doRegiao = (filtros.regiao && REGIOES[filtros.regiao] ? REGIOES[filtros.regiao].ufs : Object.keys(UFS)).filter((u) => !ufsOk || ufsOk.includes(u));
   const ufs = [["", "Todos"], ...doRegiao.slice().sort((x, y) => UFS[x].localeCompare(UFS[y], "pt-BR")).map((u) => [u, UFS[u]])];
   const ativo = !!(filtros.uf || filtros.status);
   const ord = ordem ? `<label class="f-sel"><span>Ordem</span><select data-ordem-sel aria-label="Ordenar">${[["az", "A–Z"], ["pct", "% apurado"]].map(([k, n]) => `<option value="${k}"${k === ordem ? " selected" : ""}>${n}</option>`).join("")}</select></label>` : "";

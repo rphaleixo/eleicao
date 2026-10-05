@@ -1,9 +1,9 @@
 // Seleção fluida de estado: tira com as siglas, barra fixa com cargos e uma folha de busca.
-import { UFS } from "./config.js";
+import { UFS, UFS_GOV, TURNO2 } from "./config.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const semAcento = (t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-export const CARGOS_BARRA = [["resumo", "Resumo"], ["governador", "Governador"], ["senador", "Senador"], ["dep-federal", "Dep. Federal"], ["dep-estadual", "Dep. Estadual"], ["presidente", "Presidente"], ["mapa", "Mapa"]];
+const TODOS_CARGOS_BARRA = [["resumo", "Resumo"], ["governador", "Governador"], ["senador", "Senador"], ["dep-federal", "Dep. Federal"], ["dep-estadual", "Dep. Estadual"], ["presidente", "Presidente"], ["mapa", "Mapa"]];
 
 /** Estados cujo nome ou sigla começa com o texto digitado (sem acento, sem maiúsculas). */
 export function filtrarEstados(texto) {
@@ -13,6 +13,9 @@ export function filtrarEstados(texto) {
 }
 
 const pontoDe = (ac, uf) => { const a = ac?.ufs?.[uf.toLowerCase()]?.andamento; return a === "f" ? "f" : a === "p" ? "p" : "n"; };
+/** Cargos da barra do estado. No 2º turno: Presidente em todos os estados e Governador só onde há disputa; sem Senado nem deputados. */
+export const cargosBarra = (uf) => (TURNO2 ? TODOS_CARGOS_BARRA.filter(([id]) => ["resumo", "presidente", "mapa"].includes(id) || (id === "governador" && UFS_GOV.includes(uf))) : TODOS_CARGOS_BARRA);
+export const CARGOS_BARRA = TODOS_CARGOS_BARRA;
 const ORDEM = Object.keys(UFS).sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
 
 /** Estado anterior (-1) ou seguinte (+1) em ordem alfabética, dando a volta no fim da lista. */
@@ -38,7 +41,7 @@ export function barraEstado(uf, cargo) {
       <button type="button" class="be-seta" data-vizinho="-1" aria-label="Estado anterior: ${esc(UFS[vizinho(uf, -1)])}">‹</button>
       <button type="button" class="be-estado" data-abrir-seletor aria-haspopup="dialog" aria-label="Escolher estado. Atual: ${esc(UFS[uf])}"><strong>${uf}</strong><span>${esc(UFS[uf])}</span></button>
       <button type="button" class="be-seta" data-vizinho="1" aria-label="Próximo estado: ${esc(UFS[vizinho(uf, 1)])}">›</button></div>
-    <div class="be-cargos" role="tablist" aria-label="Eleição">${CARGOS_BARRA.map(([id, nome]) => `<button type="button" role="tab" data-cargo="${id}" aria-selected="${id === cargo}">${nome}</button>`).join("")}</div></div>`;
+    <div class="be-cargos" role="tablist" aria-label="Eleição">${cargosBarra(uf).map(([id, nome]) => `<button type="button" role="tab" data-cargo="${id}" aria-selected="${id === cargo}">${nome}</button>`).join("")}</div></div>`;
 }
 
 /** Conteúdo da folha: busca e o mapa de blocos do Brasil (um toque escolhe o estado). */

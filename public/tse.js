@@ -29,10 +29,10 @@ export function urlAcompanhamento(cargo) {
   return `/api/ele${CONFIG.ano}/${e}/dados/br/br-e${pad6(e)}-ab.json`;
 }
 
-export const urlHistorico = () => "/api/historico";
-export const urlEventos = () => "/api/eventos";
-export const urlResultadosGovernador = (locais = []) => `/api/resultados-governador${locais.length ? `?local=${locais.join(",")}` : ""}`;
-export const urlResultadosPresidente = (locais = []) => `/api/resultados-presidente${locais.length ? `?local=${locais.join(",")}` : ""}`;
+export const urlHistorico = () => `/api/historico?turno=${CONFIG.turno}`;
+export const urlEventos = () => `/api/eventos?turno=${CONFIG.turno}`;
+export const urlResultadosGovernador = (locais = []) => `/api/resultados-governador?turno=${CONFIG.turno}${locais.length ? `&local=${locais.join(",")}` : ""}`;
+export const urlResultadosPresidente = (locais = []) => `/api/resultados-presidente?turno=${CONFIG.turno}${locais.length ? `&local=${locais.join(",")}` : ""}`;
 
 /** Foto do candidato: Presidente fica na pasta "br"; os demais cargos na pasta do estado. */
 export function urlFoto(cargo, uf, sqcand) {
@@ -121,7 +121,7 @@ export function normalizar(json) {
   // Situação visual de cada candidato (c.sit): "eleito" ou "segundo" (2º turno). Vale o que o TSE marcou no candidato;
   // enquanto isso não vem, usa a eleição matematicamente definida (md): "e" = mais votados eleitos, "s" = dois vão ao 2º turno.
   const md = json.md === "e" || json.md === "s" ? json.md : "";
-  const temSegundoTurno = String(cargo.cd) !== "5"; // o Senado não tem 2º turno
+  const temSegundoTurno = String(cargo.cd) !== "5" && String(json.t) !== "2"; // o Senado não tem 2º turno, nem há outro depois do 2º
   for (const c of candidatos) c.sit = /2.\s*turno/i.test(c.situacao) ? (temSegundoTurno ? "segundo" : "") : c.eleito ? "eleito" : ""; // o TSE marca e="s" também em quem vai ao 2º turno
   const vagas = num(cargo.nv) || 1;
   const majoritario = ["1", "3", "5"].includes(String(cargo.cd)); // a definição matemática (md) só existe nas eleições majoritárias

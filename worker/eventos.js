@@ -1,6 +1,7 @@
 // Registro das definições da eleição (eleito, 2º turno), com a hora em que cada uma apareceu.
 // Usa o mesmo leitor dos arquivos do TSE do site (public/tse.js), para a regra de "eleito" ser uma só.
 import { normalizar, num } from "../public/tse.js";
+import { UFS_GOVERNO_SEGUNDO_TURNO } from "../public/segundo-turno.js";
 
 export const UFS_ALVO = ["ac", "al", "ap", "am", "ba", "ce", "df", "es", "go", "ma", "mt", "ms", "mg", "pa", "pb", "pr", "pe", "pi", "rj", "rn", "rs", "ro", "rr", "sc", "sp", "se", "to"];
 export const CODIGO_CARGO = { presidente: "0001", governador: "0003", senador: "0005" };
@@ -37,9 +38,12 @@ export function acrescentarEventos(atual, novos, agora = Date.now(), primeiraVis
 }
 
 /** Os alvos ainda abertos, dos visitados há mais tempo aos mais recentes (revezamento, para limitar as consultas por minuto). */
-export function escolherAlvos(estado, maximo = 16) {
+/** No 2º turno só há Presidente e o governo dos estados com disputa. */
+export const alvosDoTurno = (turno) => (turno === 2 ? ALVOS.filter((a) => a.cargo === "presidente" || (a.cargo === "governador" && UFS_GOVERNO_SEGUNDO_TURNO.includes(a.uf.toUpperCase()))) : ALVOS);
+
+export function escolherAlvos(estado, maximo = 16, alvos = ALVOS) {
   const visto = estado?.visto ?? {}, fechado = estado?.fechado ?? {};
-  return ALVOS.filter((a) => !fechado[a.id]).sort((a, b) => (visto[a.id] ?? 0) - (visto[b.id] ?? 0)).slice(0, maximo);
+  return alvos.filter((a) => !fechado[a.id]).sort((a, b) => (visto[a.id] ?? 0) - (visto[b.id] ?? 0)).slice(0, maximo);
 }
 
 export const caminhoAlvo = (a, ano, eleicaoFederal, eleicaoEstadual) => {

@@ -1,6 +1,7 @@
 // Aba "Marcha da apuração": painel único com o andamento do Brasil e a lista de estados.
 // Os componentes (heroApuracao, linhaEstado, chipsRegiao...) são reaproveitados nas outras abas.
-import { UFS, INICIO_APURACAO } from "./config.js";
+import { UFS, INICIO_APURACAO, TURNO2 } from "./config.js";
+import { blocoDisputas } from "./segundoTurno.js";
 import { areaPresenca } from "./graficos.js";
 import { urlFoto } from "./tse.js";
 import { seloSit, classeSit, seloEleicao } from "./situacao.js";
@@ -91,14 +92,15 @@ export const regiaoDe = (uf) => Object.entries(REGIOES).find(([, r]) => r.ufs.in
  * Navegação por região e estado, usada no topo das abas. Uma barra mostra onde você está ("Brasil › Nordeste › Bahia", com o % apurado);
  * tocar nela abre o painel com as regiões e, escolhida a região, os estados. Nada rola para o lado.
  */
-export function navegacaoRegional(ac, { regiao, uf, comExterior = true, comEstados = true, aberto = false }) {
+export function navegacaoRegional(ac, { regiao, uf, comExterior = true, comEstados = true, aberto = false, soComDados = false }) {
+  const temDados = (r) => !soComDados || r.ufs.some((u) => ac.ufs[u.toLowerCase()]); // no 2º turno, regiões sem disputa saem da lista
   const botao = (attrs, nome, valor, ativo, classe = "") => `<button type="button" class="np-item${classe}" ${attrs} aria-pressed="${ativo}"><span>${nome}</span>${valor == null ? "" : `<small>${pct(valor)}</small>`}</button>`;
   const regioes = botao('data-regiao=""', "Brasil", doEstado(ac.ufs.br)?.pct ?? null, regiao === "" && uf === "BR")
-    + Object.entries(REGIOES).map(([k, r]) => botao(`data-regiao="${k}"`, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct, regiao === k)).join("")
+    + Object.entries(REGIOES).filter(([, r]) => temDados(r)).map(([k, r]) => botao(`data-regiao="${k}"`, r.nome, agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])).pct, regiao === k)).join("")
     + (comExterior && ac.ufs.zz ? botao('data-regiao="exterior"', "Exterior", doEstado(ac.ufs.zz).pct, regiao === "exterior") : "");
   const r = REGIOES[regiao];
   const estados = r && comEstados
-    ? `<p class="np-titulo">Estados de ${esc(r.nome)}</p><div class="np-grade">${botao("data-regiao-inteira", "Região inteira", null, uf === "BR", " np-inteira")}${r.ufs.slice().sort((x, y) => UFS[x].localeCompare(UFS[y], "pt-BR"))
+    ? `<p class="np-titulo">Estados de ${esc(r.nome)}</p><div class="np-grade">${botao("data-regiao-inteira", "Região inteira", null, uf === "BR", " np-inteira")}${r.ufs.filter((u) => !soComDados || ac.ufs[u.toLowerCase()]).sort((x, y) => UFS[x].localeCompare(UFS[y], "pt-BR"))
         .map((u) => botao(`data-nav-uf="${u}"`, esc(UFS[u]), doEstado(ac.ufs[u.toLowerCase()])?.pct ?? 0, uf === u)).join("")}</div>`
     : "";
   const caminho = ["Brasil", ...(regiao === "exterior" ? ["Exterior"] : r ? [r.nome] : []), ...(uf !== "BR" && uf !== "ZZ" ? [UFS[uf]] : [])];
@@ -244,7 +246,7 @@ export function telaMarcha(v, estado, comNav = true) {
   const topo = controlePainel(estado.painel);
   const hero = estado.painel === "regioes" ? heroRegioes(v, estado, topo, p)
     : heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave, topo });
-  return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${hero}
+  return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas() : ""}${hero}
     <p class="muted nota-fonte">Acompanhamento do TSE, no horário de Brasília. Os resultados por cargo (aba Presidente) são publicados em arquivos separados e podem estar alguns minutos atrás deste acompanhamento.</p>
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
