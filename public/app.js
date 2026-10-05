@@ -311,13 +311,14 @@ function boxEleitos(d, dist) {
   // Os eleitos vêm com a sigla da federação; a busca olha o candidato de verdade (partido, federação, número).
   const busca = estado.busca, porId = new Map(d.candidatos.map((c) => [c.id, c]));
   const base = buscando(busca) ? completa.filter((b) => porId.has(b.id) && passaBusca(porId.get(b.id), busca)) : completa;
+  const posicao = new Map(completa.map((b, i) => [b.id, i + 1])); // a posição é a da fila completa, mesmo com a busca ativa
   const paginas = Math.max(1, Math.ceil(base.length / POR_PAGINA));
   const pag = Math.min(Math.max(0, estado.pagEleitos), paginas - 1);
   const ini = pag * POR_PAGINA, fatia = base.slice(ini, ini + POR_PAGINA);
   const max = Math.max(1, base[0]?.votos ?? 1);
   const cargo = cargoAtivo();
   const itens = fatia.map((b, i) => `<li class="ce" style="--cor:${corPartido(b.partido)}" data-sq="${esc(b.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
-      <span class="pos">${ini + i + 1}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, estado.uf, b.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+      <span class="pos">${posicao.get(b.id)}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, estado.uf, b.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
       <span class="ce-nome"><b>${esc(b.nome)}</b><span class="chip" style="--cor:${corPartido(b.partido)}">${esc(b.partido)}</span>${usaOficial ? seloSit({ sit: "eleito" }, { curto: true }) : seloProjetado({ curto: true })}<small>${esc(b.sub)}</small></span>
       <span class="ce-votos">${fmt(b.votos)}</span><span class="cr-barra"><i style="width:${(b.votos / max) * 100}%"></i></span></li>`).join("");
   const nav = paginas > 1
@@ -325,7 +326,7 @@ function boxEleitos(d, dist) {
         <span>${ini + 1}–${ini + fatia.length} de ${base.length}</span><button type="button" data-pag-eleitos="1" ${pag >= paginas - 1 ? "disabled" : ""}>Próximos ›</button></nav>` : "";
   return `<section class="card"><div class="titulo-cadeiras"><h2>Candidatos eleitos</h2><span class="muted">${buscando(busca) ? `${base.length} na busca · ` : ""}${completa.length} de ${dist.vagas}</span></div>
     <p class="muted">${usaOficial ? "Resultado oficial do TSE." : "Projeção com os votos contados até agora."}</p>
-    ${base.length ? `<ol class="lista-eleitos" start="${ini + 1}">${itens}</ol>${nav}` : `<p class="muted">${buscando(busca) ? "Nenhum eleito com essa busca." : "Nenhum candidato eleito ainda."}</p>`}</section>`;
+    ${base.length ? `<ol class="lista-eleitos">${itens}</ol>${nav}` : `<p class="muted">${buscando(busca) ? "Nenhum eleito com essa busca." : "Nenhum candidato eleito ainda."}</p>`}</section>`;
 }
 
 function maisVotados(d, rotulo = "Candidatos por votos", projetados = null) {
