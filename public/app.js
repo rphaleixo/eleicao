@@ -1,4 +1,5 @@
 import { blocoDisputas } from "./segundoTurno.js";
+import { blocoComparar } from "./comparar.js";
 import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
 import { fmt, pct } from "./formato.js";
@@ -38,7 +39,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" } };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -539,6 +540,20 @@ function telaEleitos(v, cargo) {
     ${linhas ? `<ul class="rn-lista">${linhas}</ul>` : `<p class="muted">Nenhum estado com esses filtros.</p>`}</section>`;
 }
 
+/** Bloco "Comparar candidatos" da aba Presidente: Brasil (ou a região) e a lista de estados. */
+function blocoCompararPresidente(v, d) {
+  const { regiao } = estado;
+  if (!d || !v.lista) return "";
+  const reais = candidatosReais(d).filter((c) => c.votos > 0);
+  const ds = (x) => v.lista.filter((i) => i.d && x(i.uf));
+  const doRegiao = REGIOES[regiao] ? (u) => REGIOES[regiao].ufs.includes(u) : regiao === "exterior" ? (u) => u === "ZZ" : () => true;
+  const itens = ds(doRegiao);
+  const local = REGIOES[regiao] ? { rotulo: REGIOES[regiao].nome, uf: "BR", d: agregarResultados(itens.map((i) => i.d)) } : regiao === "exterior" ? { rotulo: "Exterior", uf: "ZZ", d: v.lista.find((i) => i.uf === "ZZ")?.d } : { rotulo: "Brasil", uf: "BR", d };
+  const padrao = reais.slice(0, 2).map((c) => c.id);
+  const cmp = { a: estado.cmp.a || padrao[0], b: estado.cmp.b || padrao[1], ordem: estado.cmp.ordem };
+  return blocoComparar({ candidatos: reais, local, itens: regiao === "exterior" ? [] : itens, cmp });
+}
+
 function telaPresidente(v) {
   const { regiao, uf, mun } = estado;
   const emRegiao = uf === "BR" && REGIOES[regiao];
@@ -569,7 +584,7 @@ function telaPresidente(v) {
     : `<p class="muted">${carregando ? "Carregando…" : "Resultado indisponível no momento."}</p>`;
   const grafico = mun ? "" : blocoResultadoEvolucao(v.rpLocais === locaisGrafico.join(",") ? v.rp : undefined, locaisGrafico, d?.totalizacaoFinal);
   return `${hero}${TURNO2 && uf === "BR" && !regiao ? blocoDisputas("presidente") : ""}
-    <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${d ? cartoesVotacao(d) : ""}${grafico}${quadroPorRegiao(v, uf)}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
+    <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${uf === "BR" ? blocoCompararPresidente(v, v.d) : ""}${d ? cartoesVotacao(d) : ""}${grafico}${quadroPorRegiao(v, uf)}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
 }
 
 /**
@@ -917,6 +932,13 @@ $("conteudo").addEventListener("input", (e) => {
   const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
 });
 $("conteudo").addEventListener("change", (e) => {
+  const cmpEl = e.target.closest?.("[data-cmp-a], [data-cmp-b], [data-cmp-ordem]");
+  if (cmpEl) {
+    if (cmpEl.matches("[data-cmp-a]")) estado.cmp.a = cmpEl.value;
+    else if (cmpEl.matches("[data-cmp-b]")) estado.cmp.b = cmpEl.value;
+    else estado.cmp.ordem = cmpEl.value;
+    render(true); return;
+  }
   const bp = e.target.closest?.("[data-busca-partido]");
   if (bp) { estado.busca.partido = bp.value; estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0 }; render(true); return; }
   const os = e.target.closest?.("[data-ordem-sel]");
