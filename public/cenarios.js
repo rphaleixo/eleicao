@@ -40,11 +40,14 @@ export const rotuloNoCenario = (rotulo, uniao) => (uniao && uniao.termos.some((t
 export function compararBancadas(base, cenario, { uniao = null, senado = [] } = {}) {
   const nb = consolidarNacional(base), nc = consolidarNacional(cenario);
   const mapa = new Map();
-  const linha = (rotulo) => mapa.get(rotulo) ?? (mapa.set(rotulo, { rotulo, antes: 0, depois: 0, senado: 0, porUfAntes: {}, porUfDepois: {} }), mapa.get(rotulo));
+  const linha = (rotulo) => mapa.get(rotulo) ?? (mapa.set(rotulo, { rotulo, antes: 0, depois: 0, senado: 0, porUfAntes: {}, porUfDepois: {}, qeAntes: new Set(), qeDepois: new Set() }), mapa.get(rotulo));
+  // atingiu o quociente eleitoral = votos do grupo no estado >= QE (ao menos 1 de quociente partidário)
+  for (const { uf, dist } of base) for (const l of dist.linhas) if (l.qp >= 1) linha(rotuloNoCenario(l.sigla, uniao)).qeAntes.add(uf);
+  for (const { uf, dist } of cenario) for (const l of dist.linhas) if (l.qp >= 1) linha(l.sigla).qeDepois.add(uf);
   for (const p of nb.partidos) { const l = linha(rotuloNoCenario(p.sigla, uniao)); l.antes += p.vagas; for (const [u, q] of Object.entries(p.porUF)) l.porUfAntes[u] = (l.porUfAntes[u] ?? 0) + q; }
   for (const p of nc.partidos) { const l = linha(p.sigla); l.depois += p.vagas; for (const [u, q] of Object.entries(p.porUF)) l.porUfDepois[u] = (l.porUfDepois[u] ?? 0) + q; }
   for (const s of senado) linha(rotuloNoCenario(s.rotulo, uniao)).senado += s.total;
-  const linhas = [...mapa.values()].map((l) => ({ ...l, delta: l.depois - l.antes, congresso: l.depois + l.senado }))
+  const linhas = [...mapa.values()].map((l) => ({ ...l, ufsQeAntes: [...l.qeAntes].sort(), ufsQeDepois: [...l.qeDepois].sort(), delta: l.depois - l.antes, congresso: l.depois + l.senado }))
     .sort((a, b) => b.depois - a.depois || b.antes - a.antes || a.rotulo.localeCompare(b.rotulo, "pt-BR"));
   return { linhas, totalAntes: nb.total, totalDepois: nc.total, nacionalAntes: nb, nacionalDepois: nc };
 }

@@ -67,3 +67,12 @@ test("PDT, PSOL e Rede com o PT: uma federação só, com os três somados", () 
   assert.equal(j.votos, 750); assert.equal(j.candidatos.length, 5);
   assert.equal(rotuloNoCenario("PDT", c.uniao), c.uniao.rotulo); assert.equal(rotuloNoCenario("PSOL / REDE", c.uniao), c.uniao.rotulo); assert.equal(rotuloNoCenario("PL", c.uniao), "PL");
 });
+
+test("compararBancadas: conta os estados em que o grupo atingiu o quociente eleitoral", () => {
+  const mk = (qp) => ({ vagas: 2, linhas: [{ sigla: "PT", vagas: qp, votos: 1, qp }, { sigla: "XYZ", vagas: 0, votos: 1, qp: 0 }], eleitos: [] });
+  const base = [{ uf: "AC", d: { partidos: [] }, dist: mk(1) }, { uf: "AL", d: { partidos: [] }, dist: mk(0) }];
+  const cen = [{ uf: "AC", d: { partidos: [] }, dist: mk(1) }, { uf: "AL", d: { partidos: [] }, dist: mk(2) }];
+  const l = compararBancadas(base, cen).linhas.find((x) => x.rotulo === "PT");
+  assert.deepEqual(l.ufsQeAntes, ["AC"]);
+  assert.deepEqual(l.ufsQeDepois, ["AC", "AL"]);
+});

@@ -13,8 +13,8 @@ export const seletorCenarios = (atual) => `<div class="seg mini seg-rolavel" rol
 
 function tabelaBancada(cmp, comSenado) {
   const linhas = cmp.linhas.filter((l) => l.antes || l.depois || l.senado).map((l) => `<tr${l.delta ? ' class="cn-mudou"' : ""}><td>${chip(l.rotulo)}</td><td>${l.antes}</td><td><b>${l.depois}</b></td>
-    <td><span class="cn-delta ${l.delta > 0 ? "mais" : l.delta < 0 ? "menos" : ""}">${sinal(l.delta)}</span></td>${comSenado ? `<td>${l.senado}</td><td><b>${l.congresso}</b></td>` : ""}</tr>`).join("");
-  return `<div class="tab-scroll"><table class="cn-tabela"><tr><th>Grupo</th><th title="Cadeiras na Câmara hoje">Hoje</th><th title="Cadeiras na Câmara no cenário">Cenário</th><th>Δ</th>${comSenado ? "<th title=\"Senadores em 2027, sem mudança\">Senado</th><th title=\"Câmara no cenário + Senado\">Congresso</th>" : ""}</tr>${linhas}</table></div>`;
+    <td><span class="cn-delta ${l.delta > 0 ? "mais" : l.delta < 0 ? "menos" : ""}">${sinal(l.delta)}</span></td><td class="cn-qe" title="Estados em que o grupo atingiu o quociente eleitoral. Hoje: ${esc(l.ufsQeAntes.join(", ") || "nenhum")}. Cenário: ${esc(l.ufsQeDepois.join(", ") || "nenhum")}.">${l.ufsQeAntes.length}${l.ufsQeAntes.length !== l.ufsQeDepois.length ? ` → <b>${l.ufsQeDepois.length}</b>` : ""}</td>${comSenado ? `<td>${l.senado}</td><td><b>${l.congresso}</b></td>` : ""}</tr>`).join("");
+  return `<div class="tab-scroll"><table class="cn-tabela"><tr><th>Grupo</th><th title="Cadeiras na Câmara hoje">Hoje</th><th title="Cadeiras na Câmara no cenário">Cenário</th><th>Δ</th><th title="Em quantos estados o grupo atingiu o quociente eleitoral (votos ≥ QE): hoje → cenário">Atingiu QE</th>${comSenado ? "<th title=\"Senadores em 2027, sem mudança\">Senado</th><th title=\"Câmara no cenário + Senado\">Congresso</th>" : ""}</tr>${linhas}</table></div>`;
 }
 
 /**
