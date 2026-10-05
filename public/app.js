@@ -6,7 +6,7 @@ import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./
 import { montarBancada, telaBancada, situacaoUf } from "./bancada.js";
 import { statusProjecao } from "./status.js";
 import { barraFiltros, filtrarUfs, filtrosVazios, statusEleicao } from "./filtros.js";
-import { aplicarBaseNaView, baseTotal, getBase, naoVoto, setBase } from "./base.js";
+import { aplicarBaseNaView, baseTotal, candidatosReais, getBase, naoVoto, semSubJudice, setBase, setSemSubJudice } from "./base.js";
 import { blocoClausula, calcularClausula } from "./clausula.js";
 import { barraBusca, buscaVazia, filtrando as buscando, passaBusca } from "./buscaCandidatos.js";
 import { blocoTop10, cardsMaisVotados } from "./deputadosVotados.js";
@@ -37,7 +37,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva() };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -239,10 +239,10 @@ function blocoProgresso(titulo, d, ac) {
     ${d ? faixaDefinicao(d) + avisosApuracao(d) : ""}</section>`;
 }
 
-function blocoResultadoEvolucao(rp, local, final = false) {
+function blocoResultadoEvolucao(rp, local, final = false, d = null) {
   const largura = Math.max(300, Math.min(640, document.documentElement.clientWidth - 64));
   const grafico = rp === undefined ? `<p class="muted vazio-grafico">Carregando o histórico…</p>`
-    : linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO, ate: final ? 0 : Date.now(), base: getBase() });
+    : linhasResultado(rp, local, corPartido, { largura, inicio: INICIO_APURACAO, ate: final ? 0 : Date.now(), base: getBase(), excluir: semSubJudice() && d ? d.candidatos.filter((c) => c.subJudice).map((c) => c.id) : [] });
   const primeiro = rp?.pontos?.[0]?.t * 1000;
   const parcial = primeiro && primeiro > INICIO_APURACAO + 5 * 60000 ? ` O registro deste gráfico começou às ${new Date(primeiro).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}, quando o site passou a guardá-lo.` : "";
   return `<section class="card"><h2>Evolução do resultado</h2>${grafico}
@@ -305,7 +305,7 @@ const POR_PAGINA = 15;
 /** Candidatos eleitos (oficiais ou projetados), do mais votado ao menos votado. */
 function dadosEleitos(d, dist) {
   const oficiais = d.candidatos.filter((c) => c.eleito);
-  const usaOficial = d.totalizacaoFinal && oficiais.length > 0;
+  const usaOficial = !semSubJudice() && d.totalizacaoFinal && oficiais.length > 0; // o oficial do TSE inclui os sub judice
   const base = usaOficial
     ? oficiais.map((c) => ({ id: c.id, partido: c.partido, nome: c.nome, votos: c.votos, sub: c.situacao }))
     : [...dist.eleitos].sort((a, b) => b.votos - a.votos).map((e) => ({ id: e.id, partido: e.partido, nome: e.nome, votos: e.votos, sub: e.via === "quociente" ? "quociente" : e.via === "art. 111" ? "art. 111" : `sobra (${e.rodada ?? 1}ª rodada)` }));
@@ -316,7 +316,7 @@ function dadosEleitos(d, dist) {
 function boxEleitos(d, dist) {
   const { usaOficial, base: completa } = dadosEleitos(d, dist);
   // Os eleitos vêm com a sigla da federação; a busca olha o candidato de verdade (partido, federação, número).
-  const busca = estado.busca, porId = new Map(d.candidatos.map((c) => [c.id, c]));
+  const busca = estado.busca, porId = new Map(candidatosReais(d).map((c) => [c.id, c]));
   const itens = completa.map((b, i) => ({ ...b, pos: i + 1, selo: usaOficial ? seloSit({ sit: "eleito" }, { curto: true }) : seloProjetado({ curto: true }) }))
     .filter((b) => !buscando(busca) || (porId.has(b.id) && passaBusca(porId.get(b.id), busca)));
   return boxCandidatos({ titulo: "Candidatos eleitos", contagem: `${buscando(busca) ? `${itens.length} na busca · ` : ""}${completa.length} de ${dist.vagas}`,
@@ -344,9 +344,9 @@ function boxCandidatos({ titulo, contagem, nota = "", vazio, itens, chave }) {
 /** Todos os candidatos do estado, do mais votado ao menos votado; a posição é a da fila completa, mesmo com a busca ativa. */
 function maisVotados(d, rotulo = "Candidatos por votos", projetados = null) {
   const selo = (c) => c.sit ? seloSit(c, { rotulo: rotuloEleito(c), curto: true }) : projetados?.has(c.id) ? seloProjetado({ curto: true }) : !c.elegivel ? `<span class="badge neutro">${esc(c.situacaoVoto)}</span>` : "";
-  const todos = d.candidatos.map((c, i) => ({ c, pos: i + 1 }));
+  const reais = candidatosReais(d), todos = reais.map((c, i) => ({ c, pos: i + 1 }));
   const itens = todos.filter(({ c }) => passaBusca(c, estado.busca)).map(({ c, pos }) => ({ id: c.id, nome: c.nome, partido: c.partido, votos: c.votos, pos, sub: `nº ${c.numero} · ${pct(c.pct)}`, selo: selo(c) }));
-  return boxCandidatos({ titulo: rotulo, contagem: buscando(estado.busca) ? `${fmt(itens.length)} na busca · ${fmt(d.candidatos.length)} no total` : `${fmt(d.candidatos.length)} candidatos`,
+  return boxCandidatos({ titulo: rotulo, contagem: buscando(estado.busca) ? `${fmt(itens.length)} na busca · ${fmt(reais.length)} no total` : `${fmt(reais.length)} candidatos`,
     vazio: "Nenhum candidato com essa busca.", itens, chave: "cand" });
 }
 
@@ -358,7 +358,7 @@ function telaMajoritaria(v) {
   const { d } = v, { uf, mun } = estado, aba = cargoAtivo();
   const local = mun ? `${nomeUF(uf)}, município ${(estado.municipios[uf] || []).find((m) => m.cod === mun)?.nome ?? mun}` : nomeUF(uf);
   const titulo = aba === "senador" ? `Senador (${d.vagas || 2} vagas): ${local}` : `${CARGOS[aba].nome}: ${local}`;
-  const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, locaisResultado(uf, ""), d.totalizacaoFinal) : !mun && aba === "governador" ? blocoResultadoEvolucao(v.rp, [uf.toLowerCase()], d.totalizacaoFinal) : "";
+  const evolucao = !mun && aba === "presidente" ? blocoResultadoEvolucao(v.rp, locaisResultado(uf, ""), d.totalizacaoFinal, d) : !mun && aba === "governador" ? blocoResultadoEvolucao(v.rp, [uf.toLowerCase()], d.totalizacaoFinal, d) : "";
   return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${rankingMajoritario(d, { aba, uf })}</section>${cartoesVotacao(d)}${evolucao}`;
 }
 
@@ -391,7 +391,7 @@ function telaMapaMunicipal(v) {
   let semVotos = 0;
   for (const m of municipios) {
     const d = lerMun(cargo, uf, m.cod);
-    const topo = d ? ordenarCandidatos(d.candidatos)[0] : null;
+    const topo = d ? ordenarCandidatos(candidatosReais(d))[0] : null;
     if (!topo || topo.votos <= 0) { semVotos++; continue; }
     const l = { cor: corPartido(topo.partido), quem: `${topo.nome} (${topo.partido})`, apurado: d.pctSecoes };
     lideres.set(m.ibge, l); contagem[m.cod] = l;
@@ -550,7 +550,7 @@ function telaPresidente(v) {
 function lideresPorUf(lista, porPartido, maioria = false) {
   const out = {};
   for (const { uf, d } of lista ?? []) {
-    const topo = d ? ordenarCandidatos(d.candidatos)[0] : null;
+    const topo = d ? ordenarCandidatos(candidatosReais(d))[0] : null;
     if (!topo || topo.votos <= 0) { out[uf] = null; continue; }
     out[uf] = maioria && topo.votos * 2 <= d.votosValidos
       ? { cor: COR_SEGUNDO_TURNO, quem: "Segundo turno", segundo: true, apurado: d.pctSecoes }
@@ -626,7 +626,7 @@ function telaProporcionalUF(v) {
   });
   return `${cadeiras}
     ${dist.art111 ? aviso("Nenhum partido ou federação alcançou o quociente eleitoral. Pelo art. 111 do Código Eleitoral, as vagas ficam com os candidatos mais votados.") : ""}
-    ${barraBusca(d.candidatos, estado.busca, d.candidatos.filter((c) => passaBusca(c, estado.busca)).length)}
+    ${barraBusca(candidatosReais(d), estado.busca, candidatosReais(d).filter((c) => passaBusca(c, estado.busca)).length)}
     ${boxEleitos(d, dist)}
     <section class="card"><h2>Partidos e federações</h2>${tabelaPartidos(dist, d)}${COMO}</section>
     ${cartoesVotacao(d, { proporcional: true })}
@@ -720,7 +720,8 @@ function render(forcar = false) {
   const v = estado.view;
   if (!v) return;
   if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
-  setBase(estado.base); aplicarBaseNaView(v); // todos os % da tela seguem a base escolhida
+  setBase(estado.base); setSemSubJudice(estado.semSJ); aplicarBaseNaView(v); // todos os % da tela seguem a base e o cenário escolhidos
+  if (v.tipo === "nacional-prop" && v.estados) v.nacional = consolidarNacional(v.estados); // cadeiras do país seguem o cenário
   const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
@@ -771,9 +772,12 @@ function montarBase() {
   const b = estado.base;
   $("basebar").innerHTML = `<div class="seg mini" role="group" aria-label="Base dos percentuais">
       <button type="button" data-base="validos" aria-pressed="${b === "validos"}">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}">Votos totais</button></div>
+    ${b === "validos" ? `<button type="button" class="chave-sj" data-sj aria-pressed="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><i aria-hidden="true"></i>Sem sub judice</button>` : ""}
+    ${b === "validos" && estado.semSJ ? `<p class="muted base-nota">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
     ${b === "totais" ? `<p class="muted base-nota">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}`;
 }
 $("basebar").addEventListener("click", (e) => {
+  if (e.target.closest("[data-sj]")) { estado.semSJ = !estado.semSJ; montarBase(); render(true); return; }
   const bt = e.target.closest("[data-base]");
   if (!bt || bt.dataset.base === estado.base) return;
   estado.base = bt.dataset.base;

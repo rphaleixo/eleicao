@@ -7,17 +7,17 @@ import { distribuirCadeiras, REGRAS_2026, REGRAS_CODIGO_LITERAL, REGRAS_STF_2024
  * @param {"2026"|"codigo"|"variante"} modo regra das sobras (padrão: regra de 2026, em duas rodadas)
  * @param {number} vagasManual se informado, substitui o número de vagas do arquivo
  */
-export function distribuirEstado(d, modo = "2026", vagasManual = 0) {
+export function distribuirEstado(d, modo = "2026", vagasManual = 0, semSubJudice = false) {
   const vagas = vagasManual || d.vagas;
   const regras = modo === "variante" ? REGRAS_STF_2024 : modo === "codigo" ? REGRAS_CODIGO_LITERAL : REGRAS_2026;
   const entrada = d.partidos.map((p) => ({
-    id: p.id, nome: p.sigla || p.nome, votos: p.votos,
+    id: p.id, nome: p.sigla || p.nome, votos: semSubJudice ? Math.max(0, p.votos - (p.votosSJ || 0)) : p.votos, // sem sub judice: tira os votos desses candidatos do partido
     candidatos: p.candidatos.map((c) => ({ id: c.id, nome: c.nome, votos: c.votos, elegivel: c.elegivel })),
   }));
   const r = distribuirCadeiras(vagas, entrada, regras);
 
   const somaOficial = d.partidos.reduce((s, p) => s + (p.vagasTse || 0), 0);
-  const oficial = d.totalizacaoFinal && vagas === d.vagas && somaOficial === d.vagas;
+  const oficial = !semSubJudice && d.totalizacaoFinal && vagas === d.vagas && somaOficial === d.vagas; // o oficial do TSE inclui os sub judice
 
   const linhas = r.partidos.map((p) => {
     const orig = d.partidos.find((x) => x.id === p.id);

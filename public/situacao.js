@@ -5,6 +5,7 @@ export const TEXTO_SIT = { eleito: "Eleito", segundo: "2º turno" };
 
 /** Selo do candidato: ✓ Eleito (verde) ou ② 2º turno (âmbar). Vazio se não houver situação. */
 export function seloSit(c, { curto = false, rotulo = "Eleito" } = {}) {
+  if (c?.sit === "eleito" && c.sitProjetada) return seloProjetado({ curto }); // eleito só no cenário "sem sub judice", antes de terminar a apuração
   if (c?.sit === "eleito") return `<span class="selo-sit eleito" title="${esc(rotulo)}"><i aria-hidden="true">✓</i>${curto ? "" : esc(rotulo)}</span>`;
   if (c?.sit === "segundo") return `<span class="selo-sit segundo" title="Vai ao 2º turno"><i aria-hidden="true">2º</i>${curto ? "" : "turno"}</span>`;
   return "";
@@ -40,6 +41,7 @@ export function faixaDefinicao(d) {
   const sit = situacaoEleicao(d);
   if (!sit) return "";
   const nomes = d.candidatos.filter((c) => c.sit === sit).map((c) => esc(c.nome));
+  if (sit === "eleito" && d.candidatos.some((c) => c.sit === "eleito" && c.sitProjetada)) return `<div class="faixa-def eleito" role="status"><i aria-hidden="true">✓</i><span><b>Projeção sem sub judice</b>${nomes.length ? ` · ${nomes.join(" e ")} ${nomes.length > 1 ? "eleitos" : "eleito"}` : ""}</span></div>`;
   if (sit === "eleito") return `<div class="faixa-def eleito" role="status"><i aria-hidden="true">✓</i><span><b>Eleição definida</b>${nomes.length ? ` · ${nomes.join(" e ")} ${nomes.length > 1 ? "eleitos" : "eleito"}` : ""}</span></div>`;
   return `<div class="faixa-def segundo" role="status"><i aria-hidden="true">2º</i><span><b>Vai ao 2º turno</b>${nomes.length ? ` · ${nomes.join(" × ")}` : ""}</span></div>`;
 }

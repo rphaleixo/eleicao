@@ -1,8 +1,16 @@
+import { distribuirEstado } from "./proporcional.js";
 // Base dos percentuais: "validos" (votos nos candidatos ÷ votos válidos, como o TSE) ou "totais"
 // (÷ todos os eleitores aptos das seções apuradas, com brancos, nulos e abstenções como "candidatos").
 let atual = "validos";
 export const getBase = () => atual;
 export const setBase = (b) => { atual = b === "totais" ? "totais" : "validos"; };
+// Cenário "sem sub judice" (só na base de votos válidos): desconsidera os votos de candidatos com registro sub judice.
+let semSJ = false;
+export const setSemSubJudice = (v) => { semSJ = !!v; };
+/** O cenário está valendo? (só existe em votos válidos) */
+export const semSubJudice = () => semSJ && atual === "validos";
+export const ehSubJudice = (c) => !!c?.subJudice;
+
 export const ROTULO_BASE = { validos: "dos válidos", totais: "dos eleitores aptos" };
 export const rotuloBase = () => ROTULO_BASE[atual];
 
@@ -34,9 +42,13 @@ export function sinteticos(d) {
   }));
 }
 
+/** Candidatos de verdade (sem os "sintéticos"); no cenário sem sub judice, também sem os candidatos sub judice. */
+export const candidatosReais = (d) => (semSubJudice() ? (d?.candidatos ?? []).filter((c) => !c.subJudice) : d?.candidatos ?? []);
+
 /** Candidatos de um resultado na base atual: em votos totais, junta os 4 "candidatos" sintéticos, tudo por votos. */
 export function listaCandidatos(d) {
   const cs = d?.candidatos ?? [];
+  if (semSubJudice()) return cs.filter((c) => !c.subJudice); // candidatos sub judice saem da lista
   if (atual !== "totais") return cs;
   return [...cs, ...sinteticos(d)].sort((a, b) => b.votos - a.votos || String(a.nome).localeCompare(String(b.nome), "pt-BR"));
 }
@@ -44,12 +56,19 @@ export function listaCandidatos(d) {
 /** Ajusta o % de cada candidato à base atual (os dois valores ficam guardados no candidato). */
 export function aplicarBase(d) {
   if (!d?.candidatos) return;
+  const sj = semSubJudice();
+  if (d.votosValidosTSE == null) d.votosValidosTSE = d.votosValidos;
+  d.votosValidos = sj && d.votosSemSJ != null ? d.votosSemSJ : d.votosValidosTSE;
   for (const c of d.candidatos) {
     if (c.pctValido == null) c.pctValido = c.pct;
-    c.pct = atual === "totais" && c.pctTotal != null ? c.pctTotal : c.pctValido;
+    if (c.sitTSE === undefined) { c.sitTSE = c.sit; c.projetadaTSE = !!c.sitProjetada; }
+    c.pct = sj && c.pctSemSJ != null ? c.pctSemSJ : atual === "totais" && c.pctTotal != null ? c.pctTotal : c.pctValido;
+    c.sit = sj && c.sitSemSJ !== undefined ? c.sitSemSJ : c.sitTSE;
+    c.sitProjetada = sj ? !!c.sitProjetadaSJ : c.projetadaTSE;
   }
 }
 
+const SEM_DIST = Symbol("semSJ"); // marca em que cenário a distribuição de cadeiras guardada foi calculada
 const PULAR = new Set(["h", "rp", "mandatos", "malha", "municipios", "ac", "e", "f"]);
 /** Aplica a base em todos os resultados de uma tela (d, du, lista, detalhe...). */
 export function aplicarBaseNaView(v, visto = new Set()) {
@@ -57,5 +76,11 @@ export function aplicarBaseNaView(v, visto = new Set()) {
   visto.add(v);
   if (Array.isArray(v)) { for (const x of v) aplicarBaseNaView(x, visto); return; }
   if (Array.isArray(v.candidatos)) { aplicarBase(v); return; }
+  if (v.d && v.dist && Array.isArray(v.d.candidatos) && v.d.partidos) { // eleição proporcional: as cadeiras seguem o cenário
+    aplicarBase(v.d);
+    const sj = semSubJudice();
+    if (v[SEM_DIST] !== sj) { v.distTSE ??= v.dist; v.dist = sj ? distribuirEstado(v.d, "2026", 0, true) : v.distTSE; v[SEM_DIST] = sj; }
+    return;
+  }
   for (const [k, x] of Object.entries(v)) if (!PULAR.has(k)) aplicarBaseNaView(x, visto);
 }

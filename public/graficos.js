@@ -116,7 +116,7 @@ export function temTotais(rp, local, inicio = 0) {
   return (rp?.pontos ?? []).some((p) => p.t * 1000 >= inicio && locais.every((l) => p.v?.[l]?.es > 0));
 }
 
-export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6, inicio = 0, ate = 0, base = "validos" } = {}) {
+export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6, inicio = 0, ate = 0, base = "validos", excluir = [] } = {}) {
   const totais = base === "totais" && temTotais(rp, local, inicio); // % sobre todos os aptos apurados, com a linha "Não voto"
   const locais = [].concat(local); // lista = soma de vários locais (estados de uma região)
   const junta = (v) => {
@@ -124,7 +124,9 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
     if (!rs.length) return null;
     const c = {};
     for (const r of rs) for (const [id, n] of Object.entries(r.c)) c[id] = (c[id] ?? 0) + n;
-    return { vv: rs.reduce((t, r) => t + r.vv, 0), es: rs.reduce((t, r) => t + (r.es || 0), 0), c };
+    let vv = rs.reduce((t, r) => t + r.vv, 0);
+    for (const id of excluir) if (c[id] != null) { vv -= c[id]; delete c[id]; } // cenário sem sub judice: tira esses candidatos e seus votos da base
+    return { vv, es: rs.reduce((t, r) => t + (r.es || 0), 0), c };
   };
   const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: junta(p.v) })).filter((p) => p.r && p.r.vv > 0 && p.t >= inicio && (!totais || p.r.es > 0));
   if (ate && pts.length && ate > pts[pts.length - 1].t) pts.push({ ...pts[pts.length - 1], t: ate });

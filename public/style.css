@@ -653,3 +653,7 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 /* Tabela de partidos: linhas de não voto */
 .chip-nv { background: var(--muted); } tr.nv td { color: var(--txt); } tr.nv-soma td { font-weight: 700; border-top: 1px solid var(--line); }
 tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+.chave-sj { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--txt); font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; }
+.chave-sj i { width: 26px; height: 14px; border-radius: 7px; background: var(--barra); position: relative; border: 1px solid var(--line); } .chave-sj i::after { content: ""; position: absolute; top: 1px; left: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+.chave-sj[aria-pressed="true"] { border-color: var(--acento); } .chave-sj[aria-pressed="true"] i { background: var(--acento); } .chave-sj[aria-pressed="true"] i::after { transform: translateX(12px); background: #fff; }

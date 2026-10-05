@@ -1,4 +1,4 @@
-import { getBase } from "./base.js";
+import { getBase, semSubJudice } from "./base.js";
 // Soma o resultado de vários locais (estados de uma região) em um único resultado, no mesmo
 // formato de normalizar() em tse.js, para mostrar uma região como se fosse uma "eleição".
 /** O mais recente de vários "dd/mm/aaaa hh:mm:ss". */
@@ -13,21 +13,25 @@ export function agregarResultados(lista) {
   const mapa = new Map();
   for (const d of ds) for (const c of d.candidatos) {
     const m = mapa.get(c.numero) ?? { ...c, votos: 0, pct: 0, eleito: false, situacao: "", sit: "" }; // a situação de cada estado não vale para a região
-    m.votos += c.votos; mapa.set(c.numero, m);
+    m.votos += c.votos; m.votosSJ = (m.votosSJ || 0) + (c.subJudice ? c.votos : 0); mapa.set(c.numero, m);
   }
   const soma = (campo) => ds.reduce((s, d) => s + (d[campo] || 0), 0);
   const votosValidos = soma("votosValidos");
   const candidatos = [...mapa.values()].sort((x, y) => y.votos - x.votos || Number(x.numero) - Number(y.numero));
+  const validosSemSJ = ds.reduce((t, d) => t + (d.votosSemSJ ?? d.votosValidos ?? 0), 0);
   const apuradas = ds.reduce((t, d) => t + (d.eleitorado?.apuradas || 0), 0);
   for (const c of candidatos) {
     c.pctValido = votosValidos ? (c.votos / votosValidos) * 100 : 0;
     c.pctTotal = apuradas ? (c.votos / apuradas) * 100 : null;
-    c.pct = getBase() === "totais" && c.pctTotal != null ? c.pctTotal : c.pctValido;
+    c.subJudice = c.votosSJ > 0 && c.votosSJ === c.votos; // sub judice em todos os estados em que aparece
+    c.pctSemSJ = validosSemSJ ? ((c.votos - c.votosSJ) / validosSemSJ) * 100 : 0;
+    c.sitSemSJ = ""; c.sitProjetadaSJ = false; c.sitTSE = undefined;
+    c.pct = semSubJudice() ? c.pctSemSJ : getBase() === "totais" && c.pctTotal != null ? c.pctTotal : c.pctValido;
   }
   const secoesTotal = soma("secoesTotal"), secoesApuradas = soma("secoesApuradas");
   return {
     cargoNome: ds[0].cargoNome, vagas: ds[0].vagas, candidatos, partidos: [],
-    votosValidos, brancos: soma("brancos"), nulos: soma("nulos"),
+    votosValidos: semSubJudice() ? validosSemSJ : votosValidos, votosSemSJ: validosSemSJ, votosSJ: soma("votosSJ"), brancos: soma("brancos"), nulos: soma("nulos"),
     secoesTotal, secoesApuradas, pctSecoes: secoesTotal ? (secoesApuradas / secoesTotal) * 100 : 0,
     votos: Object.fromEntries(["total", "nominais", "validos", "nominaisValidos", "legenda", "anulados", "anuladosSubJudice", "brancos", "nulos"].map((k) => [k, ds.reduce((t, d) => t + (d.votos?.[k] || 0), 0)])),
     eleitorado: Object.fromEntries(["apto", "apuradas", "comparecimento", "abstencao"].map((k) => [k, ds.reduce((t, d) => t + (d.eleitorado?.[k] || 0), 0)])),

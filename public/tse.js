@@ -110,6 +110,7 @@ export function normalizar(json) {
       votosLegenda,
       votos: votosNominais + votosLegenda,
       vagasTse: a.vag != null ? num(a.vag) : null,
+      votosSJ: cands.filter((c) => /sub judice/i.test(c.situacaoVoto)).reduce((t, c) => t + c.votos, 0), // votos de candidatos sub judice neste partido/federação
       candidatos: cands,
     });
     candidatos.push(...cands);
@@ -148,6 +149,25 @@ export function normalizar(json) {
   for (const c of candidatos) c.pctTotal = totalApuradas > 0 ? (c.votos / totalApuradas) * 100 : null;
   if (validos > 0) for (const c of candidatos) c.pct = (c.votos / validos) * 100;
   for (const c of candidatos) c.pctValido = c.pct;
+  // Cenário "sem sub judice": desconsidera os votos de candidatos com registro sub judice (base = votos válidos sem eles).
+  const validosSemSJ = num(v.vv) || Math.max(0, validos - num(v.vansj));
+  for (const c of candidatos) {
+    c.subJudice = /sub judice/i.test(c.situacaoVoto);
+    c.pctSemSJ = c.subJudice || validosSemSJ <= 0 ? 0 : (c.votos / validosSemSJ) * 100;
+    c.sitSemSJ = ""; c.sitProjetadaSJ = false;
+  }
+  if (majoritario) {
+    const ok = candidatos.filter((c) => c.votos > 0 && c.elegivel && !c.subJudice);
+    if (String(cargo.cd) === "5") {
+      const restantes = Math.max(0, num(json.e?.te) - num(json.e?.est));
+      const rivais = ok.slice(vagas), maiorRival = rivais.reduce((m, c) => Math.max(m, c.votos), 0);
+      if (num(json.e?.est) > 0 && ok.length >= vagas && ok[vagas - 1].votos > maiorRival + restantes) ok.slice(0, vagas).forEach((c) => { c.sitSemSJ = "eleito"; });
+    } else if (ok[0] && ok[0].votos * 2 > validosSemSJ) {
+      ok[0].sitSemSJ = "eleito"; ok[0].sitProjetadaSJ = !(String(s.pst) === "100,00" || num(s.pst) >= 100); // antes da apuração terminar, é projeção
+    } else if (ok.length >= 2 && (String(s.pst) === "100,00" || num(s.pst) >= 100)) {
+      ok.slice(0, 2).forEach((c) => { c.sitSemSJ = "segundo"; });
+    }
+  }
   return {
     cargoNome: cargo.nmn ?? "",
     vagas: num(cargo.nv),
@@ -156,6 +176,7 @@ export function normalizar(json) {
     secoesApuradas: num(s.st),
     secoesTotal: num(s.ts),
     votosValidos: num(v.vvc) || num(v.vv),
+    votosSemSJ: validosSemSJ, votosSJ: num(v.vansj),
     brancos: num(v.vb),
     nulos: num(v.tvn ?? v.vn),
     atualizadoEm: [json.dt, json.ht].filter(Boolean).join(" "),
