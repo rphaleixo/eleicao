@@ -29,7 +29,7 @@ export const CAMINHO_VALIDO = new RegExp(
   "^ele(2022|2024|2026)/\\d{3,6}/(" +
     "config/mun-e\\d{6}-cm\\.json" +
     "|dados/(br/br|[a-z]{2}/[a-z]{2}(\\d{5})?)-c\\d{4}-e\\d{6}-u\\.json" +
-    "|dados/br/br-e\\d{6}-ab\\.json" +
+    "|dados/(br/br|[a-z]{2}/[a-z]{2})-e\\d{6}-ab\\.json" + // andamento do Brasil e de cada estado (o do estado traz a abstenção de todos os municípios)
     "|fotos/(br|[a-z]{2})/\\d{9,14}\\.jpeg" +
     ")$"
 );
@@ -57,7 +57,7 @@ export default {
     }
     if (url.pathname === "/api/senadores-mandato") return senadoresMandato();
     const mMalha = /^\/api\/malha\/([A-Za-z]{2})$/.exec(url.pathname);
-    if (mMalha) return malhaDoEstado(CODIGO_IBGE[mMalha[1].toUpperCase()]);
+    if (mMalha) return malhaDoEstado(CODIGO_IBGE[mMalha[1].toUpperCase()] ?? (mMalha[1].toUpperCase() === "BR" ? "BR" : undefined));
     const T = contextoDoTurno(url.searchParams.get("turno"));
     if (url.pathname === "/api/historico") return lerHistorico(request, env, ctx, "historico", { pontos: [] }, null, T);
     if (url.pathname === "/api/resultados-governador") return lerHistorico(request, env, ctx, "governador", { cands: {}, pontos: [] }, url.searchParams.get("local"), T);
@@ -111,7 +111,8 @@ export default {
 // Desenho dos municípios de um estado (malha do IBGE). Quase nunca muda: guardamos por 7 dias.
 async function malhaDoEstado(codigo) {
   if (!codigo) return new Response("Estado inválido", { status: 400 });
-  const r = await fetch(`https://servicodados.ibge.gov.br/api/v3/malhas/estados/${codigo}?formato=image/svg%2Bxml&qualidade=minima&intrarregiao=municipio`, { cf: { cacheEverything: true, cacheTtl: 604800 } });
+  const caminho = codigo === "BR" ? "paises/BR" : `estados/${codigo}`; // "BR": os 5.570 municípios em um só desenho
+  const r = await fetch(`https://servicodados.ibge.gov.br/api/v3/malhas/${caminho}?formato=image/svg%2Bxml&qualidade=minima&intrarregiao=municipio`, { cf: { cacheEverything: true, cacheTtl: 604800 } });
   if (!r.ok) return new Response("Malha indisponível", { status: 502 });
   return new Response(await r.text(), { headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=86400" } });
 }

@@ -31,6 +31,12 @@ export function urlAcompanhamento(cargo, turno = CONFIG.turno) {
   return `/api/ele${CONFIG.ano}/${e}/dados/br/br-e${pad6(e)}-ab.json`;
 }
 
+/** Andamento de um estado (-ab): traz, por município, os eleitores aptos, o comparecimento e a abstenção. Eleição federal (a mesma para todos os cargos). */
+export function urlAndamentoUf(uf, turno = CONFIG.turno) {
+  const e = codEleicao("presidente", turno), u = uf.toLowerCase();
+  return `/api/ele${CONFIG.ano}/${e}/dados/${u}/${u}-e${pad6(e)}-ab.json`;
+}
+
 export const urlHistorico = () => `/api/historico?turno=${CONFIG.turno}`;
 export const urlEventos = () => `/api/eventos?turno=${CONFIG.turno}`;
 export const urlResultadosGovernador = (locais = []) => `/api/resultados-governador?turno=${CONFIG.turno}${locais.length ? `&local=${locais.join(",")}` : ""}`;

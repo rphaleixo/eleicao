@@ -776,3 +776,26 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .gp-escolha summary { cursor: pointer; font-size: .85rem; color: var(--muted); padding: 6px 0; } .gp-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 4px; }
 .gp-chip { border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-size: .78rem; padding: 4px 9px; border-radius: 999px; cursor: pointer; }
 .gp-chip[aria-pressed="true"] { background: color-mix(in srgb, var(--cor) 20%, transparent); border-color: var(--cor); color: var(--txt); font-weight: 600; }
+
+/* Geografia: mapa nacional por município */
+.geo-ctl { display: grid; gap: 10px; margin-bottom: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.geo-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; } .geo-selects { align-items: flex-end; }
+.geo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.geo-chip { border: 1px solid var(--line); background: none; color: var(--muted); font: inherit; font-size: .85rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; min-height: 36px; }
+.geo-chip[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
+.mapa-area-geo { margin: 8px 0; } .mapa-geo { width: 100%; height: auto; max-height: 75vh; display: block; }
+.gm { stroke: var(--card); stroke-width: .35px; vector-effect: non-scaling-stroke; cursor: pointer; fill: #b9c0cc; }
+.gm:hover { stroke: var(--txt); stroke-width: 1px; } .gm.sel { stroke: var(--txt); stroke-width: 2px; }
+.gm.cx { fill: #b9c0cc; opacity: .55; } .gm.cf { fill: #cfd4dc; opacity: .4; } .gm.co { fill: var(--barra); opacity: .45; pointer-events: none; }
+.gm-taxa .c0, .gm-pessoas .c0, .gm-leg.c0 { fill: #fdf0d5; background: #fdf0d5; } .gm-taxa .c1, .gm-pessoas .c1 { fill: #f9d08b; } .gm-taxa .c2, .gm-pessoas .c2 { fill: #f3a65a; } .gm-taxa .c3, .gm-pessoas .c3 { fill: #dd7230; } .gm-taxa .c4, .gm-pessoas .c4 { fill: #a8501f; }
+.gm-acima .c0 { fill: #1b7f8c; } .gm-acima .c1 { fill: #8fcfd0; } .gm-acima .c2 { fill: #ececec; } .gm-acima .c3 { fill: #f5b878; } .gm-acima .c4 { fill: #d9701c; }
+.geo-legenda { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .78rem; color: var(--muted); } .geo-legenda li { display: flex; align-items: center; gap: 6px; }
+.gm-leg { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1px solid var(--line); background: #b9c0cc; }
+.geo-legenda.gm-taxa .c0, .geo-legenda.gm-pessoas .c0 { background: #fdf0d5; } .geo-legenda.gm-taxa .c1, .geo-legenda.gm-pessoas .c1 { background: #f9d08b; } .geo-legenda.gm-taxa .c2, .geo-legenda.gm-pessoas .c2 { background: #f3a65a; } .geo-legenda.gm-taxa .c3, .geo-legenda.gm-pessoas .c3 { background: #dd7230; } .geo-legenda.gm-taxa .c4, .geo-legenda.gm-pessoas .c4 { background: #a8501f; }
+.geo-legenda.gm-acima .c0 { background: #1b7f8c; } .geo-legenda.gm-acima .c1 { background: #8fcfd0; } .geo-legenda.gm-acima .c2 { background: #ececec; } .geo-legenda.gm-acima .c3 { background: #f5b878; } .geo-legenda.gm-acima .c4 { background: #d9701c; }
+.geo-legenda .cx { background: #b9c0cc; opacity: .55; } .geo-legenda .cf { background: #cfd4dc; opacity: .4; }
+.geo-ficha { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; } .geo-ficha h3 { margin: 0 0 6px; }
+.geo-tab { width: 100%; border-collapse: collapse; } .geo-tab th { text-align: left; font-weight: 500; padding: 4px 0; } .geo-tab td { text-align: right; padding: 4px 0 4px 10px; font-variant-numeric: tabular-nums; }
+.geo-rank td, .geo-rank th { padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums; } .geo-rank td:nth-child(2), .geo-rank th:nth-child(2) { text-align: left; } .geo-rank tr[data-geo-ibge] { cursor: pointer; } .geo-rank tr.sel { background: color-mix(in srgb, var(--acento) 14%, transparent); }
+.geo-mais { color: #d9701c; } .geo-menos { color: #1b7f8c; }
+.geo-chips { flex: 1 1 200px; min-width: 0; } .geo-linha > .seg { max-width: 100%; overflow-x: auto; } .geo-ctl { min-width: 0; }

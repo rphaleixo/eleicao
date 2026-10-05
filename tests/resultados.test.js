@@ -28,3 +28,9 @@ test("fotos: aceita códigos de candidato com 11 ou 12 dígitos", () => {
   for (const sq of ["10002544107", "190002543271"]) assert.ok(CAMINHO_VALIDO.test(`ele2026/6259/fotos/ac/${sq}.jpeg`), sq);
   assert.ok(!CAMINHO_VALIDO.test("ele2026/6259/fotos/ac/abc.jpeg"));
 });
+
+test("o andamento de cada estado (abstenção dos municípios) passa pelo proxy", () => {
+  assert.ok(CAMINHO_VALIDO.test("ele2026/6257/dados/rj/rj-e006257-ab.json"));
+  assert.ok(CAMINHO_VALIDO.test("ele2026/6257/dados/br/br-e006257-ab.json"));
+  assert.ok(!CAMINHO_VALIDO.test("ele2026/6257/dados/rj/rj-c0001-e006257-ab.json"));
+});

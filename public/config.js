@@ -46,6 +46,7 @@ const TODAS_ABAS = [
   { id: "camara", nome: "Deputados" },
   { id: "partidos", nome: "Partidos" },
   { id: "cenarios", nome: "E se…" },
+  { id: "geo", nome: "Geografia" },
   { id: "estados", nome: "Estados" },
 ];
 

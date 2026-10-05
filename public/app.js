@@ -2,6 +2,8 @@ import { blocoDisputas } from "./segundoTurno.js";
 import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
 import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartidos.js";
 import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
+import { lerAbUf, montarLinhas, calcular, classesDeCor, CARGOS_GEO } from "./geo.js";
+import { controlesGeo, mapaGeo, legendaGeo, resumoGeo, fichaGeo, tabelaGeo, nomeDasMetricas } from "./geoView.js";
 import { acFinal, telaCompleta as telaCompletaPura } from "./encerramento.js";
 import { telaCenario } from "./cenariosView.js";
 import { CENARIOS, recalcularEstados, compararBancadas, mudancasPorEstado, candidatosQueMudam } from "./cenarios.js";
@@ -30,7 +32,7 @@ import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO } from "./config.js";
 import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
 import {
-  urlsResultado, urlMunicipios, urlAcompanhamento, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
+  urlsResultado, urlMunicipios, urlAcompanhamento, urlAndamentoUf, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
 } from "./tse.js";
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
@@ -46,7 +48,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -166,6 +168,34 @@ function emSegundoPlano(chave, ttlMs, produtor) {
   return e.dados;
 }
 
+/** Abstenção de todos os municípios: um arquivo por estado (27 pedidos). Devolve Map(uf -> Map(município -> números)). */
+async function carregarAndamentoDosEstados() {
+  const ufs = Object.keys(UFS).filter((u) => u !== "ZZ");
+  const rs = await Promise.allSettled(ufs.map((u) => buscarJson(urlAndamentoUf(u))));
+  const mapa = new Map();
+  rs.forEach((r, i) => { if (r.status === "fulfilled") mapa.set(ufs[i], lerAbUf(r.value)); });
+  if (!mapa.size) throw new Error("O andamento dos municípios ainda não foi publicado.");
+  return mapa;
+}
+
+// Brancos e nulos precisam do arquivo de cada município no cargo escolhido: 5.570 arquivos pequenos, carregados aos poucos (6 por vez), estado por estado.
+const geoCarga = {};
+function iniciarCargaGeo(cargo) {
+  if (geoCarga[cargo]) return;
+  geoCarga[cargo] = true;
+  (async () => {
+    const ufs = Object.keys(UFS).filter((u) => u !== "ZZ" && !(cargo === "dep-estadual" && u === "DF")); // o DF vota deputado distrital, em outro arquivo
+    const ordem = estado.geo.uf && ufs.includes(estado.geo.uf) ? [estado.geo.uf, ...ufs.filter((u) => u !== estado.geo.uf)] : ufs;
+    for (const uf of ordem) {
+      await carregarVotosMunicipais({ cargo, uf, municipios: estado.municipios[uf] ?? [], buscar: (c, u, cod) => obter(c, u, cod), ttl: 6 * 3600_000, concorrencia: 6, intervalo: 1500, aoProgresso: () => { if (estado.aba === "geo") render(); } });
+    }
+  })();
+}
+function carregarMunicipioGeo(uf, cod) {
+  const m = (estado.municipios[uf] ?? []).find((x) => x.cod === cod);
+  if (m) carregarVotosMunicipais({ cargo: estado.geo.cargo, uf, municipios: [m], buscar: (c, u, k) => obter(c, u, k), ttl: 6 * 3600_000, aoProgresso: () => { if (estado.aba === "geo") render(); } });
+}
+
 async function panorama(cargo, turno = CONFIG.turno) {
   const ufs = [...(cargo === "governador" ? (turno === 2 ? UFS_GOVERNO_SEGUNDO_TURNO : Object.keys(UFS)) : Object.keys(UFS)), ...(cargo === "presidente" ? ["ZZ"] : [])]; // no 2º turno, só os estados com disputa
   const rs = await Promise.allSettled(ufs.map((uf) => obter(cargo, uf, undefined, turno)));
@@ -220,6 +250,11 @@ async function carregarView(rota) {
     const lista = emSegundoPlano("pan-" + cargo, CONFIG.atualizarACadaSegundos * 900, () => panorama(cargo));
     const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" ? obterMandatos() : null]);
     return { tipo: "cargo-por-estado", cargo, e, lista, mandatos, visao: rota.visaoSenado };
+  }
+  if (aba === "geo") { // mapa nacional por município: o desenho e a abstenção (um arquivo por estado); brancos e nulos chegam município a município
+    const malha = await obterMalha("BR");
+    const ab = emSegundoPlano("geo-ab", 15 * 60_000, carregarAndamentoDosEstados);
+    return { tipo: "geo", malha, ab };
   }
   if (aba === "cenarios") { // "e se...": a Câmara do 1º turno e o Senado de 2027 (que não muda)
     const ttl = CONFIG.atualizarNacionalACadaSegundos * 1000, pan = CONFIG.atualizarACadaSegundos * 900;
@@ -774,6 +809,36 @@ function listaDeputadosEleitos(estados, ufs, f) {
     ${boxCandidatos({ titulo: "Deputados federais eleitos", contagem: `${fmt(itens.length)}${buscando(busca) || todos.length !== 513 ? ` de ${fmt(todos.length)}` : " de 513"}`, nota: "Votos nominais de cada eleito e % dos votos válidos do estado. “Projeção” = eleito pela soma dos votos contados até agora; “eleito” = resultado oficial do TSE.", vazio: "Nenhum deputado com esses filtros.", itens, chave: "deps", porPagina: 25, semCartao: true })}`;
 }
 
+/** Aba Geografia: abstenção, brancos e nulos por município, em mapa e tabela. */
+function telaGeo(v) {
+  const g = estado.geo, ms = g.metricas, precisaUrna = ms.has("brancos") || ms.has("nulos");
+  if (precisaUrna) iniciarCargaGeo(g.cargo);
+  if (!v.ab) return `<section class="card carregando"><div class="barra-carregando"><i></i></div><p class="muted">Carregando a abstenção dos municípios…</p></section>`;
+  const linhas = montarLinhas({ municipios: estado.municipios, ab: v.ab, urna: (uf, cod) => lerMun(g.cargo, uf, cod) });
+  const c = calcular(linhas, { metricas: ms, minimo: g.min, uf: g.uf });
+  const cls = classesDeCor(c.itens, g.visao);
+  const doUf = g.uf ? estado.municipios[g.uf] ?? [] : null;
+  const total = linhas.filter((l) => !g.uf || l.uf === g.uf).length, fora = c.itens.filter((l) => l.fora).length;
+  const nome = nomeDasMetricas(ms), cargoNome = CARGOS[g.cargo].nome;
+  const titulo = precisaUrna ? `${nome[0].toUpperCase()}${nome.slice(1)} · ${cargoNome}` : `${nome[0].toUpperCase()}${nome.slice(1)}`;
+  let carga = "";
+  if (precisaUrna) {
+    const ufs = Object.keys(UFS).filter((u) => u !== "ZZ" && !(g.cargo === "dep-estadual" && u === "DF"));
+    const todos = ufs.reduce((t, u) => t + (estado.municipios[u]?.length ?? 0), 0), feitos = ufs.reduce((t, u) => t + progresso(g.cargo, u, estado.municipios[u] ?? []), 0);
+    if (feitos < todos) carga = `<div class="progresso-mun"><span>Carregando brancos e nulos de ${esc(cargoNome)}: ${fmt(feitos)} de ${fmt(todos)} municípios</span><div class="barra-prog"><i style="width:${(feitos / todos) * 100}%"></i></div></div>`;
+  }
+  const sel = g.sel ? c.itens.find((l) => l.ibge === g.sel) : null;
+  const ufNome = sel ? sel.uf : "", escopo = g.uf ? `de ${UFS[g.uf]}` : "do Brasil";
+  const mapa = mapaGeo(v.malha, c.itens, { visao: g.visao, classe: cls.classe, selecionado: g.sel, uf: g.uf, municipiosDaUf: doUf ?? [], nomeMetrica: nome });
+  return `${controlesGeo(g, { cargoAtivo: precisaUrna })}
+    <section class="card"><h2>${esc(titulo)}</h2>${carga}${resumoGeo(c, g, nome, total)}
+      <div class="mapa-area mapa-area-geo">${mapa}</div>
+      ${legendaGeo(cls, g.visao, { semDado: Math.max(0, total - c.municipios - fora), fora })}
+      <p class="muted nota">${{ taxa: "Cor = % dos eleitores aptos do município.", pessoas: "Cor = número de pessoas. Cidades grandes aparecem mais fortes simplesmente por terem mais eleitores.", acima: `Cor = pessoas a mais (ou a menos) do que a taxa ${escopo} daria para o tamanho do município. Pesa a taxa e o número de eleitores ao mesmo tempo.` }[g.visao]} Todos os percentuais são sobre os eleitores aptos.</p>
+      ${fichaGeo(sel, { cargoNome, metricas: ms, totalValor: c.totalValor, taxaNacional: c.taxaNacional, ufNome, escopo })}</section>
+    <section class="card"><div class="titulo-cadeiras"><h2>Ranking dos municípios</h2><span class="muted">${fmt(c.municipios)} com dado</span></div>${tabelaGeo(c.itens, { visao: g.visao, pagina: g.pag, selecionado: g.sel })}</section>`;
+}
+
 /** Aba "E se…": recalcula a Câmara no cenário escolhido (guarda o último cálculo enquanto os dados não mudam). */
 let memoCenario = { chave: null, valor: null };
 function telaCenarios(v) {
@@ -903,7 +968,7 @@ function render(forcar = false) {
   if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
   setBase(estado.base); setSemSubJudice(estado.semSJ); aplicarBaseNaView(v); // todos os % da tela seguem a base e o cenário escolhidos
   if (v.tipo === "nacional-prop" && v.estados) v.nacional = consolidarNacional(v.estados); // cadeiras do país seguem o cenário
-  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   reaplicarGraficos($("conteudo"));
@@ -1055,6 +1120,8 @@ $("conteudo").addEventListener("input", (e) => {
   const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
 });
 $("conteudo").addEventListener("change", (e) => {
+  const gu = e.target.closest?.("[data-geo-uf], [data-geo-min]");
+  if (gu) { if (gu.matches("[data-geo-uf]")) { estado.geo.uf = gu.value; estado.geo.sel = ""; } else estado.geo.min = Number(gu.value); estado.geo.pag = 1; render(true); return; }
   const pt = e.target.closest?.("[data-partido]");
   if (pt) { estado.partido = pt.value; gravarHash(); render(true); return; }
   const gEl = e.target.closest?.("[data-cmpg-modo], [data-cmpg-pa], [data-cmpg-pb], [data-cmpg-ordem]");
@@ -1115,6 +1182,21 @@ $("conteudo").addEventListener("click", (e) => {
   if (cz) { estado.cenario = cz.dataset.cenario; gravarHash(); render(); return; }
   const pv = e.target.closest("[data-pvisao]");
   if (pv) { estado.partidoVisao = pv.dataset.pvisao; render(); return; }
+  const gm = e.target.closest("[data-geo-metrica], [data-geo-nv], [data-geo-cargo], [data-geo-visao], [data-geo-ibge], [data-geo-mais]");
+  if (gm) {
+    const g = estado.geo, d = gm.dataset;
+    if (d.geoMetrica) { if (!g.metricas.delete(d.geoMetrica)) g.metricas.add(d.geoMetrica); if (!g.metricas.size) g.metricas.add(d.geoMetrica); g.pag = 1; }
+    else if ("geoNv" in d) { if (g.metricas.size === 3) { g.metricas.clear(); g.metricas.add("abstencao"); } else ["abstencao", "brancos", "nulos"].forEach((k) => g.metricas.add(k)); g.pag = 1; }
+    else if (d.geoCargo) { g.cargo = d.geoCargo; g.pag = 1; }
+    else if (d.geoVisao) { g.visao = d.geoVisao; g.pag = 1; }
+    else if ("geoMais" in d) g.pag++;
+    else if (d.geoIbge) {
+      g.sel = g.sel === d.geoIbge ? "" : d.geoIbge;
+      if (g.sel) { for (const [uf, lista] of Object.entries(estado.municipios)) { const m = lista.find((x) => x.ibge === g.sel); if (m) { carregarMunicipioGeo(uf, m.cod); break; } } }
+      if (gm.matches("tr")) document.querySelector(".mapa-area-geo")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    render(true); return;
+  }
   const gpM = e.target.closest("[data-gp-metrica]"), gpO = e.target.closest("[data-gp-ordem]"), gpA = e.target.closest("[data-gp-alt]");
   if (gpM) { estado.gp.metrica = gpM.dataset.gpMetrica; render(true); return; }
   if (gpO) { estado.gp.ordem = gpO.dataset.gpOrdem; render(true); return; }
