@@ -3,6 +3,8 @@ import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
 import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartidos.js";
 import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
 import { lerAbUf, montarLinhas, calcular, classesDeCor, CARGOS_GEO } from "./geo.js";
+import { rankingNumeros, pontosDoMapa, zonasEmDestaque, CARGOS_NULOS } from "./nulos.js";
+import { controlesNulos, resumoNulos, rankingNulos, mapaNulos, legendaNulos, fichaNulos, tabelaZonas } from "./nulosView.js";
 import { controlesGeo, mapaGeo, legendaGeo, resumoGeo, fichaGeo, tabelaGeo, nomeDasMetricas } from "./geoView.js";
 import { acFinal, telaCompleta as telaCompletaPura } from "./encerramento.js";
 import { telaCenario } from "./cenariosView.js";
@@ -48,7 +50,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -168,6 +170,16 @@ function emSegundoPlano(chave, ttlMs, produtor) {
   return e.dados;
 }
 
+const dadosNulos = new Map();
+/** Os dois arquivos do estado (resumo por zona e mapa dos locais). Mudam só quando o script de coleta roda de novo. */
+async function carregarDadosNulos(uf) {
+  if (!dadosNulos.has(uf)) {
+    const buscar = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`Os dados de nulos de ${uf.toUpperCase()} ainda não foram coletados.`); return r.json(); };
+    dadosNulos.set(uf, Promise.all([buscar(`/dados/nulos-${uf}.json`), buscar(`/dados/nulos-${uf}-mapa.json`)]).then(([resumo, mapa]) => ({ resumo, mapa })).catch((e) => { dadosNulos.delete(uf); throw e; }));
+  }
+  return dadosNulos.get(uf);
+}
+
 /** Abstenção de todos os municípios: um arquivo por estado (27 pedidos). Devolve Map(uf -> Map(município -> números)). */
 async function carregarAndamentoDosEstados() {
   const ufs = Object.keys(UFS).filter((u) => u !== "ZZ");
@@ -250,6 +262,10 @@ async function carregarView(rota) {
     const lista = emSegundoPlano("pan-" + cargo, CONFIG.atualizarACadaSegundos * 900, () => panorama(cargo));
     const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" ? obterMandatos() : null]);
     return { tipo: "cargo-por-estado", cargo, e, lista, mandatos, visao: rota.visaoSenado };
+  }
+  if (aba === "nulos") { // números digitados nos votos nulos (RJ por enquanto): somas por zona e locais de votação com coordenadas
+    const [dados, malha] = await Promise.all([carregarDadosNulos("rj"), obterMalha("RJ")]);
+    return { tipo: "nulos", ...dados, malha };
   }
   if (aba === "geo") { // mapa nacional por município: o desenho e a abstenção (um arquivo por estado); brancos e nulos chegam município a município
     const malha = await obterMalha("BR");
@@ -809,6 +825,28 @@ function listaDeputadosEleitos(estados, ufs, f) {
     ${boxCandidatos({ titulo: "Deputados federais eleitos", contagem: `${fmt(itens.length)}${buscando(busca) || todos.length !== 513 ? ` de ${fmt(todos.length)}` : " de 513"}`, nota: "Votos nominais de cada eleito e % dos votos válidos do estado. “Projeção” = eleito pela soma dos votos contados até agora; “eleito” = resultado oficial do TSE.", vazio: "Nenhum deputado com esses filtros.", itens, chave: "deps", porPagina: 25, semCartao: true })}`;
 }
 
+/** Aba Nulos: números digitados nos votos nulos (presidente, governador e senador). */
+function telaNulos(v) {
+  const n = estado.nl, { resumo, mapa, malha } = v;
+  const cargoNome = CARGOS_NULOS.find(([k]) => k === n.cargo)[1];
+  const municipios = [...new Map(mapa.locais.map((l) => [l.m, l.mn])).entries()].map(([cod, nome]) => ({ cod, nome })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  if (n.numero && !mapa.topo[n.cargo].includes(n.numero)) n.numero = "";
+  const ibge = n.mun ? (estado.municipios[v.mapa.uf]?.find((m) => m.cod === n.mun)?.ibge ?? "") : "";
+  const pontos = pontosDoMapa(mapa, resumo, n.cargo, { visao: n.visao, numero: n.numero, municipio: n.mun });
+  const zonas = pontosDoMapa(mapa, resumo, n.cargo, { visao: "zonas", numero: n.numero, municipio: n.mun });
+  const r = rankingNumeros(n.mun ? resumo.municipios[n.mun]?.total : resumo.total, n.cargo, mapa.nomes);
+  const sel = pontos.find((p) => p.id === n.sel) ?? zonas.find((p) => p.id === n.sel) ?? null;
+  const maxShare = Math.max(0, ...pontos.map((p) => p.share));
+  const onde = n.mun ? municipios.find((m) => m.cod === n.mun)?.nome : UFS[mapa.uf];
+  return `${controlesNulos(n, { mapa, municipios })}
+    <section class="card"><h2>Nulos digitados · ${esc(cargoNome)}</h2><p class="muted">Cada voto nulo guarda o número que o eleitor teclou. Aqui estão os de ${esc(onde)}: ${fmt(r.total)} votos nulos com número digitado em ${esc(cargoNome.toLowerCase())}. Só o Rio de Janeiro foi coletado até agora.</p>${resumoNulos(r, cargoNome.toLowerCase())}
+      <div class="mapa-area mapa-area-geo">${mapaNulos(malha, pontos, { numero: n.numero, selecionado: n.sel, municipioIbge: ibge, topoNumeros: mapa.topo[n.cargo] })}</div>
+      ${legendaNulos({ numero: n.numero, topo: mapa.topo[n.cargo], nomes: mapa.nomes, cargo: n.cargo, maxShare })}
+      ${fichaNulos(sel, { cargoNome, nomes: mapa.nomes, cargo: n.cargo })}</section>
+    ${rankingNulos(r, { titulo: `Números mais digitados · ${cargoNome}`, nota: "% = parte dos nulos com número digitado. O sistema registra “00” (ou zeros) como nulo proposital e qualquer número que não é de candidato como nulo." })}
+    <section class="card"><div class="titulo-cadeiras"><h2>Zonas eleitorais</h2><span class="muted">${fmt(zonas.length)} zonas</span></div><p class="muted">${n.numero ? `Zonas em que mais gente digitou ${esc(n.numero)}, em % dos nulos.` : "Zonas com mais nulos digitados por urna."} Toque em uma linha para ver no mapa.</p>${tabelaZonas(zonasEmDestaque(zonas, n.numero), { numero: n.numero, limite: n.zonas })}${zonas.length > n.zonas ? `<button type="button" class="btn-mais" data-nl-mais>Mostrar mais zonas</button>` : ""}</section>`;
+}
+
 /** Aba Geografia: abstenção, brancos e nulos por município, em mapa e tabela. */
 function telaGeo(v) {
   const g = estado.geo, ms = g.metricas, precisaUrna = ms.has("brancos") || ms.has("nulos");
@@ -968,7 +1006,7 @@ function render(forcar = false) {
   if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
   setBase(estado.base); setSemSubJudice(estado.semSJ); aplicarBaseNaView(v); // todos os % da tela seguem a base e o cenário escolhidos
   if (v.tipo === "nacional-prop" && v.estados) v.nacional = consolidarNacional(v.estados); // cadeiras do país seguem o cenário
-  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo, nulos: telaNulos }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   reaplicarGraficos($("conteudo"));
@@ -1120,6 +1158,8 @@ $("conteudo").addEventListener("input", (e) => {
   const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
 });
 $("conteudo").addEventListener("change", (e) => {
+  const nu = e.target.closest?.("[data-nl-numero], [data-nl-mun]");
+  if (nu) { if (nu.matches("[data-nl-numero]")) estado.nl.numero = nu.value; else { estado.nl.mun = nu.value; estado.nl.sel = ""; } estado.nl.zonas = 15; render(true); return; }
   const gu = e.target.closest?.("[data-geo-uf], [data-geo-min]");
   if (gu) { if (gu.matches("[data-geo-uf]")) { estado.geo.uf = gu.value; estado.geo.sel = ""; } else estado.geo.min = Number(gu.value); estado.geo.pag = 1; render(true); return; }
   const pt = e.target.closest?.("[data-partido]");
@@ -1182,6 +1222,15 @@ $("conteudo").addEventListener("click", (e) => {
   if (cz) { estado.cenario = cz.dataset.cenario; gravarHash(); render(); return; }
   const pv = e.target.closest("[data-pvisao]");
   if (pv) { estado.partidoVisao = pv.dataset.pvisao; render(); return; }
+  const nl = e.target.closest("[data-nl-cargo], [data-nl-visao], [data-nl-ponto], [data-nl-mais]");
+  if (nl) {
+    const n = estado.nl, d = nl.dataset;
+    if (d.nlCargo) { n.cargo = d.nlCargo; n.numero = ""; n.sel = ""; }
+    else if (d.nlVisao) { n.visao = d.nlVisao; n.sel = ""; }
+    else if ("nlMais" in d) n.zonas += 15;
+    else if (d.nlPonto) { n.sel = n.sel === d.nlPonto ? "" : d.nlPonto; if (nl.matches("tr")) document.querySelector(".mapa-area-geo")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    render(true); return;
+  }
   const gm = e.target.closest("[data-geo-metrica], [data-geo-nv], [data-geo-cargo], [data-geo-visao], [data-geo-ibge], [data-geo-mais]");
   if (gm) {
     const g = estado.geo, d = gm.dataset;

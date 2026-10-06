@@ -799,3 +799,8 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .geo-rank td, .geo-rank th { padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums; } .geo-rank td:nth-child(2), .geo-rank th:nth-child(2) { text-align: left; } .geo-rank tr[data-geo-ibge] { cursor: pointer; } .geo-rank tr.sel { background: color-mix(in srgb, var(--acento) 14%, transparent); }
 .geo-mais { color: #d9701c; } .geo-menos { color: #1b7f8c; }
 .geo-chips { flex: 1 1 200px; min-width: 0; } .geo-linha > .seg { max-width: 100%; overflow-x: auto; } .geo-ctl { min-width: 0; }
+
+/* Nulos digitados: mapa de locais de votação e zonas */
+.nm-mun { fill: var(--barra); stroke: var(--card); stroke-width: .35px; vector-effect: non-scaling-stroke; } .nm-mun.sel { fill: color-mix(in srgb, var(--acento) 18%, var(--barra)); }
+.nm-pt { stroke: rgba(0, 0, 0, .35); stroke-width: .5px; vector-effect: non-scaling-stroke; fill-opacity: .82; cursor: pointer; } .nm-pt:hover, .nm-pt.sel { stroke: var(--txt); stroke-width: 2px; fill-opacity: 1; }
+.nl-top { text-align: left !important; font-size: .78rem; color: var(--muted); }

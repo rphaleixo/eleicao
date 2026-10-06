@@ -1,5 +1,5 @@
 // Endereço da página (#/aba/estado/...), com a leitura e a montagem em um só lugar.
-export const ABAS_IDS = ["andamento", "presidente", "governadores", "senadores", "camara", "partidos", "cenarios", "geo", "estados"];
+export const ABAS_IDS = ["andamento", "presidente", "governadores", "senadores", "camara", "partidos", "cenarios", "geo", "nulos", "estados"];
 export const CARGOS_ESTADO = ["resumo", "governador", "senador", "dep-federal", "dep-estadual", "presidente", "mapa"];
 const COM_MUNICIPIO = ["governador", "senador", "presidente"];
 
