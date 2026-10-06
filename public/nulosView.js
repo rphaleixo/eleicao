@@ -9,7 +9,7 @@ const seg = (attr, atual, opcoes) => `<div class="seg mini seg-rolavel" role="gr
 
 export function controlesNulos(n, { mapa, municipios }) {
   const topo = mapa.topo[n.cargo];
-  const numeros = `<option value="">O mais frequente em cada ponto</option>${topo.map((d) => `<option value="${esc(d)}"${d === n.numero ? " selected" : ""}>${esc(d)} · ${esc(rotuloNumero(d, n.cargo, mapa.nomes).texto)}</option>`).join("")}`;
+  const numeros = `<option value="">Mais frequente em cada ponto</option>${topo.map((d) => `<option value="${esc(d)}"${d === n.numero ? " selected" : ""}>${esc(d)} · ${esc(rotuloNumero(d, n.cargo, mapa.nomes).texto)}</option>`).join("")}`;
   const muns = `<option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === n.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}`;
   return `<div class="geo-ctl"><div class="geo-linha"><span class="gp-leg">Cargo</span>${seg("data-nl-cargo", n.cargo, CARGOS_NULOS)}</div>
     <div class="geo-linha"><span class="gp-leg">No mapa</span>${seg("data-nl-visao", n.visao, [["locais", "Locais de votação"], ["zonas", "Zonas eleitorais"]])}</div>

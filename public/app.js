@@ -76,7 +76,10 @@ const gravarHash = () => history.replaceState(null, "", montarRota(estado));
 const permiteMun = () => (estado.aba === "presidente" || (estado.aba === "estados" && ["governador", "senador", "presidente"].includes(estado.cargo))) && estado.uf !== "BR" && estado.uf !== "ZZ";
 
 function montarControles() {
-  $("abas").innerHTML = ABAS.map((a) => `<button data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
+  const tira = $("abas");
+  tira.innerHTML = ABAS.map((a) => `<button data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
+  const ativa = tira.querySelector('[aria-current="true"]'); // a aba escolhida fica no centro da tira, que não volta ao começo a cada toque
+  if (ativa) tira.scrollLeft = Math.max(0, ativa.offsetLeft - (tira.clientWidth - ativa.offsetWidth) / 2);
   document.querySelector(".filtros").hidden = !permiteMun(); // estado e região são escolhidos na navegação do topo; sobra só o município
   $("lbl-mun").hidden = !permiteMun();
   const lista = estado.municipios[estado.uf] || [];
@@ -103,7 +106,7 @@ function navegar(mudanca) {
   estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0, barr: 0 };
   if (mudanca.uf || mudanca.cargo || mudanca.aba) estado.busca = buscaVazia();
   if (mudanca.uf || mudanca.cargo || mudanca.aba) estado.munSel = "";
-  gravarHash(); montarControles();
+  gravarHash(); montarControles(); montarBase();
   const guardada = cacheViews.get(chaveRota());
   if (guardada) { estado.view = guardada; render(); } // já vista: mostra na hora e atualiza em seguida
   else if (estado.view?.tipo === "presidente" && estado.aba === "presidente") render(); // tudo o que o painel precisa já está carregado
@@ -459,7 +462,7 @@ function resumoEstado(v) {
   const { uf } = estado, k = uf.toLowerCase();
   const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, "", uf);
   const fed = v.f.ufs[k];
-  const extra = `<p class="hero-sec">${textoAptos(p.a)}</p>${fed ? `<p class="hero-sub">Presidente: ${pct(fed.pct)} das seções</p>` : ""}`;
+  const extra = fed ? `<p class="hero-sub">Presidente: ${pct(fed.pct)} das seções</p>` : "";
   const hero = heroApuracao({ ...p, titulo: UFS[uf], subtitulo: "Eleições estaduais", extra, hist: [], grafico: false });
   const dt = v.detalhe ?? {};
   const cards = [
@@ -1072,15 +1075,22 @@ async function carregarMunicipios() {
 }
 
 // ---------- base dos percentuais (votos válidos x votos totais) ----------
+/** Turno, base dos percentuais e "sem sub judice" só aparecem nas abas em que mudam alguma coisa. */
 function montarBase() {
-  const b = estado.base;
-  $("basebar").innerHTML = `<div class="seg mini turno-chave" role="group" aria-label="Turno da eleição">
-      <button type="button" data-turno="1" aria-pressed="${!TURNO2}">1º turno</button><button type="button" data-turno="2" aria-pressed="${TURNO2}">2º turno</button></div>
-    <div class="seg mini" role="group" aria-label="Base dos percentuais">
-      <button type="button" data-base="validos" aria-pressed="${b === "validos"}">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}">Votos totais</button></div>
-    ${b === "validos" ? `<button type="button" class="chave-sj" data-sj aria-pressed="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><i aria-hidden="true"></i>Sem sub judice</button>` : ""}
-    ${b === "validos" && estado.semSJ ? `<p class="muted base-nota">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
-    ${b === "totais" ? `<p class="muted base-nota">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}`;
+  const b = estado.base, aba = estado.aba;
+  const semTudo = aba === "geo" || aba === "nulos"; // mapas de abstenção e nulos não dependem de turno, base nem sub judice
+  const semTurno = semTudo || aba === "partidos" || aba === "cenarios"; // sempre o resultado do 1º turno
+  const semBase = semTudo || aba === "cenarios";
+  const sj = aba === "cenarios" || b === "validos";
+  $("basebar").hidden = semTudo;
+  if (semTudo) { $("basebar").innerHTML = ""; return; }
+  $("basebar").innerHTML = `${semTurno ? "" : `<div class="seg mini turno-chave" role="group" aria-label="Turno da eleição">
+      <button type="button" data-turno="1" aria-pressed="${!TURNO2}">1º turno</button><button type="button" data-turno="2" aria-pressed="${TURNO2}">2º turno</button></div>`}
+    ${semBase ? "" : `<div class="seg mini" role="group" aria-label="Base dos percentuais">
+      <button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Totais</button></div>`}
+    ${sj ? `<button type="button" class="chave-sj" data-sj aria-pressed="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><i aria-hidden="true"></i>Sem sub judice</button>` : ""}
+    ${sj && estado.semSJ ? `<p class="muted base-nota">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
+    ${!semBase && b === "totais" ? `<p class="muted base-nota">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}`;
 }
 $("basebar").addEventListener("click", (e) => {
   const tn = e.target.closest("[data-turno]");
@@ -1284,13 +1294,14 @@ $("conteudo").addEventListener("click", (e) => {
   if (tr && (estado.aba === "governadores" || estado.aba === "senadores")) { navegar({ aba: "estados", uf: tr.dataset.uf, cargo: estado.aba === "governadores" ? "governador" : "senador", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (tr && estado.aba === "presidente") { navegar({ uf: tr.dataset.uf, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
-addEventListener("hashchange", () => { lerHash(); montarControles(); atualizar(); });
+addEventListener("hashchange", () => { lerHash(); montarControles(); montarBase(); atualizar(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) atualizar(); });
 
 const hashInicial = location.hash;
 lerHash();
 gravarHash(); // endereços antigos passam para o formato novo
 montarControles();
+montarBase();
 carregarMunicipios();
 // Primeira visita: abre a visão por estado no estado de quem acessa (a Cloudflare informa a região).
 if (!ufGuardada()) {
