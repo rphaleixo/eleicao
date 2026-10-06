@@ -804,3 +804,9 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .72rem
 .nm-mun { fill: var(--barra); stroke: var(--card); stroke-width: .35px; vector-effect: non-scaling-stroke; } .nm-mun.sel { fill: color-mix(in srgb, var(--acento) 18%, var(--barra)); }
 .nm-pt { stroke: rgba(0, 0, 0, .35); stroke-width: .5px; vector-effect: non-scaling-stroke; fill-opacity: .82; cursor: pointer; } .nm-pt:hover, .nm-pt.sel { stroke: var(--txt); stroke-width: 2px; fill-opacity: 1; }
 .nl-top { text-align: left !important; font-size: .78rem; color: var(--muted); }
+
+/* Zoom dos mapas */
+.zoom-wrap { position: relative; } .zoom-wrap .mapa-geo { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; } .zoom-wrap .mapa-geo:active { cursor: grabbing; }
+.zoom-ctl { position: absolute; top: 8px; right: 8px; display: grid; gap: 6px; }
+.zoom-ctl button { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--txt); font: inherit; font-size: 1.3rem; font-weight: 600; line-height: 1; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, .2); } .zoom-ctl button[hidden] { display: none; }
+.zoom-dica { margin: 4px 0 0; font-size: .75rem; }

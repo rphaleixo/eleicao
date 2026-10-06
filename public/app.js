@@ -3,6 +3,7 @@ import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
 import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartidos.js";
 import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
 import { lerAbUf, montarLinhas, calcular, classesDeCor, CARGOS_GEO } from "./geo.js";
+import { ligarZoom, reaplicarZoom } from "./zoomMapa.js";
 import { rankingNumeros, pontosDoMapa, zonasEmDestaque, CARGOS_NULOS } from "./nulos.js";
 import { controlesNulos, resumoNulos, rankingNulos, mapaNulos, legendaNulos, fichaNulos, tabelaZonas } from "./nulosView.js";
 import { controlesGeo, mapaGeo, legendaGeo, resumoGeo, fichaGeo, tabelaGeo, nomeDasMetricas } from "./geoView.js";
@@ -1010,6 +1011,7 @@ function render(forcar = false) {
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   reaplicarGraficos($("conteudo"));
+  reaplicarZoom($("conteudo"));
   ajustarContrasteChips($("conteudo"));
   if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
 }
@@ -1157,6 +1159,7 @@ $("conteudo").addEventListener("input", (e) => {
   render(true);
   const novo = $("busca-texto"); if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); } // a lista se refaz sem tirar o cursor do campo
 });
+ligarZoom($("conteudo"));
 $("conteudo").addEventListener("change", (e) => {
   const nu = e.target.closest?.("[data-nl-numero], [data-nl-mun]");
   if (nu) { if (nu.matches("[data-nl-numero]")) estado.nl.numero = nu.value; else { estado.nl.mun = nu.value; estado.nl.sel = ""; } estado.nl.zonas = 15; render(true); return; }

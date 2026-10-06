@@ -1,6 +1,7 @@
 // Tela "Nulos": números digitados nos votos nulos, em ranking, mapa (locais de votação e zonas) e tabela de zonas.
 import { fmt, pct } from "./formato.js";
 import { viewBoxDoEstado } from "./geo.js";
+import { caixaZoom } from "./zoomMapa.js";
 import { CARGOS_NULOS, CORES_NUMERO, COR_OUTROS, rotuloNumero, corPorParticipacao } from "./nulos.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -43,9 +44,9 @@ export function mapaNulos(malha, pontos, { numero, selecionado, municipioIbge, t
     const r = rBase * (0.3 + 0.7 * Math.sqrt(valor(p) / max)) * (p.tipo === "zona" ? 1.6 : 1);
     const cor = numero ? corPorParticipacao(p.share, maxShare) : p.cor;
     const top = p.top3.map(([d, q]) => `${d}: ${fmt(q)}`).join(" · ");
-    return `<circle class="nm-pt${p.id === selecionado ? " sel" : ""}" data-nl-ponto="${esc(p.id)}" cx="${(p.lo * 10000).toFixed(0)}" cy="${(p.la * 10000).toFixed(0)}" r="${r.toFixed(0)}" fill="${cor}"><title>${esc(p.nome)} · ${fmt(p.n)} nulos · ${esc(top)}</title></circle>`;
+    return `<circle class="nm-pt${p.id === selecionado ? " sel" : ""}" data-nl-ponto="${esc(p.id)}" cx="${(p.lo * 10000).toFixed(0)}" cy="${(p.la * 10000).toFixed(0)}" r="${r.toFixed(0)}" data-r0="${r.toFixed(0)}" fill="${cor}"><title>${esc(p.nome)} · ${fmt(p.n)} nulos · ${esc(top)}</title></circle>`;
   }).join("");
-  return `<svg class="mapa-geo" viewBox="${vb}" role="group" aria-label="Mapa de nulos digitados"><g transform="scale(0.0001,-0.0001)">${fundo}${circulos}</g></svg>`;
+  return caixaZoom(`<svg class="mapa-geo" data-zoom="nulos" viewBox="${vb}" role="group" aria-label="Mapa de nulos digitados"><g transform="scale(0.0001,-0.0001)">${fundo}${circulos}</g></svg>`);
 }
 
 export function legendaNulos({ numero, topo, nomes, cargo, maxShare }) {

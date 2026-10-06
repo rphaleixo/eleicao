@@ -1,6 +1,7 @@
 // Tela da aba Geografia: controles, mapa dos municípios, legenda, ficha do município e tabela.
 import { UFS } from "./config.js";
 import { fmt, pct } from "./formato.js";
+import { caixaZoom } from "./zoomMapa.js";
 import { METRICAS, VISOES, MINIMOS, CARGOS_GEO, valorDaVisao, viewBoxDoEstado } from "./geo.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -38,7 +39,7 @@ export function mapaGeo(malha, itens, { visao, classe, selecionado, uf, municipi
     return `<path class="gm ${c}${ibge === selecionado ? " sel" : ""}" data-geo-ibge="${ibge}" d="${d}"${dica ? ` aria-label="${esc(dica)}"` : ""}>${dica ? `<title>${esc(dica)}</title>` : ""}</path>`;
   }).join("");
   const vb = uf ? viewBoxDoEstado(malha, municipiosDaUf.map((m) => m.ibge).filter(Boolean)) : malha.viewBox;
-  return `<svg class="mapa-geo gm-${visao}" viewBox="${vb}" role="group" aria-label="Mapa dos municípios: ${esc(nomeMetrica)}"><g transform="scale(0.0001,-0.0001)">${caminhos}</g></svg>`;
+  return caixaZoom(`<svg class="mapa-geo gm-${visao}" data-zoom="geo" viewBox="${vb}" role="group" aria-label="Mapa dos municípios: ${esc(nomeMetrica)}"><g transform="scale(0.0001,-0.0001)">${caminhos}</g></svg>`);
 }
 
 export function legendaGeo({ cortes }, visao, { semDado, fora }) {
