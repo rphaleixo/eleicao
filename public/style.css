@@ -513,7 +513,7 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 /* Filtros compactos: listas lado a lado */
 .filtros-estados { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin: 10px 0; }
 .f-sel { display: flex; flex-direction: column; gap: 2px; flex: 1 1 7rem; min-width: 0; font-size: .75rem; color: var(--texto-suave); }
-.f-sel select { width: 100%; min-height: 36px; font-size: .85rem; }
+.f-sel select { width: 100%; min-height: 44px; font-size: .85rem; }
 .f-limpar { flex: none; border: 0; background: none; color: var(--acento); font: inherit; font-size: .8rem; font-weight: 600; min-height: 36px; cursor: pointer; }
 .filtros-estados { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .f-sel select { min-width: 0; max-width: 100%; box-sizing: border-box; }
@@ -1056,3 +1056,9 @@ a.el-duplo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px
 .el-duplo__corpo { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
 .el-duplo__lado, .el-duplo__lado:last-child { grid-template-columns: var(--foto-p) minmax(0, 1fr); }
 .el-duplo__lado:last-child { grid-template-columns: minmax(0, 1fr) var(--foto-p); }
+
+/* alvos de toque de 44px (campos, zoom do mapa, setas de estado, linhas de tabela que abrem o município) */
+select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
+.zoom-ctl button, .zoom button, [data-zoom-mais], [data-zoom-menos], .mapa-zoom button { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
+.be-seta { min-width: 44px; }
+.geo-rank tr[role="button"] td, .geo-rank tr[role="button"] th { padding-top: 11px; padding-bottom: 11px; }
