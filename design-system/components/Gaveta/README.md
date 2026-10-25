@@ -12,3 +12,5 @@ Conteúdo, nesta ordem: (1) Base dos percentuais, com `el-visao` (Votos válidos
 Acessibilidade: `role="dialog"`, `aria-modal`, o foco vai para o botão fechar ao abrir e volta ao item do menu ao fechar; Esc fecha; o fundo atrás fica inerte. O item do menu mostra `aria-expanded`.
 
 Não duplique: depois da migração, remova o `Painel` "Como calcular" de todas as telas. O `Painel` continua existindo para outros textos recolhíveis.
+
+Se a gaveta for um <dialog>, ela fica escondida enquanto não está aberta (regra dialog.el-gaveta:not([open]) no bundle). Sem essa regra, a gaveta lateral aparece como uma coluna vazia de 420px sobre o conteúdo.
