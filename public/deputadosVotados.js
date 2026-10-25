@@ -26,7 +26,7 @@ export function top10Pais(estados, n = 10) {
 const selo = (c) => (c.oficial ? seloSit({ sit: "eleito" }, { curto: true }) : c.projetado ? seloProjetado({ curto: true }) : "");
 
 const linha = (c, i, comUf, max) => `<li class="dv" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
-  <span class="pos">${i + 1}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto("dep-federal", c.uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+  <span class="pos">${i + 1}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto("dep-federal", c.uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
   <span class="dv-quem"><b>${esc(c.nome)}</b><span class="muted">${comUf ? `${esc(UFS[c.uf] ?? c.uf)} · ` : ""}<span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span></span></span>
   <span class="dv-votos"><strong>${fmt(c.votos)}</strong><small>${pct(c.pct)} ${rotuloBase()}</small>${selo(c)}</span>
   <span class="cr-barra"><i style="width:${max ? (c.votos / max) * 100 : 0}%"></i></span></li>`;

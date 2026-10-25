@@ -25,7 +25,7 @@ function pódio(c, i, aba, uf) {
     <strong class="pod-pct">${pct(c.pct)}</strong><small class="pod-votos">${fmt(c.votos)}</small></li>`;
   return `<li class="pod pod-${i + 1}${classeSit(c)}" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
     <span class="pod-pos">${i + 1}º</span>
-    <img class="foto pod-foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+    <img class="foto pod-foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
     <b class="pod-nome">${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>
     <strong class="pod-pct">${pct(c.pct)}</strong><small class="pod-votos">${fmt(c.votos)}</small>${selo(c)}</li>`;
 }

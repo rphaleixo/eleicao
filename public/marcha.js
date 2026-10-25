@@ -155,7 +155,7 @@ export function cardCargo({ titulo, aba, uf, d }) {
   const top = d.candidatos.slice().sort((x, y) => y.votos - x.votos || x.nome.localeCompare(y.nome, "pt-BR")).slice(0, 5);
   const itens = top.length
     ? top.map((c, i) => `<li class="${classeSit(c).trim()}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato"><span class="pos">${i + 1}</span>
-        <img class="foto mini" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+        <img class="foto mini" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
         <span class="cc-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${seloSit(c, { curto: true })}</span>
         <span class="cc-votos"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)}</small></span></li>`).join("")
     : `<li class="vazio muted">Sem candidatos no arquivo do TSE.</li>`;

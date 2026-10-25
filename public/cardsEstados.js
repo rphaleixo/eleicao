@@ -58,7 +58,7 @@ function cardBase({ chave, sigla, nome, uf, d, u, cargo, total, extra = "" }) {
       <span class="cu-corpo"><span class="cu-linha1"><span class="cu-quem"><b>${esc(c.nome)}</b></span></span><span class="cu-trilho"><i style="width:${Math.min(100, c.pct)}%"></i></span>
         <span class="cu-linha2"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)} votos</small></span></span></li>`;
     const cor = corPartido(c.partido);
-    return `<li class="cu-dest${classeSit(c)}" style="--cor:${cor}"><img class="foto cu-foto" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+    return `<li class="cu-dest${classeSit(c)}" style="--cor:${cor}"><img class="foto cu-foto" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
       <span class="cu-corpo"><span class="cu-linha1"><span class="cu-quem"><b title="${esc(c.nome)}">${esc(c.nome)}</b><i class="cu-num-cand">${esc(c.numero)}</i></span><span class="chip" style="--cor:${cor}">${esc(c.partido)}</span></span>
         <span class="cu-trilho"><i style="width:${Math.min(100, c.pct)}%"></i></span>
         <span class="cu-linha2"><strong>${pct(c.pct)}</strong>${seloSit(c, { curto: true })}<small>${fmt(c.votos)} votos</small></span></span></li>`;

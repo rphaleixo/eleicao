@@ -34,7 +34,7 @@ export function htmlFicha(f, apuracao) {
       ${campo("Idade", idade)}${campo("Gênero", p.genero)}${campo("Cor/raça", p.corRaca)}${campo("Instrução", p.instrucao)}${campo("Ocupação", p.ocupacao)}${campo("Naturalidade", naturalidade)}</dl></section>`;
   const painel = (id, conteudo, ativo = false) => `<div class="ficha-painel" role="tabpanel" id="fp-${id}" aria-labelledby="ft-${id}"${ativo ? "" : " hidden"}>${conteudo}</div>`;
   const aba = (id, nome, ativo = false) => `<button type="button" role="tab" class="ficha-aba" id="ft-${id}" data-aba="${id}" aria-controls="fp-${id}" aria-selected="${ativo}" tabindex="${ativo ? 0 : -1}">${nome}</button>`;
-  return `<header class="ficha-topo"><img class="foto ficha-foto" alt="" src="${urlFotoFicha(f)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+  return `<header class="ficha-topo"><img class="foto ficha-foto" alt="" src="${urlFotoFicha(f)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
       <div><h2 id="ficha-titulo">${esc(f.nomeUrna)}</h2><p class="muted">${esc(f.nome)}</p>
       <p><span class="chip">${esc(f.federacao || f.partido || "–")}</span> ${esc(f.cargoNome)} · ${f.uf === "BR" ? "Brasil" : esc(f.uf)} · nº ${esc(f.numero)}</p></div></header>
     <div class="ficha-abas" role="tablist" aria-label="Seções da ficha">${aba("resumo", "Resumo", true)}${aba("perfil", "Perfil")}${aba("bens", `Patrimônio (${f.bens.itens.length})`)}${aba("hist", `Trajetória (${f.historico.length})`)}</div>

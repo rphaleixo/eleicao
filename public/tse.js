@@ -58,11 +58,29 @@ export const urlMunicipios = (cargo = "governador") => {
   return `/api/ele${CONFIG.ano}/${e}/config/mun-e${pad6(e)}-cm.json`;
 };
 
-export async function buscarJson(url) {
+const ORIGEM_TSE = "https://resultados.tse.jus.br/oficial/";
+let irDiretoAte = 0; // enquanto o servidor do site estiver bloqueado pelo TSE, este navegador pede direto ao TSE (o TSE aceita pedidos de qualquer site)
+
+async function pedir(url) {
   const r = await fetch(url, { cache: "no-store" });
-  if (r.status === 404) throw new Error("Ainda não publicado pelo TSE (404).");
-  if (!r.ok) throw new Error(`Erro ${r.status} ao buscar ${url}`);
+  if (r.status === 404) throw Object.assign(new Error("Ainda não publicado pelo TSE (404)."), { definitivo: true });
+  if (!r.ok) throw Object.assign(new Error(`Erro ${r.status} ao buscar ${url}`), { status: r.status });
   return r.json();
+}
+
+/**
+ * Busca um arquivo JSON. Os arquivos do TSE passam pelo servidor do site (que guarda cache); se ele for recusado pelo TSE (403, 429) ou cair (5xx),
+ * o navegador tenta direto no TSE por alguns minutos. Cada visitante usa o próprio endereço, então o bloqueio do servidor não derruba o site.
+ */
+export async function buscarJson(url) {
+  const doTse = typeof url === "string" && url.startsWith("/api/ele");
+  const direto = doTse ? ORIGEM_TSE + url.slice("/api/".length) : null;
+  if (doTse && Date.now() < irDiretoAte) return pedir(direto);
+  try { return await pedir(url); } catch (e) {
+    if (!doTse || e.definitivo || (e.status && e.status < 500 && e.status !== 403 && e.status !== 429)) throw e;
+    irDiretoAte = Date.now() + 5 * 60_000;
+    return pedir(direto);
+  }
 }
 
 export async function buscarPrimeiro(urls) {

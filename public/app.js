@@ -457,7 +457,7 @@ function blocoEvolucao(titulo, hist, serie, chave) {
     <p class="muted">% de seções apuradas ao longo do tempo (registro a cada minuto).</p></section>`;
 }
 
-const fotoDe = (aba, uf, c) => `<img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" style="--cor:${corPartido(c.partido)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">`;
+const fotoDe = (aba, uf, c) => `<img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" style="--cor:${corPartido(c.partido)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">`;
 
 function itemCandidato({ pos, nome, sub, partido, votos, pctVotos, max, badge = "", foto = "", eleito = false, sq = "" }) {
   const cor = corPartido(partido);
@@ -533,7 +533,7 @@ function boxCandidatos({ titulo, contagem, nota = "", vazio, itens, chave, porPa
   const ini = pag * porPagina, fatia = itens.slice(ini, ini + porPagina);
   const max = Math.max(1, itens[0]?.votos ?? 1), cargo = cargoAtivo();
   const linhas = fatia.map((b) => `<li class="ce" style="--cor:${corPartido(b.partido)}" data-sq="${esc(b.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
-      <span class="pos">${b.pos}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto(b.cargo ?? cargo, b.uf ?? estado.uf, b.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+      <span class="pos">${b.pos}</span><img class="foto mini" loading="lazy" alt="" src="${urlFoto(b.cargo ?? cargo, b.uf ?? estado.uf, b.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
       <span class="ce-nome"><b>${esc(b.nome)}</b><span class="chip" style="--cor:${corPartido(b.partido)}">${esc(b.partido)}</span>${b.selo ?? ""}<small>${esc(b.sub ?? "")}</small></span>
       <span class="ce-votos">${fmt(b.votos)}</span><span class="cr-barra"><i style="width:${(b.votos / max) * 100}%"></i></span></li>`).join("");
   const nav = paginas > 1
@@ -702,7 +702,7 @@ function telaEleitos(v, cargo) {
   const todas = (senador ? Object.keys(UFS) : UFS_GOV).slice().sort((a, b) => UFS[a].localeCompare(UFS[b], "pt-BR"));
   const ufs = filtrarUfs(todas, f, (u) => statusEleicao(dDe(u)));
   const mini = (c, uf, extra = "") => `<span class="rn-cand" data-sq="${esc(c.id)}" role="button" tabindex="0" style="--cor:${corPartido(c.partido)}" title="Ver ficha do candidato">
-    <img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="this.onerror=null;this.src='img/sem-foto.png'">
+    <img class="foto mini" loading="lazy" alt="" src="${urlFoto(cargo, uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
     <span class="rn-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${extra}</span></span>`;
   const situacaoDe = (d, uf) => {
     const ordenados = ordenarCandidatos(d.candidatos).filter((c) => c.votos > 0 && c.elegivel);
