@@ -14,3 +14,5 @@ Linguagem de redação (rodada 4): as regiões são um placar (`el-abas--placar`
 Orçamento de altura (rodada 6): o placar de regiões é uma única linha de 6 células (Todas e as 5 regiões) com 52px, em vez de duas linhas. Nada de seletor de estado e de situação sempre à vista: eles abrem sob demanda.
 
 Escopo recolhido (rodada 8): no celular a linha de escopo é um botão de 46px (`el-escopo-barra`) com o caminho atual (Brasil › Sudeste › Rio de Janeiro). Tocar abre o `el-escopo-painel`: setas para o estado anterior e o próximo (`el-vizinhos`), o placar de regiões, o seletor de estado (que abre o `SeletorEstado`) e a situação. Fechado por padrão, soma só 46px, e entra no orçamento de altura (topo 48 + turno e escopo 44 + esta linha 46 = 138px). Aparece em Presidente, Governadores e Meu estado.
+
+- O mesmo agrupamento (Brasil, Regiões, Estados) vale em qualquer seletor de lugar que hoje liste só os estados.
