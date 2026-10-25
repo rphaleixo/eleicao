@@ -1058,3 +1058,6 @@ select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
 .card .g-txt { paint-order: stroke; stroke: var(--cartao); stroke-width: 3px; stroke-linejoin: round; }
 .g-corte text { paint-order: stroke; stroke: var(--cartao); stroke-width: 3px; } .hero .g-corte text { stroke: none; }
 .card.hero .g-txt { stroke: none; }
+
+/* linha da região: a descrição ocupa uma linha inteira abaixo (sob o nome, a barra e o percentual), sem quebrar */
+.el-uf--regiao .el-uf__det--linha { grid-column: 2 / -1; white-space: nowrap; overflow: hidden; text-overflow: clip; margin-top: calc(var(--esp-4) * -1); }
