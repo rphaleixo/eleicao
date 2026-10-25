@@ -145,17 +145,21 @@ export function linhaEstado(uf, u, aberto = false, painel = "") {
 }
 
 /** Visão em blocos: uma casa por estado com a sigla e o % apurado; o estado aberto mostra o resumo logo abaixo da grade. */
-export function blocosEstados(v, estado) {
-  const ac = v.f, ufs = ufsVisiveis(estado.regiao);
-  if (estado.ordem === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
+/** Posição (linha/coluna) de cada estado na grade 9×7 do mapa de blocos (componente BlocosMapa). */
+export const POSICAO_MAPA = { RR: [1, 4], AP: [1, 6], AM: [2, 3], PA: [2, 5], MA: [2, 6], CE: [2, 7], RN: [2, 8], AC: [3, 2], RO: [3, 3], MT: [3, 4], TO: [3, 5], PI: [3, 6], PE: [3, 7], PB: [3, 8], MS: [4, 4], GO: [4, 5], DF: [4, 6], BA: [4, 7], AL: [4, 8], SP: [5, 4], MG: [5, 5], RJ: [5, 6], ES: [5, 7], SE: [5, 8], PR: [6, 4], SC: [6, 5], RS: [7, 4] };
+
+export function blocosEstados(v, estado, mapa = false) {
+  const ac = v.f, ufs = ufsVisiveis(estado.regiao).filter((u) => !mapa || POSICAO_MAPA[u]);
+  if (!mapa && estado.ordem === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
   const bloco = (uf) => {
     const u = ac.ufs[uf.toLowerCase()], a = doEstado(u), nome = nomeEstado(uf);
     const aguardando = !a || !(a.st > 0 || u?.andamento === "p" || u?.andamento === "f");
     const cor = u?.andamento === "f" ? "var(--eleito)" : "var(--acento)";
-    return `<button type="button" class="el-bloco${aguardando ? " el-bloco--aguardando" : ""}" ${aguardando ? "" : `style="--cor:${cor}"`} data-uf="${uf}" aria-pressed="${estado.uf === uf}" aria-label="${esc(nome)}${aguardando ? ", aguardando" : `, ${pct(a.pct ?? 0)} apurado`}"><span>${uf === "ZZ" ? "EX" : uf}<small>${aguardando ? "—" : pct(a.pct ?? 0)}</small></span></button>`;
+    const grade = mapa ? `grid-area:${POSICAO_MAPA[uf].join("/")};` : "";
+    return `<button type="button" class="el-bloco${aguardando ? " el-bloco--aguardando" : ""}" ${aguardando ? (grade ? `style="${grade}"` : "") : `style="${grade}--cor:${cor}"`} data-uf="${uf}" aria-pressed="${estado.uf === uf}" aria-label="${esc(nome)}${aguardando ? ", aguardando" : `, ${pct(a.pct ?? 0)} apurado`}"><span>${uf === "ZZ" ? "EX" : uf}<small>${aguardando ? "—" : pct(a.pct ?? 0)}</small></span></button>`;
   };
   const aberto = ufs.includes(estado.uf) ? `<div class="bloco-aberto">${painelEstado(v, estado.uf)}</div>` : "";
-  return `<div class="el-blocos">${ufs.map(bloco).join("")}</div>${aberto}`;
+  return `<div class="el-blocos${mapa ? " el-blocos--mapa" : ""}">${ufs.map(bloco).join("")}</div>${aberto}`;
 }
 
 // ---------- resumo do estado (campo expansível) ----------
@@ -264,9 +268,9 @@ export function telaMarcha(v, estado, comNav = true) {
   return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas(null, v.disp2) : ""}${hero}${listaRegioes(v, estado, p)}
     <p class="muted nota-fonte">Acompanhamento do TSE, no horário de Brasília. Os resultados por cargo (aba Presidente) são publicados em arquivos separados e podem estar alguns minutos atrás deste acompanhamento.</p>
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
-      <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div>
-      <div class="el-visao" role="group" aria-label="Visão dos estados"><button type="button" data-visao-ufs="blocos" aria-pressed="${estado.visaoUfs !== "lista"}">Blocos</button><button type="button" data-visao-ufs="lista" aria-pressed="${estado.visaoUfs === "lista"}">Lista</button></div></div>
-      ${estado.visaoUfs === "lista" ? `<ul class="lista-estados el-ufs el-ufs--duas">${listaOrdenada(v, estado)}</ul>` : blocosEstados(v, estado)}
+      ${estado.visaoUfs === "mapa" ? "" : `<div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div>`}
+      <div class="el-visao" role="group" aria-label="Visão dos estados"><button type="button" data-visao-ufs="blocos" aria-pressed="${estado.visaoUfs !== "lista" && estado.visaoUfs !== "mapa"}">Blocos</button><button type="button" data-visao-ufs="mapa" aria-pressed="${estado.visaoUfs === "mapa"}">Mapa</button><button type="button" data-visao-ufs="lista" aria-pressed="${estado.visaoUfs === "lista"}">Lista</button></div></div>
+      ${estado.visaoUfs === "lista" ? `<ul class="lista-estados el-ufs el-ufs--duas">${listaOrdenada(v, estado)}</ul>` : blocosEstados(v, estado, estado.visaoUfs === "mapa")}
       <p class="muted nota">Toque em um estado para ver o resumo da situação e das eleições para Presidente, Governador e Senador. Porcentagens de candidatos: votos no candidato ÷ ${getBase() === "totais" ? "eleitores aptos das seções apuradas" : "votos válidos"}.</p></section>
     ${blocoEventos(v.eventos ?? null)}`;
 }

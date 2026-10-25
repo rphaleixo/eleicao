@@ -852,8 +852,6 @@ body { padding-bottom: 72px; }
   body { padding-left: 240px; padding-bottom: 0; }
   .el-menu { display: flex; position: fixed; inset: 0 auto 0 0; overflow-y: auto; z-index: 5; }
   .el-nav-inf--fixa { display: none; }
-  .el-escopo-barra { display: none; }
-  .el-escopo-painel { display: block; margin-top: 0; padding: 0; border: 0; background: none; }
 }
 .ese .el-menu, .ese .el-nav-inf { display: none; } .ese { padding: 0; }
 .folha-mais { margin: auto 0 0; width: 100%; max-width: none; border: 0; border-top: 3px solid var(--texto); padding: var(--esp-16); background: var(--cartao); color: var(--texto); }
@@ -971,11 +969,6 @@ dialog.el-gaveta::backdrop { background: rgba(0, 0, 0, .5); }
 .escopo-base { flex: none; min-height: 46px; padding: 0 var(--esp-10); border: 1px solid var(--linha); border-bottom: 2px solid var(--texto); border-radius: var(--raio-xs); background: var(--cartao); color: var(--texto-suave); font: 600 12px/16px var(--font-text); cursor: pointer; text-align: center; }
 .escopo-base b { color: var(--texto); } .escopo-base:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
 .base-longa { display: none; } .base-curta { font-weight: 700; color: var(--texto); }
-@media (min-width: 1024px) {
-  .escopo-linha .el-escopo-barra { display: none; }
-  .escopo-base { border: 1px solid var(--linha); min-height: 32px; padding: 0 var(--esp-8); }
-  .base-curta { display: none; } .base-longa { display: inline; }
-}
 /* carimbo do topo em uma linha: no celular só a hora e o símbolo; "próxima em N s" fica para o desktop e o leitor de tela */
 .status-ico { margin-left: var(--esp-4); }
 @media (max-width: 1023px) {
@@ -1015,7 +1008,7 @@ a.el-duplo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px
 .so-desktop { display: none; } @media (min-width: 1024px) { .so-desktop { display: inline; } }
 .escopo-linha--solo { justify-content: flex-end; }
 .escopo-linha--solo .escopo-base { margin-left: 0; }
-@media (min-width: 1024px) { .escopo-linha { align-items: center; justify-content: flex-start; } .escopo-linha .escopo-lupa { margin-left: auto; } .escopo-linha--solo .escopo-lupa { margin-left: 0; } .escopo-linha .escopo-base { flex: none; } .escopo-linha--solo { justify-content: space-between; } }
+
 
 /* área de toque de 44px sem mexer no desenho: links e botões de texto ganham uma margem invisível */
 .link, .f-limpar, .btn-mais, .chip-exterior { position: relative; }
@@ -1031,24 +1024,11 @@ a.el-duplo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px
 /* foto que falhou: iniciais no lugar, sem buraco */
 .foto-iniciais { display: grid; place-items: center; width: var(--foto-p); aspect-ratio: 3 / 4; background: var(--trilho); color: var(--texto); border: 3px solid var(--cor, var(--sem-cor)); font: 400 22px/1 var(--font-display); letter-spacing: .04em; }
 
-/* escolha única (el-escolha): fieldset com rádios reais, lista vertical, linhas de 48px, opção ativa com faixa lateral e fundo */
-.el-escolha { margin: var(--esp-12) 0 0; padding: 0; border: 0; display: grid; gap: 0; min-width: 0; }
-.el-escolha__legenda { padding: 0; font: 700 11px/14px var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--texto-suave); margin-bottom: var(--esp-6); }
-.el-escolha__op { display: grid; grid-template-columns: 24px 1fr; gap: var(--esp-12); align-items: center; min-height: 48px; padding: var(--esp-8) var(--esp-12); border-bottom: 1px solid var(--linha); cursor: pointer; }
-.el-escolha__op:has(input:checked) { box-shadow: inset 4px 0 0 var(--acento); background: color-mix(in srgb, var(--acento) 10%, var(--cartao)); }
-.el-escolha__op input { appearance: none; width: 22px; height: 22px; margin: 0; border: 2px solid var(--texto); border-radius: 50%; background: var(--cartao); display: grid; place-content: center; cursor: pointer; }
-.el-escolha__op input::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--acento); transform: scale(0); }
-.el-escolha__op input:checked::before { transform: scale(1); }
-.el-escolha__op input:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
-.el-escolha__rotulo b { display: block; font: 700 15px/20px var(--font-text); }
-.el-escolha__rotulo small { display: block; font: 400 13px/18px var(--font-text); color: var(--texto-suave); }
-
-/* rádios do el-escolha: nada do estilo global de campos (largura mínima, altura, preenchimento) */
-.el-escolha__op input { min-width: 0; min-height: 0; padding: 0; width: 22px; height: 22px; box-sizing: border-box; }
 /* disputas compactas: nome só quebra entre palavras e o chip não vaza do cartão */
 .el-duplo__lado > span { min-width: 0; }
 .el-duplo__nome { overflow-wrap: break-word; word-break: normal; hyphens: manual; }
-.el-duplo .el-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box; }
+.el-duplo .el-chip { white-space: nowrap; width: max-content; max-width: none; letter-spacing: 0; box-sizing: border-box; } /* a sigla inteira, sem reticências: a tag ocupa a largura de que precisa */
+.el-duplo__x { font-size: 16px; line-height: 1; font-weight: 700; color: var(--texto); } /* o × entre os candidatos: 16px com contraste */
 @media (max-width: 420px) { .el-duplo__nome { font-size: 12px; line-height: 15px; } .el-duplo__corpo { gap: var(--esp-4); padding-left: var(--esp-8); padding-right: var(--esp-8); } }
 /* links de ação em avisos e cartões: 44px de alvo de verdade */
 .el-aviso .link, .el-aviso a, .card-cargo .link, .card-cargo a.link { display: inline-flex; align-items: center; min-height: 44px; }
@@ -1062,3 +1042,6 @@ select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
 .zoom-ctl button, .zoom button, [data-zoom-mais], [data-zoom-menos], .mapa-zoom button { min-width: 44px; min-height: 44px; width: 44px; height: 44px; }
 .be-seta { min-width: 44px; }
 .geo-rank tr[role="button"] td, .geo-rank tr[role="button"] th { padding-top: 11px; padding-bottom: 11px; }
+
+/* rádios do el-escolha: o estilo global de campos (largura/altura mínimas, preenchimento) não vale aqui */
+.el-escolha input { min-width: 0; min-height: 0; padding: 0; width: 20px; height: 20px; box-sizing: border-box; }

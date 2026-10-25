@@ -138,3 +138,11 @@ test("estados em blocos (visão padrão): sigla, % apurado e o estado aberto com
   assert.ok(h.includes('class="el-blocos"') && h.includes('aria-pressed="true"') && h.includes("bloco-aberto") && h.includes("carrossel"));
   assert.ok(telaMarcha(v, est({ visaoUfs: "lista" })).includes("el-ufs"));
 });
+
+test("estados em mapa de blocos: grade 9×7, posição de cada sigla, percentual com duas casas e três botões de visão", () => {
+  const h = telaMarcha(v, est({ visaoUfs: "mapa" }));
+  assert.ok(h.includes('class="el-blocos el-blocos--mapa"') && h.includes('data-visao-ufs="mapa" aria-pressed="true"'));
+  for (const [uf, pos] of [["RR", "1/4"], ["AC", "3/2"], ["RS", "7/4"], ["DF", "4/6"]]) assert.ok(new RegExp(`style="grid-area:${pos};[^"]*"[^>]*data-uf="${uf}"`).test(h), uf);
+  assert.ok(h.includes("50,00%") && !h.includes('data-ordem="az"'));
+  assert.ok(!telaMarcha(v, est({ visaoUfs: "blocos" })).includes("el-blocos--mapa"));
+});
