@@ -176,13 +176,17 @@ export function normalizar(json) {
   }
   // Em todo o site o % do candidato é votos no candidato ÷ votos válidos. A base é a do TSE (vvc): válidos mais os anulados
   // sub judice, cujos candidatos continuam na lista. Sem isso, os percentuais somam mais de 100% e a maioria de 50% se distorce.
-  const validos = num(v.vvc) || num(v.vv);
+  // Votos válidos = só votos dados a candidatos e legendas (brancos, nulos e abstenções ficam de fora). Somamos nós mesmos,
+  // em vez de confiar em um campo do TSE: assim os percentuais dos candidatos (com a legenda) sempre somam 100%.
+  const validosSoma = candidatos.reduce((t, c) => t + c.votos, 0) + partidos.reduce((t, p) => t + p.votosLegenda, 0);
+  const validos = validosSoma > 0 ? validosSoma : num(v.vvc) || num(v.vv);
   const totalApuradas = num(json.e?.est); // eleitores aptos das seções apuradas: base da visão de votos totais
   for (const c of candidatos) c.pctTotal = totalApuradas > 0 ? (c.votos / totalApuradas) * 100 : null;
   if (validos > 0) for (const c of candidatos) c.pct = (c.votos / validos) * 100;
   for (const c of candidatos) c.pctValido = c.pct;
   // Cenário "sem sub judice": desconsidera os votos de candidatos com registro sub judice (base = votos válidos sem eles).
-  const validosSemSJ = num(v.vv) || Math.max(0, validos - num(v.vansj));
+  const votosSubJudice = candidatos.filter((c) => /sub judice/i.test(c.situacaoVoto)).reduce((t, c) => t + c.votos, 0);
+  const validosSemSJ = Math.max(0, validos - votosSubJudice);
   for (const c of candidatos) {
     c.subJudice = /sub judice/i.test(c.situacaoVoto);
     c.pctSemSJ = c.subJudice || validosSemSJ <= 0 ? 0 : (c.votos / validosSemSJ) * 100;
@@ -207,8 +211,8 @@ export function normalizar(json) {
     pctSecoes: num(s.pst),
     secoesApuradas: num(s.st),
     secoesTotal: num(s.ts),
-    votosValidos: num(v.vvc) || num(v.vv),
-    votosSemSJ: validosSemSJ, votosSJ: num(v.vansj),
+    votosValidos: validos,
+    votosSemSJ: validosSemSJ, votosSJ: votosSubJudice,
     brancos: num(v.vb),
     nulos: num(v.tvn ?? v.vn),
     atualizadoEm: [json.dt, json.ht].filter(Boolean).join(" "),

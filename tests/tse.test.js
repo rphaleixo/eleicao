@@ -77,9 +77,25 @@ test("estado da apuração, matematicamente definido e divulgação (EA20)", () 
   assert.deepEqual(b.motivosSemEleito, ["Pendência judicial"]);
 });
 
-test("% do candidato = votos no candidato ÷ votos válidos", () => {
+test("% do candidato = votos no candidato ÷ votos válidos (soma dos candidatos)", () => {
   const json = { v: { vv: "1000", vb: "10", vn: "20" }, carg: [{ cd: "3", nv: "1", agr: [{ n: "13", par: [{ sg: "PT", cand: [{ n: "13", sqcand: "1", nm: "A", vap: "600", pvap: "99,99" }, { n: "22", sqcand: "2", nm: "B", vap: "250", pvap: "1,00" }] }] }] }] };
   const d = normalizar(json);
-  assert.equal(d.candidatos[0].pct, 60);
-  assert.equal(d.candidatos[1].pct, 25);
+  assert.equal(d.candidatos[0].pct.toFixed(2), "70.59"); // 600 ÷ 850
+  assert.equal(d.candidatos[1].pct.toFixed(2), "29.41");
+});
+
+test("regra de votos válidos: brancos, nulos e abstenções ficam fora; os candidatos somam 100% mesmo se o campo do TSE vier errado", () => {
+  // vvc "errado" de propósito: inclui 150 brancos e 100 nulos. A base certa é a soma dos candidatos (600 + 250 = 850).
+  const json = { v: { vvc: "1100", vv: "1100", vb: "150", tvn: "100" }, e: { te: "2000", est: "1500", a: "300" }, carg: [{ cd: "3", nv: "1", agr: [{ n: "13", par: [{ sg: "PT", cand: [{ n: "13", sqcand: "1", nm: "A", vap: "600" }, { n: "22", sqcand: "2", nm: "B", vap: "250" }] }] }] }] };
+  const d = normalizar(json);
+  assert.equal(d.votosValidos, 850);
+  assert.equal(d.candidatos.reduce((s, c) => s + c.pct, 0).toFixed(2), "100.00");
+  assert.equal(d.candidatos[0].pct.toFixed(2), "70.59");
+  assert.equal(d.brancos, 150); assert.equal(d.nulos, 100); // não voto continua à parte
+});
+
+test("regra de votos válidos em eleição proporcional: candidatos mais legendas", () => {
+  const json = { v: { vvc: "9999", vb: "500", tvn: "400" }, carg: [{ cd: "6", nv: "2", agr: [{ n: "13", tvtl: "100", tvtn: "700", par: [{ sg: "PT", cand: [{ n: "1301", sqcand: "1", nm: "A", vap: "500" }, { n: "1302", sqcand: "2", nm: "B", vap: "200" }] }] }, { n: "22", tvtl: "50", tvtn: "150", par: [{ sg: "PL", cand: [{ n: "2201", sqcand: "3", nm: "C", vap: "150" }] }] }] }] };
+  const d = normalizar(json);
+  assert.equal(d.votosValidos, 1000); // 500 + 200 + 150 + legendas 100 + 50
 });

@@ -54,7 +54,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, visaoUfs: "blocos", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "aptos", sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, visaoUfs: "blocos", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -989,7 +989,7 @@ function telaTurnos(v) {
   }
   const abrirExt = uf === "BR" ? `<button type="button" class="btn-mais" data-ct-abrir="ZZ/">Ver o exterior por país</button>` : "";
   return `${controlesComparacao({ ...ct0, uf, mun }, { municipios })}
-    <section class="card"><h2>${esc(ondeNome)}</h2>${quadro}${barrasComposicao(l1, l2)}${abrirExt}</section>${mapa}`;
+    <section class="card">${quadro}${barrasComposicao(l1, l2)}${abrirExt}</section>${mapa}`;
 }
 const seg2 = (attr, atual, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === atual}">${n}</button>`).join("")}</div>`;
 
@@ -1265,7 +1265,7 @@ function montarBase() {
   if (caixa.hidden) { caixa.innerHTML = ""; return; }
   const chave = `<button type="button" class="el-chave" role="switch" data-sj aria-checked="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><span class="el-chave__trilho"></span>Sem sub judice<span class="el-chave__estado">${estado.semSJ ? "Ligado" : "Desligado"}</span></button>`;
   caixa.innerHTML = `<details class="el-painel"${aberto ? " open" : ""}><summary>Como calcular</summary><div class="el-painel__corpo">
-    ${semBase ? "" : `<div class="el-seg" role="group" aria-label="Base dos percentuais"><button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Votos totais</button></div>`}
+    ${semBase ? "" : `<div class="el-seg" role="group" aria-label="Base dos percentuais"><button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Eleitores aptos</button></div>`}
     ${!semBase && b === "totais" ? `<p class="el-apoio">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}
     ${sj ? chave : ""}
     ${sj && estado.semSJ ? `<p class="el-apoio">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
@@ -1432,6 +1432,7 @@ $("conteudo").addEventListener("click", (e) => {
     if (d.ctPais) { if (!c.paisesAbertos.delete(d.ctPais)) c.paisesAbertos.add(d.ctPais); } else if (d.ctOrdemPais) { c.ordemPais = d.ctOrdemPais; c.maisPaises = 30; } else c.maisPaises += 30;
     render(true); return;
   }
+  if (e.target.closest("[data-ct-premissas]")) { estado.ct.premissas = !estado.ct.premissas; render(true); return; }
   const ct = e.target.closest("[data-ct-linha], [data-ct-medida], [data-ct-base], [data-ct-ibge], [data-ct-dir], [data-ct-abrir]");
   if (ct) {
     const c = estado.ct, d = ct.dataset;

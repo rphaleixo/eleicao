@@ -14,19 +14,19 @@ export function linhaDeResultado(d) {
   const e = d.eleitorado ?? {}, cs = d.candidatos ?? [];
   const por = (n) => cs.find((c) => c.numero === n)?.votos ?? 0;
   const lula = por(LULA), flavio = por(FLAVIO), outros = cs.filter((c) => c.numero !== LULA && c.numero !== FLAVIO).reduce((t, c) => t + (c.votos || 0), 0);
-  return { aptos: num(e.apuradas) || num(e.apto), comparecimento: num(e.comparecimento), abstencao: num(e.abstencao || d.abstencao), brancos: num(d.brancos), nulos: num(d.nulos), lula, flavio, outros, validos: num(d.votosValidos) || lula + flavio + outros, pct: num(d.pctSecoes) };
+  return { aptos: num(e.apuradas) || num(e.apto), comparecimento: num(e.comparecimento), abstencao: num(e.abstencao || d.abstencao), brancos: num(d.brancos), nulos: num(d.nulos), lula, flavio, outros, validos: lula + flavio + outros, pct: num(d.pctSecoes) };
 }
 
 /** A partir de uma linha do arquivo presidente-tN-municipios.json (ordem em "colunas"). */
 export function linhaDeArquivo(a) {
-  const [, , aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos, pct] = a;
-  return { aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos, pct };
+  const [, , aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, , pct] = a;
+  return { aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos: lula + flavio + outros, pct }; // válidos = só candidatos
 }
 
 /** A partir de uma linha de presidente-tN-exterior.json (nome, aptos, comparecimento, abstenção, brancos, nulos, Lula, Flávio, outros, válidos, %). */
 export function linhaDeExterior(a) {
-  const [, aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos, pct] = a;
-  return { aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos, pct };
+  const [, aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, , pct] = a;
+  return { aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos: lula + flavio + outros, pct };
 }
 
 /** Não voto = abstenções + brancos + nulos. */

@@ -1,28 +1,28 @@
 // Disputas definidas para o 2º turno (25/10/2026), conforme o resultado do 1º turno em 04/10/2026.
 // Só estas eleições têm 2º turno: Presidente e o governo de seis estados. Não há 2º turno para Senado nem deputados.
-// Percentuais do 1º turno: votos no candidato ÷ votos válidos mais anulados sub judice (base do TSE).
+// Percentuais do 1º turno: votos no candidato ÷ votos válidos (soma dos votos em candidatos e legendas; brancos, nulos e abstenções ficam fora).
 export const DATA_SEGUNDO_TURNO = "2026-10-25";
 export const DISPUTAS_SEGUNDO_TURNO = [
   {
     "cargo": "presidente",
     "uf": "BR",
-    "pctApurado": 99.92,
+    "pctApurado": 100,
     "candidatos": [
       {
         "id": "280002551544",
         "numero": "22",
         "nome": "FLAVIO BOLSONARO",
         "partido": "PL",
-        "votos": 56084915,
-        "pct": 47.05
+        "votos": 56104503,
+        "pct": 47.03
       },
       {
         "id": "280002542548",
         "numero": "13",
         "nome": "LULA",
         "partido": "PT",
-        "votos": 53806782,
-        "pct": 45.14
+        "votos": 53879538,
+        "pct": 45.16
       }
     ]
   },
@@ -52,23 +52,23 @@ export const DISPUTAS_SEGUNDO_TURNO = [
   {
     "cargo": "governador",
     "uf": "AM",
-    "pctApurado": 99.75,
+    "pctApurado": 100,
     "candidatos": [
       {
         "id": "40002532272",
         "numero": "55",
         "nome": "OMAR AZIZ",
         "partido": "PSD",
-        "votos": 838237,
-        "pct": 40.57
+        "votos": 841846,
+        "pct": 40.63
       },
       {
         "id": "40002541626",
         "numero": "22",
         "nome": "PROFESSORA MARIA DO CARMO",
         "partido": "PL",
-        "votos": 507087,
-        "pct": 24.54
+        "votos": 507335,
+        "pct": 24.49
       }
     ]
   },
@@ -121,14 +121,14 @@ export const DISPUTAS_SEGUNDO_TURNO = [
   {
     "cargo": "governador",
     "uf": "RN",
-    "pctApurado": 99.99,
+    "pctApurado": 100,
     "candidatos": [
       {
         "id": "200002535255",
         "numero": "44",
         "nome": "ALLYSON",
         "partido": "UNIÃO",
-        "votos": 733738,
+        "votos": 733809,
         "pct": 36.94
       },
       {
@@ -136,7 +136,7 @@ export const DISPUTAS_SEGUNDO_TURNO = [
         "numero": "13",
         "nome": "CADU DE LULA",
         "partido": "PT",
-        "votos": 718206,
+        "votos": 718300,
         "pct": 36.16
       }
     ]

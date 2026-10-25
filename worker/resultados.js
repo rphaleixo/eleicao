@@ -11,13 +11,18 @@ export const UFS_MINUSCULAS = [
 export function lerResultado(json) {
   const cargo = (json?.carg ?? [])[0] ?? {};
   const c = {}, nomes = {};
-  for (const a of cargo.agr ?? []) for (const p of a.par ?? []) for (const cand of p.cand ?? []) {
-    const id = String(cand.sqcand ?? cand.seq ?? cand.n);
-    c[id] = num(cand.vap);
-    nomes[id] = { n: cand.nmu || cand.nm || "", p: p.sg ?? "" };
+  let legenda = 0;
+  for (const a of cargo.agr ?? []) {
+    legenda += a.tvtl != null ? num(a.tvtl) : (a.par ?? []).reduce((s, p) => s + num(p.tvtl), 0);
+    for (const p of a.par ?? []) for (const cand of p.cand ?? []) {
+      const id = String(cand.sqcand ?? cand.seq ?? cand.n);
+      c[id] = num(cand.vap);
+      nomes[id] = { n: cand.nmu || cand.nm || "", p: p.sg ?? "" };
+    }
   }
-  // Base dos percentuais = a do TSE: votos válidos mais os anulados sub judice (vvc), que ainda podem ser validados.
-  return { valor: { vv: num(json?.v?.vvc) || num(json?.v?.vv), es: num(json?.e?.est), c }, nomes }; // es = eleitores aptos das seções apuradas (base dos votos totais)
+  // Votos válidos = só votos em candidatos e legendas (soma nossa, sem brancos nem nulos); os anulados sub judice ficam, como no TSE.
+  const soma = Object.values(c).reduce((s, v) => s + v, 0) + legenda;
+  return { valor: { vv: soma || num(json?.v?.vvc) || num(json?.v?.vv), es: num(json?.e?.est), c }, nomes }; // es = eleitores aptos das seções apuradas (base dos votos totais)
 }
 
 /**

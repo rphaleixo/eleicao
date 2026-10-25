@@ -1,6 +1,5 @@
 // Tela "Comparar turnos": quadro, barras e mapa de Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno.
 import { UFS } from "./config.js";
-import { ajusteMapa } from "./ajuste.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { viewBoxDoEstado } from "./geo.js";
@@ -15,30 +14,63 @@ const corLinha = (k) => ({ lula: corPartido("PT"), flavio: corPartido("PL"), out
 const classeDelta = (n) => (n > 0 ? "cmp-sobe" : n < 0 ? "cmp-desce" : "");
 const seta = (n) => (n > 0 ? "▲" : n < 0 ? "▼" : "•");
 
+const abas = (attr, atual, opcoes) => `<div class="el-abas" role="group">${opcoes.map(([k, n]) => `<button type="button" class="el-aba" ${attr}="${k}" aria-pressed="${String(k) === String(atual)}">${esc(n)}</button>`).join("")}</div>`;
+
+/** Faixa de premissas fixa (design system, PremissasFixas): onde, base e mapa à vista; todos os controles no painel "Ajustar". */
 export function controlesComparacao(c, { municipios }) {
   const ufs = `<option value="BR">Brasil</option>${Object.entries(UFS).filter(([u]) => u !== "ZZ").sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).map(([u, n]) => `<option value="${u}"${u === c.uf ? " selected" : ""}>${esc(n)}</option>`).join("")}<option value="ZZ"${c.uf === "ZZ" ? " selected" : ""}>Exterior</option>`;
-  const muns = c.uf === "BR" || c.uf === "ZZ" ? "" : `<label class="f-sel"><span>Município</span><select data-ct-mun aria-label="Município"><option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === c.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
-  return `<div class="geo-ctl"><div class="geo-linha geo-selects"><label class="f-sel"><span>Onde</span><select data-ct-uf aria-label="Estado">${ufs}</select></label>${muns}</div>
-    <div class="geo-linha"><span class="gp-leg">Mapa: quem</span>${seg("data-ct-linha", c.linha, LINHAS)}</div>
-    ${ajusteMapa("comparar", `${MEDIDAS.find(([k]) => k === c.medida)?.[1] ?? ""} · ${c.base === "validos" ? "votos válidos" : "eleitores aptos"}`, `<div class="geo-linha"><span class="gp-leg">Mapa: o que mostrar</span>${seg("data-ct-medida", c.medida, MEDIDAS)}</div>
-      <div class="geo-linha"><span class="gp-leg">Percentuais sobre</span>${seg("data-ct-base", c.base, [["aptos", "Eleitores aptos"], ["validos", "Votos válidos"]])}</div>`)}</div>`;
+  const semMun = c.uf === "BR" || c.uf === "ZZ";
+  const muns = semMun ? "" : `<label class="el-campo">Município<select data-ct-mun aria-label="Município"><option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === c.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
+  const onde = c.uf === "BR" ? "Brasil" : c.uf === "ZZ" ? "Exterior" : `${c.uf} · ${c.mun ? (municipios.find((m) => m.cod === c.mun)?.nome ?? "Município") : "Todo o estado"}`;
+  const baseNome = c.base === "validos" ? "Votos válidos" : "Eleitores aptos";
+  const mapaNome = `${LINHAS.find(([k]) => k === c.linha)?.[1] ?? ""} · ${MEDIDAS.find(([k]) => k === c.medida)?.[1] ?? ""}`;
+  const aberto = !!c.premissas;
+  return `<div class="el-premissas"><button type="button" class="el-premissas__barra" data-ct-premissas aria-expanded="${aberto}"><span class="el-premissas__lista"><span><small>Onde</small>${esc(onde)}</span><span><small>Base</small>${baseNome}</span><span><small>Mapa</small>${esc(mapaNome)}</span></span><span class="el-premissas__ajustar">${aberto ? "Fechar ▴" : "Ajustar ▾"}</span></button>
+    <div class="el-premissas__painel"${aberto ? "" : " hidden"}><div class="el-campos"><label class="el-campo">Onde<select data-ct-uf aria-label="Estado">${ufs}</select></label>${muns}</div>
+      <div><span class="el-apoio">Percentuais sobre</span>${abas("data-ct-base", c.base, [["validos", "Votos válidos"], ["aptos", "Eleitores aptos"]])}</div>
+      <div><span class="el-apoio">Mapa: quem</span>${abas("data-ct-linha", c.linha, LINHAS)}</div>
+      <div><span class="el-apoio">Mapa: o que mostrar</span>${abas("data-ct-medida", c.medida, MEDIDAS)}</div>
+      <div class="el-premissas__fim"><button type="button" class="el-botao el-botao--cheio" data-ct-premissas>Aplicar</button></div></div></div>`;
 }
 
-const bloco = (rotulo, v, p) => `<div class="cmp-col"><small class="muted">${rotulo}</small>${v == null ? `<span class="muted">—</span>` : `<b>${fmt(v)}</b><span>${p == null ? "" : pct(p)}</span>`}</div>`;
+const ptBr = (n) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const COR_LADO = { lula: "var(--lado-a)", flavio: "var(--lado-b)", outros: "var(--ausencia)", naovoto: "var(--sem-cor)" };
+const NOME_CURTO = { lula: "Lula", flavio: "Flávio Bolsonaro" };
 
-/** O quadro principal: uma faixa por linha (Lula, Flávio, outros, não voto) com 1º turno, 2º turno e variação em votos e em pontos percentuais. */
+/**
+ * Bloco Duelo (design system): faixa de vantagem no alto e uma linha de 44px por candidato com 1º turno, 2º turno e variação em pontos.
+ * Todos os % de candidatos são sobre votos válidos (só candidatos); a base "Eleitores aptos" mostra o não voto como linha à parte.
+ * Sem dados no 2º turno, a faixa descreve o 1º turno e as colunas do 2º mostram traço.
+ */
 export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
-  const itens = compararLinhas(l1, l2, base).map((r) => {
-    const nv = r.chave === "naovoto" && base === "validos" ? ` <small class="muted" title="Abstenções, brancos e nulos não são votos válidos: o % é sobre os eleitores aptos">(% dos aptos)</small>` : "";
-    const delta = r.dv == null ? `<div class="cmp-col"><small class="muted">Variação</small><span class="muted">—</span></div>`
-      : `<div class="cmp-col ${classeDelta(r.dv)}"><small class="muted">Variação</small><b>${seta(r.dv)} ${sinal(r.dv)}</b><span>${r.dp == null ? "" : pp(r.dp)}</span></div>`;
-    return `<div class="cmp-item"><div class="cmp-nome"><i class="cmp-dot" style="background:${corLinha(r.chave)}"></i>${esc(r.nome)}${nv}</div>
-      <div class="cmp-cols">${bloco("1º turno", r.v1, r.p1)}${r.semNoTurno2 ? `<div class="cmp-col"><small class="muted">2º turno</small><span class="muted">sem candidato</span></div>` : bloco("2º turno", r.v2, r.p2)}${delta}</div></div>`;
+  const tem2 = !!l2 && l2.aptos > 0 && l2.pct > 0 && (l2.lula + l2.flavio + l2.outros) > 0;
+  const linhas = compararLinhas(l1, tem2 ? l2 : null, base).filter((r) => r.chave !== "naovoto" || base === "aptos");
+  const p = (l, k) => percentual(l, k, base);
+  const dif = (l) => (l ? p(l, "lula") - p(l, "flavio") : null);
+  const m1 = dif(l1), m2 = tem2 ? dif(l2) : null;
+  const refe = tem2 ? m2 : m1;
+  const lider = refe == null ? null : refe >= 0 ? "lula" : "flavio", outro = lider === "lula" ? "flavio" : "lula";
+  let vantagem = "";
+  if (lider) {
+    const sinalL = lider === "lula" ? 1 : -1, ant = m1 == null ? null : sinalL * m1, agora = Math.abs(refe);
+    const parcial = tem2 && l2.pct < 100 ? ` · parcial, ${pct(l2.pct)} apurado` : "";
+    const detalhe = tem2
+      ? `No 1º turno: ${ant >= 0 ? "+" : "−"}${ptBr(Math.abs(ant))} p.p. · ${agora - ant >= 0 ? "▲ ampliou" : "▼ reduziu"} ${ptBr(Math.abs(agora - ant))} p.p.${parcial}`
+      : "2º turno ainda sem dados apurados";
+    vantagem = `<div class="el-duelo__vantagem" style="--cor:${COR_LADO[lider]}"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> lidera${tem2 ? "" : " no 1º turno"} sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`;
+  }
+  const votos = (v) => `<span class="el-duelo__votos"><br>${v == null ? "" : fmt(v)}</span>`;
+  const celula = (pc, v) => (pc == null ? `<span class="el-duelo__sem">—</span>${votos(null)}` : `${pct(pc)}${votos(v)}`);
+  const corpo = linhas.map((r) => {
+    const eLider = r.chave === lider;
+    const delta = r.dp == null ? "—" : `<span class="${r.dp > 0 ? "el-delta--mais" : r.dp < 0 ? "el-delta--menos" : ""}">${r.dp > 0 ? "▲" : r.dp < 0 ? "▼" : "•"} ${sinal(r.dp, ptBr)}</span>`;
+    const c2 = r.semNoTurno2 ? `<span class="el-duelo__sem">—</span>${votos(null)}` : celula(tem2 ? r.p2 : null, tem2 ? r.v2 : null);
+    return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span></span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>`;
   }).join("");
-  const dAptos = l1 && l2 ? l2.aptos - l1.aptos : null;
-  return `<div class="cmp-cabeca"><span><b>1º turno</b> · 04/10 · ${l1 ? pct(l1.pct) : "—"} apurado</span><span><b>2º turno</b> · 25/10 · ${l2 ? pct(l2.pct) : "ainda sem dados"} apurado</span></div>
-    <div class="cmp-lista">${itens}<div class="cmp-item cmp-total"><div class="cmp-nome">Eleitores aptos</div><div class="cmp-cols">${bloco("1º turno", l1?.aptos ?? null, null)}${bloco("2º turno", l2?.aptos ?? null, null)}<div class="cmp-col ${dAptos != null ? classeDelta(dAptos) : ""}"><small class="muted">Variação</small>${dAptos == null ? `<span class="muted">—</span>` : `<b>${sinal(dAptos)}</b>`}</div></div></div></div>
-    <p class="muted nota">${esc(ondeNome)}. ${status2 ?? ""} Não voto = abstenções + brancos + nulos. Variação = 2º turno menos 1º turno. Os eleitores aptos são os das seções apuradas em cada turno.</p>`;
+  const baseTxt = base === "validos" ? "Percentuais dos candidatos sobre os votos válidos (só candidatos)." : "Percentuais sobre os eleitores aptos das seções apuradas; o não voto soma abstenções, brancos e nulos.";
+  return `<section class="el-duelo"><header class="el-duelo__topo"><h3>${esc(ondeNome)}</h3><span>1º turno ${l1 ? pct(l1.pct) : "—"} · 2º turno ${tem2 ? `${pct(l2.pct)} apurado` : "ainda sem dados"}</span></header>${vantagem}
+    <div class="el-duelo__tabela"><div class="el-duelo__linha el-duelo__linha--cab"><span>Candidato</span><span>1º turno</span><span>2º turno</span><span>Variação</span></div>${corpo}</div></section>
+    <p class="muted nota">${status2 ?? ""} ${baseTxt} Variação em pontos percentuais: 2º turno menos 1º turno.</p>`;
 }
 
 /** Duas barras empilhadas (1º e 2º turno) com a composição de cada turno sobre os eleitores aptos. */

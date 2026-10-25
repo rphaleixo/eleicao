@@ -225,7 +225,7 @@ async function refinarEventos(env, itens, T = TURNOS[1]) {
       const ordenados = d.candidatos.filter((c) => c.votos > 0 && c.elegivel).sort((a, b) => b.votos - a.votos);
       const votos = ordenados.map((c) => c.votos), chave = alvo.cargo === "presidente" ? "f" : "e", uf = alvo.uf;
       const serie = pontos.map((p) => ({ t: p.t, pct: p[chave]?.[uf] })).filter((p) => p.pct != null);
-      const base = { vv: num(json.v?.vvc) || num(json.v?.vv), te: d.eleitorado?.apto ?? 0, vagas: d.vagas || 1, pctAgora: d.pctSecoes, serie, votos };
+      const base = { vv: d.votosValidos, te: d.eleitorado?.apto ?? 0, vagas: d.vagas || 1, pctAgora: d.pctSecoes, serie, votos };
       for (const e of evs) {
         const indice = ordenados.findIndex((c) => c.id === e.c?.[0]?.id);
         const t = estimarInstante({ ...base, tipo: e.tipo, cargo: e.cargo, indice: Math.max(0, indice) });

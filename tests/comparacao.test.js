@@ -59,7 +59,7 @@ test("classes de cor da variação e maiores altas e quedas", () => {
 
 test("quadro e barras mostram as quatro linhas, os dois turnos e a variação", () => {
   const html = quadroComparacao(linhaDeResultado(d1), linhaDeResultado(d2), { base: "aptos", ondeNome: "Brasil", status2: "" });
-  for (const t of ["Lula", "Flávio Bolsonaro", "Outros candidatos", "Não voto", "sem candidato", "35,00%", "▲ +50", "+4,60 pp", "2º turno menos 1º turno"]) assert.ok(html.includes(t), t);
+  for (const t of ["el-duelo", "Lula", "Flávio Bolsonaro", "Outros candidatos", "Não voto", "lidera", "2º turno menos 1º turno"]) assert.ok(html.includes(t), t);
   assert.equal((barrasComposicao(linhaDeResultado(d1), null).match(/sem dados ainda/g) || []).length, 1);
   assert.match(tabelaExtremos([{ ibge: "1", nome: "X", uf: "RJ", l1: { aptos: 10 }, valor: 1.234 }], { medida: "pp", dir: "alta", linhaNome: "Lula" }), /\+1,23 pp/);
 });
@@ -81,4 +81,16 @@ test("exterior por país: soma as cidades do mesmo país e ordena", () => {
   assert.ok(html.includes("Portugal") && html.includes("LISBOA") && html.includes("PORTO") && !html.includes("ROMA <"));
   assert.equal(somarLinhas([null, null]), null);
   assert.equal(linhaDeExterior(["X", 10, 7, 3, 1, 1, 4, 3, 0, 7, 100]).lula, 4);
+});
+
+test("Duelo: sem dados no 2º turno a faixa descreve o 1º turno e as colunas mostram traço; com dados, mostra ampliou ou reduziu", () => {
+  const l1 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 20, nulos: 30, lula: 400, flavio: 300, outros: 50, validos: 750, pct: 100 };
+  const sem = quadroComparacao(l1, null, { base: "validos", ondeNome: "Acre", status2: "" });
+  assert.ok(sem.includes("lidera no 1º turno") && sem.includes("ainda sem dados") && sem.includes("el-duelo__sem"));
+  assert.ok(!sem.includes("ampliou") && !sem.includes("reduziu"));
+  const l2 = { ...l1, lula: 500, flavio: 250, outros: 0, validos: 750, pct: 100 };
+  const com = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Acre", status2: "" });
+  assert.ok(com.includes("ampliou") && com.includes("+33,33 p.p.")); // (500−250)/750
+  assert.ok(!com.includes(">Não voto<")); // na base de votos válidos o não voto não é linha
+  assert.ok(quadroComparacao(l1, l2, { base: "aptos", ondeNome: "Acre", status2: "" }).includes("Não voto"));
 });

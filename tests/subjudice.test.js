@@ -22,9 +22,9 @@ test("% dos candidatos usa a base do TSE (válidos + anulados sub judice), como 
   assert.equal(lerResultado(json).valor.vv, 6924072); // o histórico dos gráficos usa a mesma base
 });
 
-test("sem vvc, cai para os votos válidos", () => {
-  const d = normalizar({ ...json, v: { vv: "6692872" } });
-  assert.equal(d.votosValidos, 6692872);
+test("os votos válidos são a soma dos candidatos, com ou sem os campos do TSE", () => {
+  const d = normalizar({ ...json, v: { vv: "1" } });
+  assert.equal(d.votosValidos, 6924072); // 3.631.147 + 3.061.725 + 231.200
 });
 
 test("cron: só busca o que mudou, os que mais mudaram primeiro e dentro do teto", () => {
