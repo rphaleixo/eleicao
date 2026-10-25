@@ -60,7 +60,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, t2Iniciou: false, visaoUfs: "blocos", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "maiorMargem" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { premissas: false, cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { premissas: false, metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, t2Iniciou: false, visaoUfs: "blocos", agrupUfs: "estados", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "maiorMargem" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { premissas: false, cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { premissas: false, metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -1460,7 +1460,7 @@ $("nav").addEventListener("click", (e) => {
   if (e.target.closest("[data-escopo-toggle]")) { estado.navAberta = !estado.navAberta; renderNavegacao(estado.view); return; }
   const fechar = () => { estado.navAberta = false; };
   const reg = e.target.closest("[data-regiao]");
-  if (reg) { estado.regiao = reg.dataset.regiao; if (estado.filtros.uf && regiaoDe(estado.filtros.uf) !== estado.regiao) estado.filtros.uf = ""; if (!estado.regiao || !["andamento", "presidente"].includes(estado.aba)) fechar(); navegar({ uf: "BR", mun: "" }); return; }
+  if (reg) { estado.agrupUfs = "estados"; estado.regiao = reg.dataset.regiao; if (estado.filtros.uf && regiaoDe(estado.filtros.uf) !== estado.regiao) estado.filtros.uf = ""; if (!estado.regiao || !["andamento", "presidente"].includes(estado.aba)) fechar(); navegar({ uf: "BR", mun: "" }); return; }
   if (e.target.closest("[data-regiao-inteira]")) { fechar(); navegar({ uf: "BR", mun: "" }); return; }
   const nav = e.target.closest("[data-nav-uf]");
   if (nav) { fechar(); estado.rolar = true; navegar({ uf: nav.dataset.navUf, mun: "" }); return; }
@@ -1564,6 +1564,8 @@ $("conteudo").addEventListener("click", (e) => {
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const vm = e.target.closest("[data-vermais]");
   if (vm) { maisItens(vm.dataset.vermais, Number(vm.dataset.passo) || 10, vm.dataset.vermais === "pres-cmp" ? 5 : 10); render(true); return; }
+  const ag = e.target.closest("[data-agrup-ufs]");
+  if (ag) { estado.agrupUfs = ag.dataset.agrupUfs; render(true); return; }
   const vu = e.target.closest("[data-visao-ufs]");
   if (vu) { estado.visaoUfs = vu.dataset.visaoUfs; render(true); return; }
   const ord = e.target.closest("[data-ordem]");

@@ -252,6 +252,19 @@ function controlePainel(painel) {
 }
 
 /** Apuração por região: lista longa (regiões e exterior, ou os estados de uma região), na coluna principal e recolhida; o Placar da lateral fica só com o resumo do Brasil. */
+const DETALHE_REGIAO = { norte: "7 estados", nordeste: "9 estados", centroeste: "3 estados e DF", sudeste: "4 estados", sul: "3 estados", exterior: "1 local" };
+/** Agrupamento Regiões: seis linhas (el-uf--regiao); o % de cada uma soma as seções apuradas dentro dela, não é a média dos estados. */
+export function linhasRegioes(v, estado) {
+  const ac = v.f;
+  const itens = [...Object.entries(REGIOES).map(([k, r]) => ({ k, sigla: r.sigla, nome: r.nome, a: agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])) })), { k: "exterior", sigla: "EX", nome: "Exterior", a: ac.ufs.zz ? doEstado(ac.ufs.zz) : null }];
+  itens.sort((x, y) => (estado.ordem === "pct" ? (y.a?.pct ?? 0) - (x.a?.pct ?? 0) : 0) || x.nome.localeCompare(y.nome, "pt-BR"));
+  return itens.map(({ k, sigla, nome, a }) => {
+    const aguardando = !a || !(a.st > 0);
+    return `<li><button type="button" class="el-uf el-uf--regiao${aguardando ? " el-uf--aguardando" : ""}" data-regiao="${k}" aria-label="${esc(nome)}: ${aguardando ? "aguardando" : `${pct(a.pct)} apurado`}, ver os estados"><span class="el-uf__sigla">${sigla}</span>
+      <span><span class="el-uf__nome">${esc(nome)}</span><span class="el-uf__det">${DETALHE_REGIAO[k]}</span>${aguardando ? "" : `<span class="el-uf__barra"><i style="width:${Math.min(100, a.pct)}%"></i></span>`}</span>
+      <span class="el-uf__pct">${aguardando ? "Aguardando" : `${pct(a.pct)}<small>apurado</small>`}</span><span class="el-uf__seta" aria-hidden="true">›</span></button></li>`;
+  }).join("");
+}
 function listaRegioes(v, estado, p) {
   const ac = v.f, r = REGIOES[estado.regiao];
   const itens = r
@@ -263,14 +276,15 @@ function listaRegioes(v, estado, p) {
 }
 
 export function telaMarcha(v, estado, comNav = true) {
-  const p = escopoDoPainel(v, estado.regiao);
+  const regioes = estado.agrupUfs === "regioes", p = escopoDoPainel(v, estado.regiao);
   const hero = heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave });
   return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas(null, v.disp2) : ""}${hero}${listaRegioes(v, estado, p)}
     <p class="muted nota-fonte">Acompanhamento do TSE, no horário de Brasília. Os resultados por cargo (aba Presidente) são publicados em arquivos separados e podem estar alguns minutos atrás deste acompanhamento.</p>
-    <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
-      ${estado.visaoUfs === "mapa" ? "" : `<div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div>`}
-      <div class="el-visao" role="group" aria-label="Visão dos estados"><button type="button" data-visao-ufs="blocos" aria-pressed="${estado.visaoUfs !== "lista" && estado.visaoUfs !== "mapa"}">Blocos</button><button type="button" data-visao-ufs="mapa" aria-pressed="${estado.visaoUfs === "mapa"}">Mapa</button><button type="button" data-visao-ufs="lista" aria-pressed="${estado.visaoUfs === "lista"}">Lista</button></div></div>
-      ${estado.visaoUfs === "lista" ? `<ul class="lista-estados el-ufs el-ufs--duas">${listaOrdenada(v, estado)}</ul>` : blocosEstados(v, estado, estado.visaoUfs === "mapa")}
+    <section class="card estados"><div class="el-estados__cab"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
+      <div class="el-estados__ctl">${estado.visaoUfs === "mapa" && !regioes ? "" : `<div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div>`}
+      <div class="el-visao" role="group" aria-label="Agrupar por"><button type="button" data-agrup-ufs="estados" aria-pressed="${!regioes}">Estados</button><button type="button" data-agrup-ufs="regioes" aria-pressed="${regioes}">Regiões</button></div>
+      ${regioes ? "" : `<div class="el-visao" role="group" aria-label="Visão dos estados"><button type="button" data-visao-ufs="blocos" aria-pressed="${estado.visaoUfs !== "lista" && estado.visaoUfs !== "mapa"}">Blocos</button><button type="button" data-visao-ufs="mapa" aria-pressed="${estado.visaoUfs === "mapa"}">Mapa</button><button type="button" data-visao-ufs="lista" aria-pressed="${estado.visaoUfs === "lista"}">Lista</button></div>`}</div></div>
+      ${regioes ? `<ul class="lista-estados el-ufs">${linhasRegioes(v, estado)}</ul>` : estado.visaoUfs === "lista" ? `<ul class="lista-estados el-ufs el-ufs--duas">${listaOrdenada(v, estado)}</ul>` : blocosEstados(v, estado, estado.visaoUfs === "mapa")}
       <p class="muted nota">Toque em um estado para ver o resumo da situação e das eleições para Presidente, Governador e Senador. Porcentagens de candidatos: votos no candidato ÷ ${getBase() === "totais" ? "eleitores aptos das seções apuradas" : "votos válidos"}.</p></section>
     ${blocoEventos(v.eventos ?? null)}`;
 }

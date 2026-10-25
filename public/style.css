@@ -163,14 +163,13 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .hero-vazio { margin: 12px 0 0; font-size: .8rem; color: rgba(255, 255, 255, .75); }
 
 /* lista de estados */
-.estados-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .estados-topo h2 { margin: 0; }
+.estados-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .estados-topo h2, .el-estados__cab h2 { margin: 0; }
 .chips { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0 6px; scrollbar-width: none; margin: 0 -2px; }
 .chips::-webkit-scrollbar { display: none; }
 .chips button { flex: none; border: 1px solid var(--linha); background: var(--fundo); color: var(--texto); font: inherit; font-size: .85rem; padding: 7px 12px; border-radius: 999px; cursor: pointer; min-height: 36px; }
 .chips button small { color: var(--texto-suave); font-weight: 600; margin-left: 2px; }
 .chips button[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--sobre-acento); font-weight: 600; } .chips button[aria-pressed="true"] small { color: inherit; opacity: .85; }
 .lista-estados { list-style: none; margin: 4px 0 0; padding: 0; }
-.lista-estados li { border-top: 1px solid var(--linha); } .lista-estados li:first-child { border-top: 0; }
 .linha-estado { display: grid; grid-template-columns: 40px 1fr auto 14px; align-items: center; gap: 10px; width: 100%; border: 0; background: none; color: var(--texto); font: inherit; text-align: left; padding: 11px 0; cursor: pointer; min-height: 56px; }
 .linha-estado:active { background: var(--trilho); }
 .sigla { width: 40px; height: 40px; border-radius: 3px; background: var(--trilho); display: grid; place-items: center; font-weight: 700; font-size: .85rem; color: var(--texto); }
@@ -205,7 +204,6 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .hero .presenca-leg { color: rgba(255, 255, 255, .8); } .hero .presenca-leg strong { color: #fff; } .hero .pt.falta { border-color: rgba(255, 255, 255, .6); }
 
 /* resumo do estado (expansível) */
-.lista-estados li.aberto { background: color-mix(in srgb, var(--acento) 6%, transparent); border-radius: 3px; padding: 0 8px; margin: 4px -8px; }
 .expandido { padding: 4px 0 14px; }
 .resumo-estado { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-bottom: 8px; }
 .resumo-estado span { display: block; font-size: .75rem; color: var(--texto-suave); } .resumo-estado strong { display: block; font-size: 1.1rem; font-variant-numeric: tabular-nums; } .resumo-estado small { color: var(--texto-suave); font-size: .75rem; }

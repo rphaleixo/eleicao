@@ -146,3 +146,12 @@ test("estados em mapa de blocos: grade 9×7, posição de cada sigla, percentual
   assert.ok(h.includes("50,00%") && !h.includes('data-ordem="az"'));
   assert.ok(!telaMarcha(v, est({ visaoUfs: "blocos" })).includes("el-blocos--mapa"));
 });
+
+test("agrupamento Regiões: seis linhas el-uf--regiao, % somando seções (não a média dos estados), sem o seletor de visão; Estados em lista usa button.el-uf", () => {
+  const h = telaMarcha(v, est({ agrupUfs: "regioes" }));
+  assert.equal((h.match(/el-uf--regiao/g) ?? []).length, 6 + 0 * 1);
+  for (const d of ["7 estados", "9 estados", "3 estados e DF", "4 estados", "3 estados", "1 local"]) assert.ok(h.includes(d), d);
+  assert.ok(h.includes('data-agrup-ufs="regioes" aria-pressed="true"') && !h.includes("data-visao-ufs") && h.includes('data-regiao="sul"'));
+  const lista = telaMarcha(v, est({ visaoUfs: "lista" }));
+  assert.ok(lista.includes("el-ufs--duas") && lista.includes("el-uf--compacta") && lista.includes('data-agrup-ufs="estados" aria-pressed="true"'));
+});
