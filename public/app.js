@@ -290,30 +290,45 @@ const vivoT2 = new Map(), progT2 = { feitos: 0, total: 0, emVoo: false };
  * só esses são pedidos (um arquivo por município, 6 por vez), então não há pedidos de arquivos que ainda não existem (o TSE bloqueia quem gera muitos 404).
  * Em cada rodada busca quem ainda não foi lido ou cujo % de seções apuradas mudou desde a última leitura.
  */
-async function atualizarMunicipiosT2(pctBrasil) {
-  if (progT2.emVoo || !(pctBrasil > 0)) return;
-  progT2.emVoo = true;
-  try {
-    const ufs = Object.keys(UFS).filter((u) => u !== "ZZ");
-    const rs = await Promise.allSettled(ufs.map((u) => buscarJson(urlAndamentoUf(u, 2))));
-    const comDados = new Map(); // cód. do município -> % de seções apuradas agora
-    rs.forEach((r) => { if (r.status === "fulfilled") for (const [cod, a] of lerAbUf(r.value)) if (a.secoesApuradas > 0) comDados.set(cod, a.pctUrnas); });
-    const fila = [];
-    for (const [uf, lista] of Object.entries(estado.municipios)) {
-      if (uf === "ZZ") continue;
-      for (const m of lista) { const agora = comDados.get(m.cod); if (agora == null) continue; const v = vivoT2.get(m.cod); if (!v || v.pct < agora - 0.001) fila.push({ uf, m }); }
-    }
-    progT2.total = fila.length; progT2.feitos = 0;
-    let ultimo = 0;
-    await Promise.all(Array.from({ length: 6 }, async () => {
-      while (fila.length) {
-        const { uf, m } = fila.shift();
-        try { const d = await obter("presidente", uf, m.cod, 2); vivoT2.set(m.cod, { ...linhaDeResultado(d), uf, ibge: m.ibge, cod: m.cod, t: Date.now() }); } catch { /* o arquivo pode ainda não ter chegado ao servidor: tenta na próxima rodada */ }
-        progT2.feitos++;
-        if (Date.now() - ultimo > 1500 && estado.aba === "turnos") { ultimo = Date.now(); render(); }
+/** O mapa da comparação (desenho dos municípios e arquivos por município) carrega à parte: o quadro e as barras aparecem antes. */
+const mapaTurnos = { pronto: false, malha: null, a1: null, a2: null, promessa: null };
+function prepararMapaTurnos() {
+  mapaTurnos.promessa ??= Promise.all([obterMalha("BR"), arquivoMunicipios(1), arquivoMunicipios(2)])
+    .then(([malha, a1, a2]) => { Object.assign(mapaTurnos, { malha, a1, a2, pronto: true }); if (estado.aba === "turnos") atualizar(); })
+    .catch(() => { mapaTurnos.promessa = null; });
+}
+let escopoT2 = "", jobT2 = null;
+async function atualizarMunicipiosT2(pctBrasil, ufsEscopo = null, chaveEscopo = "BR") {
+  if (!(pctBrasil > 0)) return;
+  if (jobT2 && escopoT2 === chaveEscopo) return; // este escopo já está sendo lido
+  escopoT2 = chaveEscopo; // mudou o escopo (outra região, outro estado): o trabalho anterior para no próximo pedido
+  if (jobT2) await jobT2.catch(() => {});
+  if (escopoT2 !== chaveEscopo || jobT2) return;
+  jobT2 = (async () => {
+    progT2.emVoo = true;
+    try {
+      const ufs = Object.keys(UFS).filter((u) => u !== "ZZ" && (!ufsEscopo || ufsEscopo.includes(u))); // só os estados do escopo: uma região não baixa o país inteiro
+      const rs = await Promise.allSettled(ufs.map((u) => buscarJson(urlAndamentoUf(u, 2))));
+      const comDados = new Map(); // cód. do município -> % de seções apuradas agora
+      rs.forEach((r) => { if (r.status === "fulfilled") for (const [cod, a] of lerAbUf(r.value)) if (a.secoesApuradas > 0) comDados.set(cod, a.pctUrnas); });
+      const fila = [];
+      for (const [uf, lista] of Object.entries(estado.municipios)) {
+        if (uf === "ZZ" || !ufs.includes(uf)) continue;
+        for (const m of lista) { const agora = comDados.get(m.cod); if (agora == null) continue; const v = vivoT2.get(m.cod); if (!v || v.pct < agora - 0.001) fila.push({ uf, m }); }
       }
-    }));
-  } finally { progT2.emVoo = false; }
+      progT2.total = fila.length; progT2.feitos = 0;
+      let ultimo = 0;
+      await Promise.all(Array.from({ length: 6 }, async () => { // no máximo 6 pedidos ao mesmo tempo
+        while (fila.length && escopoT2 === chaveEscopo) {
+          const { uf, m } = fila.shift();
+          try { const d = await obter("presidente", uf, m.cod, 2); vivoT2.set(m.cod, { ...linhaDeResultado(d), uf, ibge: m.ibge, cod: m.cod, t: Date.now() }); } catch { /* o arquivo pode ainda não ter chegado ao servidor: tenta na próxima rodada */ }
+          progT2.feitos++;
+          if (Date.now() - ultimo > 1500 && estado.aba === "turnos") { ultimo = Date.now(); render(); }
+        }
+      }));
+    } finally { progT2.emVoo = false; }
+  })();
+  try { await jobT2; } finally { jobT2 = null; }
 }
 
 const dadosNulos = new Map();
@@ -343,7 +358,8 @@ function iniciarCargaGeo(cargo) {
   geoCarga[cargo] = true;
   (async () => {
     const ufs = Object.keys(UFS).filter((u) => u !== "ZZ" && !(cargo === "dep-estadual" && u === "DF")); // o DF vota deputado distrital, em outro arquivo
-    const ordem = estado.geo.uf && ufs.includes(estado.geo.uf) ? [estado.geo.uf, ...ufs.filter((u) => u !== estado.geo.uf)] : ufs;
+    const primeiros = REGIOES[regiaoDoValor(estado.geo.uf)]?.ufs ?? (estado.geo.uf && ufs.includes(estado.geo.uf) ? [estado.geo.uf] : []); // o estado ou a região escolhidos primeiro
+    const ordem = [...ufs.filter((u) => primeiros.includes(u)), ...ufs.filter((u) => !primeiros.includes(u))];
     for (const uf of ordem) {
       await carregarVotosMunicipais({ cargo, uf, municipios: estado.municipios[uf] ?? [], buscar: (c, u, cod) => obter(c, u, cod), ttl: 6 * 3600_000, concorrencia: 6, intervalo: 1500, aoProgresso: () => { if (estado.aba === "geo") render(); } });
     }
@@ -419,11 +435,15 @@ async function carregarView(rota) {
     const { uf, mun } = rota, t2aberto = Date.now() >= INICIO_APURACAO_T2;
     const reg = uf === "BR" && REGIOES[estado.regiao] ? REGIOES[estado.regiao] : null; // região: soma dos votos dos estados dela
     const buscar = async (t) => { if (t === 2 && !t2aberto) return null; if (reg) return agregarResultados(await Promise.all(reg.ufs.map((u) => obter("presidente", u, undefined, t).catch(() => null)))); try { return await obter("presidente", uf, uf === "BR" || uf === "ZZ" ? undefined : mun || undefined, t); } catch { return null; } };
-    const [d1, d2, malha, a1, a2, ac2] = await Promise.all([buscar(1), buscar(2), obterMalha("BR"), arquivoMunicipios(1), arquivoMunicipios(2), t2aberto ? obterAcompanhamento("presidente", 2).catch(() => null) : null]);
-    if (t2aberto && !a2?.final) emSegundoPlano("t2-municipios", 60_000, () => atualizarMunicipiosT2(ac2?.ufs?.br?.pct ?? 0)); // enquanto o arquivo final não existe, os municípios do 2º turno vêm um a um
+    const [d1, d2, ac2] = await Promise.all([buscar(1), buscar(2), t2aberto ? obterAcompanhamento("presidente", 2).catch(() => null) : null]); // o quadro e as barras saem daqui: totais por estado, sem município
+    prepararMapaTurnos(); // o mapa carrega à parte (desenho, arquivos por município) e entra quando chega
+    if (t2aberto && mapaTurnos.pronto && !mapaTurnos.a2?.final && uf !== "ZZ") { // enquanto o arquivo final não existe, os municípios do 2º turno vêm um a um, só os do escopo
+      const ufsEscopo = reg ? reg.ufs : uf === "BR" ? null : [uf], chaveEscopo = reg ? estado.regiao : uf;
+      emSegundoPlano(`t2-municipios-${chaveEscopo}`, 60_000, () => atualizarMunicipiosT2(ac2?.ufs?.br?.pct ?? 0, ufsEscopo, chaveEscopo));
+    }
     const ext = uf === "ZZ" ? { e1: await arquivoExterior(1), e2f: t2aberto ? await arquivoExterior(2) : null, paises: await tabelaDePaises(), bol: await boletinsExteriorT2() } : null;
     if (uf === "ZZ" && t2aberto && !ext.e2f) emSegundoPlano("t2-exterior", 60_000, () => atualizarExteriorT2(ac2?.ufs?.zz?.pct ?? 0));
-    return { tipo: "turnos", uf, mun, regiao: reg ? estado.regiao : "", d1, d2, malha, a1, a2, t2aberto, ext };
+    return { tipo: "turnos", uf, mun, regiao: reg ? estado.regiao : "", d1, d2, malha: mapaTurnos.malha, a1: mapaTurnos.a1, a2: mapaTurnos.a2, mapaCarregando: !mapaTurnos.pronto, t2aberto, ext };
   }
   if (aba === "nulos") { // números digitados nos votos nulos (RJ por enquanto): somas por zona e locais de votação com coordenadas
     const [dados, malha] = await Promise.all([carregarDadosNulos("rj"), obterMalha("RJ")]);
@@ -1034,7 +1054,8 @@ function telaTurnos(v) {
       : `<section class="card"><div class="titulo-cadeiras"><h2>Exterior por país</h2><span class="muted">${fmt(new Set(Object.values(e.paises).map((p) => p[1])).size)} países</span></div>
         <p class="muted">O TSE organiza o exterior por cidade (consulados e embaixadas). Aqui as cidades foram agrupadas por país por nós: não é uma classificação oficial. Em cada faixa: % no 1º e no 2º turno e a variação em pontos. Toque no país para ver as cidades.</p>
         ${aviso}${exteriorPorPais(agruparPorPais(e.e1, t2e, e.paises), { base: ct0.base, ordem: ct0.ordemPais, abertos: ct0.paisesAbertos, limite: ct0.maisPaises })}</section>`;
-  } else if (!t1) mapa = `<section class="card"><h2>Mapa por município</h2><p class="muted">O arquivo do 1º turno por município ainda não foi gerado.</p></section>`;
+  } else if (v.mapaCarregando) mapa = `<section class="card"><h2>Mapa por município</h2><p class="muted" role="status">Carregando mapa…</p></section>`;
+  else if (!t1) mapa = `<section class="card"><h2>Mapa por município</h2><p class="muted">O arquivo do 1º turno por município ainda não foi gerado.</p></section>`;
   else {
     const itens = [...t1.values()].filter((r1) => reg ? reg.ufs.includes(r1.uf) : uf === "BR" || uf === "ZZ" || r1.uf === uf).map((r1) => {
       const r2 = t2?.get(r1.cod) ?? null;
