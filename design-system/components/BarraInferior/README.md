@@ -10,3 +10,6 @@ O consumidor fornece: os cinco destinos, o destino atual (`aria-current`) e o es
 - Comparar turnos não é destino da barra: é uma opção do seletor de turno (1º turno, 2º turno, Comparar) logo abaixo do topo, em todas as telas.
 - Altura mínima de 56px; respeita a área segura do aparelho (`env(safe-area-inset-bottom)`).
 - Os ícones são de traço (`currentColor`), nada de emoji.
+
+
+Rodada 12: a folha "Mais" lista as áreas restantes e, no fim, "Como calcular" (abre a `Gaveta` por baixo) e o seletor de tema.
