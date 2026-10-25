@@ -1042,3 +1042,17 @@ a.el-duplo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px
 .el-escolha__op input:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
 .el-escolha__rotulo b { display: block; font: 700 15px/20px var(--font-text); }
 .el-escolha__rotulo small { display: block; font: 400 13px/18px var(--font-text); color: var(--texto-suave); }
+
+/* rádios do el-escolha: nada do estilo global de campos (largura mínima, altura, preenchimento) */
+.el-escolha__op input { min-width: 0; min-height: 0; padding: 0; width: 22px; height: 22px; box-sizing: border-box; }
+/* disputas compactas: nome só quebra entre palavras e o chip não vaza do cartão */
+.el-duplo__lado > span { min-width: 0; }
+.el-duplo__nome { overflow-wrap: break-word; word-break: normal; hyphens: manual; }
+.el-duplo .el-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box; }
+@media (max-width: 420px) { .el-duplo__nome { font-size: 12px; line-height: 15px; } .el-duplo__corpo { gap: var(--esp-4); padding-left: var(--esp-8); padding-right: var(--esp-8); } }
+/* links de ação em avisos e cartões: 44px de alvo de verdade */
+.el-aviso .link, .el-aviso a, .card-cargo .link, .card-cargo a.link { display: inline-flex; align-items: center; min-height: 44px; }
+.el-aviso a.el-botao { min-height: 44px; }
+.el-duplo__corpo { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
+.el-duplo__lado, .el-duplo__lado:last-child { grid-template-columns: var(--foto-p) minmax(0, 1fr); }
+.el-duplo__lado:last-child { grid-template-columns: minmax(0, 1fr) var(--foto-p); }

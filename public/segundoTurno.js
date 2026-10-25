@@ -12,7 +12,7 @@ const foto = (d, c) => d.cargo === "presidente" ? `/api/ele2026/6257/fotos/br/${
 export const tituloDisputa = (d) => (d.cargo === "presidente" ? "Presidente da República" : `Governo · ${UFS[d.uf] ?? d.uf}`);
 export const hrefDisputa = (d) => (d.cargo === "presidente" ? "#/presidente" : `#/estados/${d.uf}/governador`);
 
-const ERRO_FOTO = "if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;var s=document.createElement('span');s.className='foto-iniciais';s.style.setProperty('--cor',this.dataset.cor);s.textContent=this.dataset.i;this.replaceWith(s)}";
+const ERRO_FOTO = "if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;var s=document.createElement('span');s.className='el-duplo__foto foto-iniciais';s.style.setProperty('--cor',this.dataset.cor);s.textContent=this.dataset.i;this.replaceWith(s)}";
 const iniciais = (nome) => { const p = String(nome ?? "").trim().split(/\s+/).filter((x) => x.length > 2 || /^[A-ZÀ-Ý]$/.test(x)); return ((p[0]?.[0] ?? "") + (p.length > 1 ? p.at(-1)[0] : "")).toUpperCase(); };
 
 /** O resultado do 2º turno de uma disputa, quando já há seções apuradas: { pct (seções), por número do candidato }. */
