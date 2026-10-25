@@ -1028,12 +1028,11 @@ a.el-duplo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px
 .el-duplo__lado > span { min-width: 0; }
 .el-duplo__nome { overflow-wrap: break-word; word-break: normal; hyphens: manual; }
 .el-duplo .el-chip { white-space: nowrap; width: max-content; max-width: none; letter-spacing: 0; box-sizing: border-box; } /* a sigla inteira, sem reticências: a tag ocupa a largura de que precisa */
-.el-duplo__x { font-size: 16px; line-height: 1; font-weight: 700; color: var(--texto); } /* o × entre os candidatos: 16px com contraste */
 @media (max-width: 420px) { .el-duplo__nome { font-size: 12px; line-height: 15px; } .el-duplo__corpo { gap: var(--esp-4); padding-left: var(--esp-8); padding-right: var(--esp-8); } }
 /* links de ação em avisos e cartões: 44px de alvo de verdade */
 .el-aviso .link, .el-aviso a, .card-cargo .link, .card-cargo a.link { display: inline-flex; align-items: center; min-height: 44px; }
 .el-aviso a.el-botao { min-height: 44px; }
-.el-duplo__corpo { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
+.el-duplo__corpo { grid-template-columns: minmax(0, 1fr) 8px minmax(0, 1fr); }
 .el-duplo__lado, .el-duplo__lado:last-child { grid-template-columns: var(--foto-p) minmax(0, 1fr); }
 .el-duplo__lado:last-child { grid-template-columns: minmax(0, 1fr) var(--foto-p); }
 
@@ -1045,3 +1044,10 @@ select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
 
 /* rádios do el-escolha: o estilo global de campos (largura/altura mínimas, preenchimento) não vale aqui */
 .el-escolha input { min-width: 0; min-height: 0; padding: 0; width: 20px; height: 20px; box-sizing: border-box; }
+
+/* barra de dois lados do el-duplo: bloco próprio, abaixo dos nomes (o span do app faz o papel de div) */
+.el-duplo__barra { display: block; } .el-duplo__barra .el-composicao { display: flex; } .el-duplo__barra .el-composicao__rotulo50 { display: block; }
+.cp-barra.el-composicao--meta { overflow: visible; margin: 10px 0 0; height: 14px; border-radius: 0; } .cp-linha .el-composicao__rotulo50 { margin: 6px 0 8px; }
+
+/* emenda do eixo do gráfico de evolução (votação prorrogada) */
+.g-corte line { stroke: var(--texto-suave); stroke-width: 1; stroke-dasharray: 3 3; } .g-corte path { stroke: var(--texto); stroke-width: 1.5; fill: none; } .g-corte text { fill: var(--texto-suave); font: 600 11px var(--font-text); }

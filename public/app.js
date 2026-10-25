@@ -48,6 +48,7 @@ import {
 } from "./tse.js";
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
 import { corPartido, ajustarContrasteChips } from "./cores.js";
+import { ladoFixo } from "./finalistas.js";
 import { linhaEvolucao, linhasResultado, temTotais } from "./graficos.js";
 import { atualizarFaixa } from "./eventos.js";
 import { iniciarGraficos, reaplicarGraficos } from "./graficoInterativo.js";
@@ -822,7 +823,7 @@ function blocoCompararPresidente(v, d) {
   const doRegiao = REGIOES[regiao] ? (u) => REGIOES[regiao].ufs.includes(u) : regiao === "exterior" ? (u) => u === "ZZ" : () => true;
   const itens = ds(doRegiao);
   const local = REGIOES[regiao] ? { rotulo: REGIOES[regiao].nome, uf: "BR", d: agregarResultados(itens.map((i) => i.d)) } : regiao === "exterior" ? { rotulo: "Exterior", uf: "ZZ", d: v.lista.find((i) => i.uf === "ZZ")?.d } : { rotulo: "Brasil", uf: "BR", d };
-  const padrao = reais.slice(0, 2).map((c) => c.id);
+  const padrao = ladoFixo(reais.slice(0, 2)).map((c) => c.id);
   const cmp = { a: estado.cmp.a || padrao[0], b: estado.cmp.b || padrao[1], ordem: estado.cmp.ordem };
   return blocoComparar({ candidatos: reais, local, itens: regiao === "exterior" ? [] : itens, cmp, paginar: { chave: "pres-cmp", base: 5 } }); // Brasil e as 5 maiores diferenças; o resto em "Ver mais"
 }

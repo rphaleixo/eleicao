@@ -6,6 +6,7 @@ import { listaCandidatos, rotuloBase } from "./base.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 import { fmt, pct } from "./formato.js";
+import { ladoFixo } from "./finalistas.js";
 
 /** Mais votados primeiro; empate (inclusive antes da apuração) em ordem alfabética. */
 export const ordenarCandidatos = (candidatos) => candidatos.slice().sort((a, b) => b.votos - a.votos || a.nome.localeCompare(b.nome, "pt-BR"));
@@ -19,12 +20,12 @@ function selo(c) {
 const ICONE = { __naovoto: "∅", __abstencao: "–", __nulos: "✕", __brancos: "○" };
 const fotoSintetica = (c, classe) => `<span class="foto ${classe} foto-sint" aria-hidden="true">${ICONE[c.id] ?? "•"}</span>`;
 
-function pódio(c, i, aba, uf, semVoto = false) {
-  if (c.sintetico) return `<li class="pod pod-${i + 1} sintetico"><span class="pod-pos">${i + 1}º</span>${fotoSintetica(c, "pod-foto")}
+function pódio(c, i, aba, uf, semVoto = false, rank = i) {
+  if (c.sintetico) return `<li class="pod pod-${i + 1} sintetico"><span class="pod-pos">${rank + 1}º</span>${fotoSintetica(c, "pod-foto")}
     <b class="pod-nome">${esc(c.nome)}</b><small class="muted">${esc(c.descricao)}</small>
     <strong class="pod-pct">${pct(c.pct)}</strong><small class="pod-votos">${fmt(c.votos)}</small></li>`;
   return `<li class="pod pod-${i + 1}${classeSit(c)}${semVoto ? " pod-sem-voto" : ""}" style="--cor:${corPartido(c.partido)}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato">
-    <span class="pod-pos">${i + 1}º</span>
+    <span class="pod-pos">${rank + 1}º</span>
     <img class="foto pod-foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
     <b class="pod-nome">${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>
     ${semVoto ? `<small class="pod-votos">Sem votos</small>` : `<strong class="pod-pct">${pct(c.pct)}</strong><small class="pod-votos">${fmt(c.votos)}</small>`}${selo(c)}</li>`;
@@ -48,11 +49,11 @@ export function rankingMajoritario(d, { aba, uf, limite = 40, vagas = d.vagas ||
   const semVoto = todos.every((c) => !c.votos); // antes da apuração: ordem de urna, sem posição
   if (semVoto) todos = todos.slice().sort((x, y) => Number(x.numero) - Number(y.numero) || String(x.nome).localeCompare(String(y.nome), "pt-BR"));
   const igual = ["presidente", "governador", "senador"].includes(aba); // disputas majoritárias: três colunas iguais, sem degrau
-  const topo = todos.slice(0, 3), resto = todos.slice(3, limite);
+  const topo = aba === "presidente" ? ladoFixo(todos.slice(0, 3)) : todos.slice(0, 3), resto = todos.slice(3, limite);
   const max = Math.max(1, todos[0].votos);
   const corte = aba === "senador" && vagas > 1 ? vagas : 0; // senador: duas vagas
   const itens = resto.map((c, i) => linha(c, i + 3, max) + (corte && i + 3 === corte - 1 && todos.length > corte ? `<li class="linha-corte" role="presentation">posição de eleito (${vagas} vagas)</li>` : "")).join("");
   const corteNoTopo = corte && corte <= 3 && todos.length > corte ? `<p class="linha-corte">Os ${corte} primeiros ocupam as vagas de senador.</p>` : "";
-  return `<ol class="podio${igual ? " el-podio--igual" : ""}${topo.length === 2 ? " podio-dois" : ""}">${topo.map((c, i) => pódio(c, i, aba, uf, semVoto)).join("")}</ol>${corteNoTopo}
+  return `<ol class="podio${igual ? " el-podio--igual" : ""}${topo.length === 2 ? " podio-dois" : ""}">${topo.map((c, i) => pódio(c, i, aba, uf, semVoto, todos.indexOf(c))).join("")}</ol>${corteNoTopo}
     ${resto.length ? `<ol class="lista-compacta" start="4">${itens}</ol>` : ""}${todos.length > limite ? `<p class="muted">Mostrando os ${limite} primeiros de ${fmt(todos.length)} candidatos.</p>` : ""}`;
 }

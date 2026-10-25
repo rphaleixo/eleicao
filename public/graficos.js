@@ -1,9 +1,31 @@
 // Gráficos simples em SVG, sem bibliotecas.
 import { pct, fmt } from "./formato.js";
+import { FIM_VOTACAO } from "./config.js";
 const escAttr = (o) => JSON.stringify(o).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 /** Dados que tornam o gráfico consultável (ver graficoInterativo.js): geometria, instantes e séries. */
-const dadosG = (largura, altura, m, t0, t1, ts, series, extra = {}) => escAttr({ l: largura, h: altura, e: m.e, d: m.d, c: m.c, b: m.b, t0, t1, ts, series, ...extra });
+const dadosG = (largura, altura, m, t0, t1, kz, ts, series, extra = {}) => escAttr({ l: largura, h: altura, e: m.e, d: m.d, c: m.c, b: m.b, t0, t1, ts, series, ...(kz ? { corte: { de: kz.de, s: kz.s } } : {}), ...extra });
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/**
+ * Emenda do eixo: se não houve apuração entre o último ponto antes de `fim` e `fim` (votação prorrogada), esse trecho sai do eixo.
+ * Os instantes depois de `fim` andam para trás por `s`, o que liga o último ponto ao primeiro a partir de `fim`, sem reta nem vazio.
+ * Muda `pts[].t` no lugar e devolve { de, s, fim, ate }, ou null quando não há o que emendar. `real(t)` volta ao horário de verdade.
+ */
+export function emendar(pts, ate = 0, fim = FIM_VOTACAO) {
+  if (!fim) return null;
+  const i = pts.findIndex((p, k) => p.t < fim && pts[k + 1] && pts[k + 1].t >= fim);
+  if (i < 0 || fim - pts[i].t < 10 * 60000) return null;
+  const de = pts[i].t, s = fim - de;
+  for (const p of pts) if (p.t >= fim) p.t -= s;
+  return { de, s, fim, ate: ate > de ? Math.max(de, ate - s) : ate };
+}
+const realDe = (kz, t) => (kz && t > kz.de ? t + kz.s : t);
+const horaCheia = (ms) => { const [h, m] = hhmm(ms).split(":"); return m === "00" ? `${Number(h)}h` : `${Number(h)}h${m}`; };
+/** Marca da emenda: corte no eixo e a legenda do trecho removido. */
+function corteSvg(kz, x, m, altura) {
+  if (!kz) return "";
+  const cx = x(kz.de), yb = altura - m.b;
+  return `<g class="g-corte" aria-hidden="true"><line x1="${cx}" x2="${cx}" y1="${m.c}" y2="${yb}"/><path d="M${cx - 6},${yb + 4} l6,-8 M${cx},${yb + 4} l6,-8"/><text x="${cx + 6}" y="${m.c + 12}">sem apuração até as ${horaCheia(kz.fim)}</text></g>`;
+}
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
 /**
@@ -18,7 +40,7 @@ export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotu
     return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
   }
   const m = { e: 56, d: 12, c: 10, b: 24 };
-  const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, ate, t0 + 60000);
+  const kz = emendar(pts, ate), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, kz?.ate ?? ate, t0 + 60000);
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
   const y = (v) => m.c + (1 - v / 100) * (altura - m.c - m.b);
   // degrau: o valor se mantém até a próxima foto
@@ -29,13 +51,13 @@ export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotu
     .map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`)
     .join("");
   const ticks = [0, 1, 2, 3, 4]
-    .map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; })
+    .map((i) => { const t = t0 + ((t1 - t0) * i) / 4; if (kz && Math.abs(x(t) - x(kz.de)) < 34) return ""; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(realDe(kz, t))}</text>`; })
     .join("");
   const ult = pts[pts.length - 1];
-  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [{ n: "Seções apuradas", v: pts.map((p) => p.v), y: [0, 100] }]);
+  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [{ n: "Seções apuradas", v: pts.map((p) => p.v), y: [0, 100] }]);
   return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.v)} das seções apuradas">
     ${grade}${ticks}<path class="g-area" d="${area}"/><path class="g-linha" d="${d}"/>
-    <circle class="g-ponto" cx="${x(ult.t)}" cy="${y(ult.v)}" r="4"/></svg><div class="g-info" hidden></div>`;
+    <circle class="g-ponto" cx="${x(ult.t)}" cy="${y(ult.v)}" r="4"/>${corteSvg(kz, x, m, altura)}</svg><div class="g-info" hidden></div>`;
 }
 
 /** Mini gráfico para listas. */
@@ -66,7 +88,7 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
   if (ate && pts.length && ate > pts[pts.length - 1].t) pts.push({ ...pts[pts.length - 1], t: ate });
   if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
   const m = { e: 56, d: 12, c: 10, b: 24 };
-  const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, ate, t0 + 60000);
+  const kz = emendar(pts, ate), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, kz?.ate ?? ate, t0 + 60000);
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
   const y = (v) => m.c + (1 - Math.min(100, v) / 100) * (altura - m.c - m.b);
   const degrau = (valor) => {
@@ -78,14 +100,14 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
   const base = (t) => `${x(t).toFixed(1)},${y(0)}`;
   const ult = pts[pts.length - 1], fim = base(ult.t), ini = base(t0);
   const grade = [0, 25, 50, 75, 100].map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`).join("");
-  const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; }).join("");
+  const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; if (kz && Math.abs(x(t) - x(kz.de)) < 34) return ""; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(realDe(kz, t))}</text>`; }).join("");
   const comUrnas = pts.some((p) => p.u != null);
   if (comUrnas) { let ant = 0; for (const p of pts) { if (p.u == null) p.u = ant; ant = p.u; } } // lacunas: mantém o último valor
   const linhaUrnas = comUrnas ? `<polyline class="g-urnas" points="${degrau((p) => p.u)}"/>` : "";
-  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [{ n: "Presentes", v: pts.map((p) => p.c), y: [0, 100] }, { n: "Ausentes", v: pts.map((p) => p.a), y: [0, 100] }, ...(comUrnas ? [{ n: "Urnas apuradas", cor: "#7cc4ff", v: pts.map((p) => p.u), y: [0, 100] }] : [])]);
+  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [{ n: "Presentes", v: pts.map((p) => p.c), y: [0, 100] }, { n: "Ausentes", v: pts.map((p) => p.a), y: [0, 100] }, ...(comUrnas ? [{ n: "Urnas apuradas", cor: "#7cc4ff", v: pts.map((p) => p.u), y: [0, 100] }] : [])]);
   return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.c)} presentes e ${pct(ult.a)} ausentes do eleitorado">
     ${grade}${ticks}<polygon class="g-aus" points="${topo} ${fim} ${ini}"/><polygon class="g-pres" points="${meio} ${fim} ${ini}"/>
-    <polyline class="g-borda" points="${topo}"/>${linhaUrnas}</svg><div class="g-info" hidden></div>`;
+    <polyline class="g-borda" points="${topo}"/>${linhaUrnas}${corteSvg(kz, x, m, altura)}</svg><div class="g-info" hidden></div>`;
 }
 
 const TITULOS = new Set(["DR.", "DRA.", "PROF.", "CEL.", "CORONEL", "PROFESSOR", "PROFESSORA", "DELEGADO", "DELEGADA", "CAPITÃO", "SARGENTO", "PASTOR", "PASTORA", "JUIZ", "JUÍZA", "ESCRITOR", "TENENTE", "MAJOR", "GENERAL", "DOUTOR", "DOUTORA"]);
@@ -139,13 +161,13 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
   const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => [...ids.map((id) => pc(p.r, id)), ...(totais ? [pcNv(p.r)] : [])])) / 10) * 10);
   const m = { e: 56, d: 12, c: 34, b: 24 }; // a faixa de cima abriga a etiqueta da diferença
   altura += 24;
-  const t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, ate, t0 + 60000);
+  const kz = emendar(pts, ate), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, kz?.ate ?? ate, t0 + 60000);
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
   const y = (v) => m.c + (1 - v / topo) * (altura - m.c - m.b);
   const passo = topo <= 20 ? 5 : 10, linhasGrade = [];
   for (let g = 0; g <= topo; g += passo) linhasGrade.push(g);
   const grade = linhasGrade.map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`).join("");
-  const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(t)}</text>`; }).join("");
+  const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; if (kz && Math.abs(x(t) - x(kz.de)) < 34) return ""; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(realDe(kz, t))}</text>`; }).join("");
   const nome = (id) => rp.cands?.[id]?.n || id, partido = (id) => rp.cands?.[id]?.p || "";
   const linhas = ids.map((id) => {
     const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(pc(p.r, id)).toFixed(1)}`).join(" ");
@@ -155,8 +177,8 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
   const legenda = ids.map((id) => `<span><i class="pt" style="background:${cor(partido(id))}"></i>${nome(id)} <b>${pct(pc(ult, id))}</b></span>`).join("")
     + (totais ? `<span><i class="pt pt-nv"></i>Não voto <b>${pct(pcNv(ult))}</b></span>` : "");
   const rot = pts.map((p) => textoDiferenca(p.r, nome, den(p.r)));
-  const dg = dadosG(largura, altura, m, t0, t1, pts.map((p) => p.t), [...ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })), ...(totais ? [{ n: "Não voto", cor: "#8a94a3", v: pts.map((p) => pcNv(p.r)), y: [0, topo] }] : [])], { rot });
+  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [...ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })), ...(totais ? [{ n: "Não voto", cor: "#8a94a3", v: pts.map((p) => pcNv(p.r)), y: [0, topo] }] : [])], { rot });
   const ultRot = rot[rot.length - 1];
   const etiqueta = ultRot ? `<g class="g-dif"><rect x="${m.e}" y="5" width="${Math.min(largura - m.e - m.d, ultRot.length * 6.9 + 20)}" height="22" rx="11"/><text x="${m.e + 9}" y="20">${esc(ultRot)}</text></g>` : "";
-  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}${linhaNv}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
+  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}${linhaNv}${corteSvg(kz, x, m, altura)}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
 }

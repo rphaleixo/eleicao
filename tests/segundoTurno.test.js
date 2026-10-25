@@ -52,6 +52,12 @@ test("disputa compacta (el-duplo): finalistas na mesma linha, sem votos absoluto
   assert.ok(!/votos<\/small>|\d\.\d{3}\.\d{3} votos/.test(h1) && !h1.includes("el-duplo__votos"));
   const d2 = { pctSecoes: 0.25, candidatos: [{ numero: "13", pct: 57.66 }, { numero: "22", pct: 42.34 }] };
   const h2 = duplo(d, d2);
-  assert.ok(h2.includes("42,34%") && h2.includes("57,66%") && h2.includes("1º turno: 47,03% × 45,16%") && h2.includes("2º turno: 0,25% das seções"));
+  assert.ok(h2.includes("42,34%") && h2.includes("57,66%") && h2.includes("1º turno: 45,16% × 47,03%") && h2.includes("2º turno: 0,25% das seções"));
   assert.ok(!h2.includes("Resultado do 1º turno ·"));
+  // Lula sempre à esquerda e Flávio à direita, mesmo com Flávio na frente; barra de dois lados com a marca de 50% uma vez; sem o "×"
+  assert.ok(h1.indexOf("LULA") < h1.indexOf("FLAVIO BOLSONARO") && h2.indexOf("LULA") < h2.indexOf("FLAVIO BOLSONARO"));
+  assert.ok(h2.includes("el-duplo__barra") && h2.includes("el-composicao--meta") && h2.split("el-composicao__rotulo50").length === 2 && !h2.includes("el-duplo__x"));
+  assert.ok(/width:57\.66%[^>]*><\/i><i style="width:42\.34%/.test(h2));
+  const h3 = duplo(DISPUTAS_SEGUNDO_TURNO.find((x) => x.cargo === "governador"), null);
+  assert.ok(h3.includes("el-duplo__barra") && /width:[\d.]+%/.test(h3));
 });

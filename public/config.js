@@ -26,6 +26,8 @@ export const CONFIG = {
 export const INICIO_APURACAO = Date.parse(turno === 2 ? "2026-10-25T00:00:00-03:00" : "2026-10-04T00:00:00-03:00");
 export const TURNO2 = turno === 2;
 /** Dia a partir do qual se pedem os arquivos do 2º turno (só a data; não há promessa de horário). Quando a divulgação começou de fato se sabe pelos dados: ao menos uma seção apurada. */
+/** Fim da votação do 2º turno de hoje (prorrogada até as 19h, horário de Brasília); 0 no 1º turno. Os gráficos de evolução tiram do eixo o intervalo sem apuração até esse horário. */
+export const FIM_VOTACAO = turno === 2 ? Date.parse("2026-10-25T19:00:00-03:00") : 0;
 export const INICIO_APURACAO_T2 = INICIO_DIA_SEGUNDO_TURNO;
 /** Página dos cenários "e se...": no subdomínio ese.* ou em /ese. Só tem a aba de cenários. */
 export const MODO_ESE = typeof location !== "undefined" && (/^ese\./.test(location.hostname) || /^\/ese(\/|\/index\.html)?$/.test(location.pathname));

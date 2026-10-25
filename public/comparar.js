@@ -46,7 +46,8 @@ const ppTxt = (n) => `${sinal(n)}${pct(Math.abs(n)).replace("%", " p.p.")}`;
 
 function barra(l, corA, corB) {
   const seg = (v, estilo, rot) => (v > 0 ? `<i style="width:${v}%;${estilo}" title="${rot}: ${pct(v)}"></i>` : "");
-  return `<span class="cp-barra" role="img" aria-label="${l.pctNaoVoto == null ? "Distribuição dos votos válidos" : "Distribuição dos aptos apurados"}">${seg(l.pctA, `background:${corA}`, "1º candidato")}${seg(l.pctB, `background:${corB}`, "2º candidato")}${seg(l.pctOutros, "background:var(--muted);opacity:.55", "Demais candidatos")}${seg(l.pctNaoVoto, "background:repeating-linear-gradient(45deg,var(--barra) 0 3px,var(--muted) 3px 4.5px)", "Não voto")}</span>`;
+  const doisLados = l.pctNaoVoto == null && !(l.pctOutros > 0.005); // só os dois candidatos: ganha a linha de 50%
+  return `<span class="cp-barra${doisLados ? " el-composicao el-composicao--meta" : ""}" role="img" aria-label="${l.pctNaoVoto == null ? "Distribuição dos votos válidos" : "Distribuição dos aptos apurados"}${doisLados ? ", linha de 50%" : ""}">${seg(l.pctA, `background:${corA}`, "1º candidato")}${seg(l.pctB, `background:${corB}`, "2º candidato")}${seg(l.pctOutros, "background:var(--muted);opacity:.55", "Demais candidatos")}${seg(l.pctNaoVoto, "background:repeating-linear-gradient(45deg,var(--barra) 0 3px,var(--muted) 3px 4.5px)", "Não voto")}</span>${doisLados ? `<span class="el-composicao__rotulo50">50%</span>` : ""}`;
 }
 
 function linhaHtml(l, rotulo, destaque, nomeA, nomeB, corA, corB, extra = "") {

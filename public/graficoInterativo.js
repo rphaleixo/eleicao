@@ -2,6 +2,7 @@
 import { pct } from "./formato.js";
 const NS = "http://www.w3.org/2000/svg";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const real = (g, t) => (g.corte && t > g.corte.de ? t + g.corte.s : t); // volta ao horário de verdade quando o eixo tem emenda
 const quando = (ms) => new Date(ms).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
 /** Índice do último instante igual ou anterior a `t` (ou 0). */
@@ -34,7 +35,7 @@ function marcar(svg, g, ordem, t) {
   const info = svg.nextElementSibling;
   if (info?.classList.contains("g-info")) {
     info.hidden = false;
-    info.innerHTML = `<b>${quando(g.ts[i])}</b>` + g.series.map((s) => `<span>${s.cor ? `<i class="pt" style="background:${s.cor}"></i>` : ""}${esc(s.n)} <b>${pct(s.v[i])}</b></span>`).join("") + (g.rot?.[i] ? `<span class="g-dif-info">${esc(g.rot[i])}</span>` : "");
+    info.innerHTML = `<b>${quando(real(g, g.ts[i]))}</b>` + g.series.map((s) => `<span>${s.cor ? `<i class="pt" style="background:${s.cor}"></i>` : ""}${esc(s.n)} <b>${pct(s.v[i])}</b></span>`).join("") + (g.rot?.[i] ? `<span class="g-dif-info">${esc(g.rot[i])}</span>` : "");
   }
   memoria.set(ordem, g.ts[i]);
 }
