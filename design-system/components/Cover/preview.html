@@ -1,0 +1,35 @@
+<!-- @dsCard height=288 -->
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>
+html,body{margin:0;background:var(--fundo)}
+.capa{position:relative;width:960px;height:288px;overflow:hidden;background:var(--fundo)}
+.capa svg{position:absolute;inset:0}
+.acento{fill:var(--acento)}.la{fill:var(--lado-a)}.lb{fill:var(--lado-b)}.ok{fill:var(--eleito)}.s2{fill:var(--segundo-turno)}.cut{fill:var(--cartao)}
+.faixa{fill:var(--trilho)}.hach{stroke:var(--ausencia);stroke-width:6}
+.bloco{rx:var(--raio-cartao)}
+.meta{stroke:var(--texto);stroke-width:3;stroke-dasharray:8 6}
+.metac{stroke:var(--cartao);stroke-width:3;stroke-dasharray:8 6}
+.texto{position:absolute;left:32px;bottom:28px;width:440px}
+.nome{margin:0;font:400 76px/72px var(--font-display);letter-spacing:.02em;color:var(--texto);text-transform:uppercase}
+.sub{margin:12px 0 0;font:400 13px/18px var(--font-text);color:var(--texto-suave)}
+</style></head><body><div class="capa">
+<!-- Derivação: blocos = acento 312×168, lado-a 192×108, lado-b 144×108, eleito 156×78, segundo-turno 156×78, faixa hachurada (trilho + ausencia) 120×108.
+Arranjo: placa grande de acento no alto, barra bicolor lado-a/lado-b embaixo com a linha tracejada de 50% sobre a divisa, coluna de situação à direita.
+Padrão: a barra do Placar com a linha dos 50% e as marcas ▲ ● ■ recortadas na placa, porque o sistema é a leitura de duas candidaturas que nunca depende só da cor; hachura para o que está fora de disputa.
+Passos e raios: 12px de vão (esp-12), blocos com raio-cartao 14px; marcas de 40px. -->
+<svg width="960" height="288" viewBox="0 0 960 288" role="img" aria-label="Placar de duas candidaturas com linha de 50% e marcas de forma">
+<defs><pattern id="h" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(135)"><line class="hach" x1="0" y1="0" x2="0" y2="12"/></pattern></defs>
+<rect class="bloco acento" x="480" y="0" width="312" height="168"/>
+<polygon class="cut" points="520,128 560,128 540,88"/>
+<circle class="cut" cx="620" cy="108" r="20"/>
+<rect class="cut" x="668" y="88" width="40" height="40" rx="3"/>
+<line class="metac" x1="740" y1="24" x2="740" y2="144"/>
+<rect class="bloco ok" x="804" y="0" width="156" height="78"/>
+<rect class="bloco s2" x="804" y="90" width="156" height="78"/>
+<rect class="bloco la" x="480" y="180" width="192" height="108"/>
+<rect class="bloco lb" x="684" y="180" width="144" height="108"/>
+<line class="meta" x1="678" y1="172" x2="678" y2="288"/>
+<rect class="bloco faixa" x="840" y="180" width="120" height="108"/>
+<rect class="bloco" x="840" y="180" width="120" height="108" fill="url(#h)"/>
+</svg>
+<div class="texto"><h2 class="nome">Apuração<br>Eleições 2026</h2><p class="sub">Quem está na frente, quanto falta apurar e de onde vem cada número.</p></div>
+</div></body></html>
