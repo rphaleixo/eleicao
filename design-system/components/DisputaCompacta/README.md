@@ -12,3 +12,7 @@ O consumidor fornece: o cargo ou o estado, os dois candidatos (nome de urna, par
 - Em telas abaixo de 360px, o nome quebra em até duas linhas; a altura sobe poucos pixels.
 
 - Ordem fixa dos finalistas do 2º turno de presidente: Lula sempre à esquerda e Flávio Bolsonaro sempre à direita, qualquer que seja o resultado, o turno ou a base. Quem está à frente é dito por texto ou ícone, nunca pela posição.
+
+- Barra de dois lados (rodada 15c): abaixo dos dois nomes vai uma barra de 14px com os dois percentuais sobre votos válidos (`el-duplo__barra` com `el-composicao el-composicao--meta`), a linha tracejada de 50% no centro e o rótulo "50%" uma vez, logo abaixo. A cor de cada trecho é a do partido do lado; o número continua escrito em cada lado, a barra nunca é a única informação. A barra soma 100% dos válidos dos dois finalistas. No presidente, Lula fica sempre à esquerda e Flávio Bolsonaro à direita; a barra segue a mesma ordem.
+
+- Com a barra, o "×" entre os dois lados sai (a barra já separa os dois); a coluna central fica vazia e flexível.
