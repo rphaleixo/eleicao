@@ -35,6 +35,8 @@ export const CAMINHO_VALIDO = new RegExp(
 );
 
 const CACHE_JSON = 10; // segundos
+const CACHE_TURNO_ENCERRADO = 21600; // 6 horas: o 1º turno terminou e seus arquivos não mudam
+const CABECALHOS_TSE = { "User-Agent": "Mozilla/5.0 (compatible; ApuracaoEleicoes2026/1.0)", Accept: "application/json, */*", Referer: "https://resultados.tse.jus.br/" };
 const CACHE_MUNICIPIO = 60; // um arquivo por município: cache maior, para não sobrecarregar o TSE
 const CODIGO_IBGE = { RO: 11, AC: 12, AM: 13, RR: 14, PA: 15, AP: 16, TO: 17, MA: 21, PI: 22, CE: 23, RN: 24, PB: 25, PE: 26, AL: 27, SE: 28, BA: 29, MG: 31, ES: 32, RJ: 33, SP: 35, PR: 41, SC: 42, RS: 43, MS: 50, MT: 51, GO: 52, DF: 53 };
 const CACHE_FOTO = 86400;
@@ -72,13 +74,23 @@ export default {
     if (!CAMINHO_VALIDO.test(caminho)) return new Response("Caminho inválido", { status: 400 });
 
     const foto = caminho.endsWith(".jpeg");
-    const ttl = foto ? CACHE_FOTO : /^ele\d{4}\/\d+\/dados\/[a-z]{2}\/[a-z]{2}\d{5}-/.test(caminho) ? CACHE_MUNICIPIO : CACHE_JSON;
-    const resposta = await fetch(ORIGEM_TSE + caminho, {
+    const final1 = /^ele\d{4}\/(6257|6259)\//.test(caminho); // 1º turno: apuração encerrada, os arquivos não mudam mais
+    const ttl = foto ? CACHE_FOTO : final1 ? CACHE_TURNO_ENCERRADO : /^ele\d{4}\/\d+\/dados\/[a-z]{2}\/[a-z]{2}\d{5}-/.test(caminho) ? CACHE_MUNICIPIO : CACHE_JSON;
+    let resposta = await fetch(ORIGEM_TSE + caminho, {
+      headers: CABECALHOS_TSE,
       cf: {
         cacheEverything: true,
         cacheTtlByStatus: { "200-299": ttl, "404": 30, "500-599": 0 },
       },
-    });
+    }).catch(() => null);
+    // Cópia de segurança: guarda a última resposta boa por 1 dia e, se o TSE recusar ou cair (403, 429, 5xx), devolve essa cópia em vez de erro.
+    const chaveCopia = new Request("https://copia.apuracao.local/" + caminho);
+    if (resposta?.ok) ctx.waitUntil(caches.default.put(chaveCopia, new Response(resposta.clone().body, { headers: { "Cache-Control": "public, max-age=86400" } })));
+    else if (!resposta || resposta.status === 403 || resposta.status === 429 || resposta.status >= 500) {
+      const copia = await caches.default.match(chaveCopia);
+      if (copia) return new Response(copia.body, { status: 200, headers: { "Content-Type": foto ? "image/jpeg" : "application/json; charset=utf-8", "Cache-Control": "public, max-age=5", "Access-Control-Allow-Origin": "*", "X-Dados-Antigos": "1" } });
+      if (!resposta) return new Response("TSE indisponível", { status: 502 });
+    }
 
     return new Response(resposta.body, {
       status: resposta.status,
