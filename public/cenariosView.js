@@ -9,7 +9,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const sinal = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
 const chip = (rotulo) => `<span class="chip" style="--cor:${corPartido(rotulo)}">${esc(rotulo)}</span>`;
 
-export const seletorCenarios = (atual) => `<div class="seg mini seg-rolavel" role="group" aria-label="Cenário">${Object.entries(CENARIOS).map(([k, c]) => `<button type="button" data-cenario="${k}" aria-pressed="${k === atual}">${esc(c.titulo)}</button>`).join("")}</div>`;
+export const seletorCenarios = (atual) => `<div class="el-abas el-abas--filtro lista-vertical" role="group" aria-label="Cenário">${Object.entries(CENARIOS).map(([k, c]) => `<button type="button" class="el-aba" data-cenario="${k}" aria-pressed="${k === atual}">${esc(c.titulo)}</button>`).join("")}</div>`;
 
 function tabelaBancada(cmp, comSenado) {
   const linhas = cmp.linhas.filter((l) => l.antes || l.depois || l.senado).map((l) => `<tr${l.delta ? ' class="cn-mudou"' : ""}><td>${chip(l.rotulo)}</td><td>${l.antes}</td><td><b>${l.depois}</b></td>

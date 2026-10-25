@@ -74,7 +74,7 @@ function lerHash() {
     if (!ABAS.some((a) => a.id === estado.aba)) Object.assign(estado, { aba: "andamento", uf: "BR", cargo: "resumo", mun: "" });
     if (estado.aba === "estados" && !cargosBarra(estado.uf).some(([id]) => id === estado.cargo)) Object.assign(estado, { cargo: "resumo", mun: "" });
     if (estado.mapaCargo === "senador" || (estado.mapaCargo === "governador" && !UFS_GOV.includes(estado.uf))) estado.mapaCargo = "presidente";
-    history.replaceState(null, "", montarRota(estado)); // endereço antigo de Senado/deputados vira o início, sem ficar na barra
+    if (!estado.avisoRota) history.replaceState(null, "", montarRota(estado)); // com aviso, o endereço fica como está: recarregar repete o aviso
   }
   if (estado.uf !== "BR" && estado.uf !== "ZZ") estado.regiao = regiaoDe(estado.uf); // a região acompanha o estado da URL
   if (estado.aba === "estados" && location.hash.split("/")[2]) guardarUf(estado.uf); // só guarda o que a pessoa escolheu, não o padrão
@@ -86,16 +86,26 @@ const permiteMun = () => (estado.aba === "presidente" || (estado.aba === "estado
 function montarModos() {
   if (MODO_ESE) { $("modos").hidden = true; return; }
   const cmp = estado.aba === "turnos";
+  const comComparar = Date.now() >= INICIO_APURACAO_T2; // Comparar só existe quando os dois turnos têm dados
   const b = (modo, nome, data, ativo) => `<button type="button" data-modo="${modo}" aria-pressed="${ativo}">${nome}<small>${data}</small></button>`;
-  $("modos").innerHTML = `<div class="el-seg el-seg--turno" role="group" aria-label="Turno da eleição">${b("1", "1º turno", "04/10", !cmp && !TURNO2)}${b("2", "2º turno", "25/10", !cmp && TURNO2)}${b("cmp", "Comparar", "1º × 2º", cmp)}</div>`;
+  $("modos").innerHTML = `<div class="el-turnos" role="group" aria-label="Turno da eleição"${comComparar ? "" : ' style="grid-template-columns:1fr 1fr"'}>${b("1", "1º turno", "04/10", !cmp && !TURNO2)}${b("2", "2º turno", "25/10", !cmp && TURNO2)}${comComparar ? b("cmp", "⇄ Comparar", "1º × 2º", cmp) : ""}</div>`;
 }
+/** A barra de turno some ao rolar para baixo e volta ao rolar para cima; as premissas fixas sobem sozinhas (--alt-fixa). */
+let ultimoY = 0;
+addEventListener("scroll", () => {
+  const y = scrollY, raiz = document.documentElement;
+  if (y > ultimoY + 6 && y > 140) raiz.setAttribute("data-turno-oculto", "");
+  else if (y < ultimoY - 6 || y < 60) raiz.removeAttribute("data-turno-oculto");
+  ultimoY = y;
+}, { passive: true });
 $("modos").addEventListener("click", (e) => {
   const m = e.target.closest("[data-modo]");
   if (!m) return;
   const modo = m.dataset.modo;
   if (modo === "cmp") { navegar({ aba: "turnos", uf: "BR", mun: "" }); window.scrollTo({ top: 0 }); return; }
   if (Number(modo) === (TURNO2 ? 2 : 1)) { if (estado.aba === "turnos") navegar({ aba: "andamento", uf: "BR", mun: "" }); return; } // já está neste turno: sai da comparação
-  const u = new URL(location.href); u.searchParams.set("turno", modo); u.hash = "#/andamento/BR"; location.href = u.toString(); // o turno muda os arquivos do TSE: recarrega
+  const u = new URL(location.href); u.searchParams.set("turno", modo); if (estado.aba === "turnos") u.hash = "#/andamento/BR"; // sai da comparação; nas demais telas fica na mesma área e no mesmo escopo
+  location.href = u.toString(); // o turno muda os arquivos do TSE: recarrega (se a área não existir no outro turno, o aviso explica)
 });
 
 function montarControles() {
@@ -1180,8 +1190,23 @@ function avisoRotaSemTurno() {
   const r = estado.avisoRota;
   if (!r) return "";
   const nome = { senadores: "Senadores", camara: "Deputados", geo: "Geografia", nulos: "Nulos" }[r.nome] ?? "Esta tela";
-  return `<div class="el-aviso" role="status" style="margin-top:var(--esp-14)"><span class="el-aviso__icone" aria-hidden="true">!</span><p><b>${esc(nome)} não existe no 2º turno.</b> No 2º turno só há Presidente e o governo de seis estados. <a class="link" href="?turno=1${esc(r.hash)}">Ver no 1º turno</a></p></div>`;
+  return `<div class="el-aviso" role="status" style="margin-top:var(--esp-14)"><span class="el-aviso__icone" aria-hidden="true">!</span><p><b>${esc(nome)} não existe no 2º turno.</b> No 2º turno só há Presidente e o governo de seis estados. <a class="el-botao" href="?turno=1${esc(r.hash)}">Ver no 1º turno</a> <a class="el-botao" href="#/andamento/BR">Ir para a Apuração do 2º turno</a></p></div>`;
 }
+/** Tela sem nada para mostrar (por exemplo, antes de a apuração começar): explica o que aparecerá, em vez de uma página em branco. */
+function vazioDaTela() {
+  const nome = ABAS.find((x) => x.id === estado.aba)?.nome ?? "Esta tela";
+  return `<section class="el-vazio"><h3>${esc(nome)}: ainda sem dados</h3><p>Os números aparecem aqui assim que o TSE publicar os primeiros resultados. A página atualiza sozinha a cada poucos segundos. <button type="button" class="link" data-tentar>Tentar agora</button></p></section>`;
+}
+
+/** Carregando por mais de 20 segundos: avisa que está demorando e oferece tentar de novo (nada de "Carregando…" sem fim). */
+let carregandoDesde = 0;
+setInterval(() => {
+  const el = $("conteudo");
+  if (!el || !/Carregando/.test(el.textContent)) { carregandoDesde = 0; return; }
+  carregandoDesde ||= Date.now();
+  if (Date.now() - carregandoDesde > 20_000 && !el.querySelector(".aviso-demora")) el.insertAdjacentHTML("afterbegin", `<div class="el-aviso aviso-demora" role="status" style="margin-top:var(--esp-14)"><span class="el-aviso__icone" aria-hidden="true">!</span><p><b>Está demorando mais que o normal.</b> O TSE pode estar lento ou a conexão falhou. <button type="button" class="link" data-tentar>Tentar agora</button></p></div>`);
+}, 4000);
+
 function renderNavegacao(v) {
   ultimoAc = v?.f ?? v?.ac ?? v?.e ?? ultimoAc;
   const nav = usaRegiao() && ultimoAc
@@ -1209,7 +1234,8 @@ function render(forcar = false) {
   if (v.tipo === "nacional-prop" && v.estados) v.nacional = consolidarNacional(v.estados); // cadeiras do país seguem o cenário
   const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo, nulos: telaNulos, turnos: telaTurnos }[v.tipo];
   renderNavegacao(v);
-  $("conteudo").innerHTML = avisoRotaSemTurno() + tela(v);
+  const html = estado.avisoRota ? avisoRotaSemTurno() : tela(v);
+  $("conteudo").innerHTML = String(html ?? "").replace(/<[^>]*>|\s/g, "") ? html : vazioDaTela();
   reaplicarGraficos($("conteudo"));
   reaplicarZoom($("conteudo"));
   ajustarContrasteChips($("conteudo"));
@@ -1285,7 +1311,7 @@ function montarBase() {
   if (caixa.hidden) { caixa.innerHTML = ""; return; }
   const chave = `<button type="button" class="el-chave" role="switch" data-sj aria-checked="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><span class="el-chave__trilho"></span>Sem sub judice<span class="el-chave__estado">${estado.semSJ ? "Ligado" : "Desligado"}</span></button>`;
   caixa.innerHTML = `<details class="el-painel"${aberto ? " open" : ""}><summary>Como calcular</summary><div class="el-painel__corpo">
-    ${semBase ? "" : `<div class="el-seg" role="group" aria-label="Base dos percentuais"><button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Eleitores aptos</button></div>`}
+    ${semBase ? "" : `<div class="el-visao" role="group" aria-label="Base dos percentuais"><button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Eleitores aptos</button></div>`}
     ${!semBase && b === "totais" ? `<p class="el-apoio">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}
     ${sj ? chave : ""}
     ${sj && estado.semSJ ? `<p class="el-apoio">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}

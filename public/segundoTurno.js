@@ -15,7 +15,7 @@ export const hrefDisputa = (d) => (d.cargo === "presidente" ? "#/presidente" : `
 function candidato(d, c) {
   return `<span class="dp-cand" style="--cor:${corPartido(c.partido)}"><img class="foto dp-foto" loading="lazy" alt="" src="${foto(d, c)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
     <b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>
-    <strong>${pct(c.pct)}</strong><small>${fmt(c.votos)} votos no 1º turno</small></span>`;
+    <strong>${pct(c.pct)} <em class="no-primeiro">no 1º turno</em></strong><small>${fmt(c.votos)} votos</small></span>`;
 }
 
 /** Cards das disputas. `cargo`: "presidente", "governador" ou nenhum (todas). */

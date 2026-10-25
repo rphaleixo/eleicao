@@ -122,25 +122,24 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .ficha-painel section:first-child h3 { margin-top: 0; }
 
 /* Marcha da apuração (mobile first) */
-/* controle segmentado em régua (componente Segmentado): marcador quadrado sobre um filete e trecho de 5px em acento sob a opção ativa */
-.seg { display: flex; position: relative; margin: var(--esp-12) 0; padding: 0; gap: 0; border-top: 2px solid var(--texto); border-radius: 0; background: none; }
-.seg button { flex: 1 1 0; position: relative; min-height: 44px; padding: 16px var(--esp-8) var(--esp-6) 0; border: 0; border-radius: 0; background: none; box-shadow: none; text-align: left; color: var(--texto-suave); font: 700 14px/18px var(--font-text); cursor: pointer; }
-.seg button::before { content: ""; position: absolute; top: -9px; left: 0; width: 16px; height: 16px; border: 2px solid var(--texto); background: var(--fundo); }
-.seg button[aria-pressed="true"] { color: var(--texto); background: none; box-shadow: none; }
-.seg button[aria-pressed="true"]::before { z-index: 1; background: var(--acento); box-shadow: inset 0 0 0 2px var(--fundo); }
-.seg button[aria-pressed="true"]::after { content: ""; position: absolute; top: -2px; left: 0; right: var(--esp-8); height: 5px; background: var(--acento); }
-.seg button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
-.seg.mini { flex: none; max-width: 100%; margin: var(--esp-8) 0; } .seg.mini button { flex: none; padding-right: var(--esp-16); white-space: nowrap; min-height: 44px; font-size: 13px; }
+/* controles de escolha: par (ou trio) de botões do design system (el-visao); listas longas rolam como abas */
+.seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; margin: var(--esp-8) 0; padding: 0; border: 1px solid var(--texto); border-radius: 0; background: none; }
+.seg button { min-height: 44px; min-width: 56px; padding: 0 var(--esp-12); border: 0; border-left: 1px solid var(--linha); border-radius: 0; background: none; box-shadow: none; color: var(--texto); font: 700 13px/16px var(--font-text); cursor: pointer; white-space: normal; text-align: center; }
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--texto); color: var(--fundo); }
+.seg button:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
+.seg.seg-rolavel { display: flex; overflow-x: auto; scrollbar-width: none; border: 0; border-bottom: 2px solid var(--linha); } .seg.seg-rolavel::-webkit-scrollbar { display: none; }
+.seg.seg-rolavel button { flex: none; background: none; color: var(--texto-suave); border: 0; padding: 0 var(--esp-14); white-space: nowrap; }
+.seg.seg-rolavel button[aria-pressed="true"] { background: none; color: var(--texto); box-shadow: inset 0 -5px 0 var(--acento); }
+.lista-vertical { flex-direction: column; flex-wrap: nowrap; overflow: visible; gap: 0; align-items: stretch; }
+.lista-vertical .el-aba { width: 100%; justify-content: flex-start; text-align: left; border-bottom: 1px solid var(--linha); }
 
 /* painel de destaque */
 .hero { background: var(--destaque-a); border: 0; color: #fff; box-shadow: none; }
 .hero h2 { color: #fff; margin: 0; font: 400 28px/28px var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
-.hero .seg { border-top-color: rgba(255, 255, 255, .7); margin-bottom: 14px; }
-.hero .seg button { color: rgba(255, 255, 255, .78); }
-.hero .seg button::before { border-color: #fff; background: var(--destaque-a); }
-.hero .seg button[aria-pressed="true"] { color: #fff; }
-.hero .seg button[aria-pressed="true"]::before { background: #fff; box-shadow: inset 0 0 0 2px var(--destaque-a); }
-.hero .seg button[aria-pressed="true"]::after { background: #fff; }
+.hero .seg { border-color: rgba(255, 255, 255, .7); margin-bottom: 14px; }
+.hero .seg button { color: #fff; border-left-color: rgba(255, 255, 255, .35); }
+.hero .seg button[aria-pressed="true"] { background: #fff; color: var(--destaque-a); }
 .hero .voltar { margin: 0 0 12px; background: rgba(255, 255, 255, .14); color: #fff; border: 0; }
 .hero-topo { display: flex; align-items: center; gap: 16px; }
 .anel { width: 118px; height: 118px; flex: none; }
@@ -814,8 +813,6 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .75rem
 @media (min-width: 900px) { .geo-ctl { grid-template-columns: 1fr 1fr; } .geo-ctl .geo-selects, .geo-ctl > p { grid-column: 1 / -1; } }
 
 /* Navegação por turno e comparação entre turnos */
-.modos { padding-top: 0; }
-.modos .el-seg { margin: var(--esp-6) 0 0; }
 .cmp-tab { width: 100%; border-collapse: collapse; } .cmp-tab th, .cmp-tab td { padding: 8px 6px; border-top: 1px solid var(--linha); text-align: right; vertical-align: top; font-variant-numeric: tabular-nums; }
 .cmp-tab tr:first-child th, .cmp-tab tr:first-child td { border-top: 0; } .cmp-tab th:first-child { text-align: left; font-weight: 600; } .cmp-tab td b, .cmp-tab td small, .cmp-tab th small { display: block; } .cmp-tab td small { color: var(--texto-suave); }
 .cmp-tab tr:first-child th { font-size: .8rem; } .cmp-total th, .cmp-total td { background: color-mix(in srgb, var(--trilho) 40%, transparent); }
@@ -890,7 +887,6 @@ body { padding-bottom: 72px; }
 @media (min-width: 760px) { .carrossel.el-carrossel { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0; margin: 14px 0 0; } .el-carrossel > .card-cargo { flex: none; } .el-carrossel + .el-carrossel__pos { display: none; } }
 
 /* turno: régua de até 480px; título do topo só no celular (no desktop a marca fica no menu); variação sem palavra órfã */
-.modos .el-seg--turno { max-width: 480px; }
 .cmp-col span, .cmp-col b, .cmp-col small { white-space: nowrap; }
 
 /* tema escuro: filete superior dos cartões menos pesado */
@@ -898,10 +894,11 @@ body { padding-bottom: 72px; }
 :root[data-theme="escuro"] .card, :root[data-theme="escuro"] .el-painel, :root[data-theme="escuro"] .el-ajuste { border-top-color: color-mix(in srgb, var(--texto) 45%, transparent); }
 
 /* topo e turno presos no alto (48 + 44 = 92px); a faixa de premissas fica logo abaixo */
-:root { --alt-fixa: 92px; }
 .topo { position: sticky; top: 0; z-index: 40; }
-.modos { position: sticky; top: 48px; z-index: 39; background: var(--fundo); height: 44px; padding-top: 0; padding-bottom: 0; }
-.modos .el-seg { margin: 10px 0 0; } .modos .el-seg button { min-height: 32px; padding-top: 14px; }
+/* seletor de turno (el-turnos-barra): preso abaixo do topo; some ao rolar para baixo */
+:root { --alt-fixa: 96px; }
+.modos.el-turnos-barra { padding-top: var(--esp-4); padding-bottom: var(--esp-4); z-index: 39; }
+.modos .el-turnos { margin: 0; }
 .el-premissas { margin: 0 -14px; padding: 0 14px; }
 .el-premissas__painel { left: 0; right: 0; }
 .el-premissas .el-abas { overflow-x: auto; margin-top: var(--esp-4); }
@@ -951,3 +948,10 @@ body { padding-bottom: 72px; }
 /* tabelas: a primeira coluna fica presa à esquerda ao rolar na horizontal (componente Tabela) */
 .tab-scroll table th:first-child, .tab-scroll table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--cartao); box-shadow: 1px 0 0 var(--linha); }
 .tab-scroll table thead th:first-child, .tab-scroll table tr:first-child th:first-child { z-index: 2; }
+
+/* percentual do 1º turno nos cartões do 2º turno: o rótulo vem junto do número, não só em letra pequena abaixo */
+.no-primeiro { font: 700 11px/14px var(--font-text); letter-spacing: .04em; text-transform: uppercase; color: var(--texto-suave); font-style: normal; margin-left: var(--esp-4); }
+/* indicador "1 de N" do carrossel mais junto do cartão */
+.el-carrossel__pos { margin-top: 2px; line-height: 14px; } .nota-estado { margin-top: 2px; }
+/* Comparar turnos: a tabela "Maiores e menores" cabe no celular (a coluna Eleitores sai abaixo de 480px) */
+@media (max-width: 480px) { .geo-rank th:nth-child(3), .geo-rank td:nth-child(3) { display: none; } }
