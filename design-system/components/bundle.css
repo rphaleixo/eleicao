@@ -789,3 +789,20 @@ button.el-uf { border-style: solid; border-color: var(--linha); border-width: 1p
 .el-cargo--vazio { border-top-color: var(--linha); }
 .el-cargo--vazio .el-cargo__topo { align-items: center; min-height: 32px; }
 .el-cargo--vazio p { margin: 0; font: 400 14px/20px var(--font-text); color: var(--texto-suave); }
+
+/* ===== Rodada 19: projeção ===== */
+.el-proj { background: var(--cartao); border: 1px solid var(--linha); border-top: 3px solid var(--texto); padding: var(--esp-12); display: grid; gap: var(--esp-10); }
+.el-proj__topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--esp-4) var(--esp-12); }
+.el-proj__topo h3 { margin: 0; font: 700 16px/20px var(--font-text); text-transform: none; letter-spacing: 0; }
+.el-proj__topo small { font: 600 13px/16px var(--font-num); color: var(--texto-suave); }
+.el-proj__lado { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--esp-8); align-items: baseline; }
+.el-proj__nome { font: 700 13px/16px var(--font-text); text-transform: uppercase; }
+.el-proj__pct { font: 700 28px/30px var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.el-proj__faixa { grid-column: 1 / -1; font: 600 12px/16px var(--font-num); color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.el-proj__escala { position: relative; height: 22px; background: var(--trilho); margin-top: var(--esp-4); }
+.el-proj__escala > .intervalo { position: absolute; top: 7px; height: 8px; background: var(--cor, var(--acento)); opacity: .55; }
+.el-proj__escala > .ponto { position: absolute; top: 3px; width: 4px; height: 16px; margin-left: -2px; background: var(--cor, var(--acento)); border: 1px solid var(--cartao); box-sizing: content-box; }
+.el-proj__escala > .meio { position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 2px dashed var(--texto); }
+.el-proj__eixo { display: flex; justify-content: space-between; font: 600 11px/14px var(--font-num); color: var(--texto-suave); margin-top: 2px; }
+.el-proj__aviso { margin: 0; padding: var(--esp-8) var(--esp-10); border-left: 4px solid var(--aviso, #b26a00); background: var(--trilho); font: 600 13px/18px var(--font-text); }
+.el-proj__rodape { margin: 0; font: 400 12px/16px var(--font-text); color: var(--texto-suave); }
