@@ -17,6 +17,7 @@ import { blocoPartido, desempenhoPartido, listaDePartidos } from "./partidos.js"
 import { textoAptos, telaMarcha, regiaoDe, locaisResultado, navegacaoRegional, heroApuracao, escopoDoPainel, cardCargo, cardBancada, situacaoGeral, agregar, REGIOES } from "./marcha.js";
 import { agregarResultados } from "./agregado.js";
 import { regiaoDoValor, opcoesDeLugar, valorRegiao } from "./lugares.js";
+import { telaEvolucao, telaCheia, EVO_PADRAO } from "./evolucaoView.js";
 import { fmt, pct } from "./formato.js";
 import { rankingMajoritario } from "./ranking.js";
 import { cardEstado, cardRegiao, gradeCards, linha2022, cardMunicipio } from "./cardsEstados.js";
@@ -62,7 +63,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, t2Iniciou: false, visaoUfs: "blocos", agrupUfs: "estados", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "maiorMargem" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { premissas: false, cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { premissas: false, metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, t2Iniciou: false, visaoUfs: "blocos", agrupUfs: "estados", evo: { ...EVO_PADRAO }, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "maiorMargem" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { premissas: false, cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { premissas: false, metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -139,7 +140,7 @@ function montarControles() {
   $("mun").value = estado.mun;
 }
 
-const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "cenarios" ? "/" + estado.cenario : ""}${estado.aba === "partidos" ? "/" + estado.partido : ""}${estado.aba === "presidente" || estado.aba === "turnos" ? "/" + estado.regiao : ""}${estado.aba === "senadores" ? "/" + estado.visaoSenado : ""}${estado.aba === "governadores" ? "/" + estado.visaoGov : ""}${estado.aba === "estados" && estado.cargo === "mapa" ? "/" + estado.mapaCargo : ""}`; // na aba Presidente a região também muda a carga
+const chaveRota = () => `${estado.aba}/${estado.uf}/${estado.cargo}/${estado.mun}${estado.aba === "cenarios" ? "/" + estado.cenario : ""}${estado.aba === "partidos" ? "/" + estado.partido : ""}${estado.aba === "presidente" || estado.aba === "turnos" || estado.aba === "evolucao" ? "/" + estado.regiao : ""}${estado.aba === "senadores" ? "/" + estado.visaoSenado : ""}${estado.aba === "governadores" ? "/" + estado.visaoGov : ""}${estado.aba === "estados" && estado.cargo === "mapa" ? "/" + estado.mapaCargo : ""}`; // na aba Presidente a região também muda a carga
 const cacheViews = new Map(); // última resposta de cada tela: aparece na hora, e é atualizada em seguida
 
 function mostrarCarregando() {
@@ -467,6 +468,11 @@ async function carregarView(rota) {
     return { tipo: "partidos", pres, final, gov: emSegundoPlano("pan-governador-t1", pan, () => panorama("governador", 1)), sen: emSegundoPlano("pan-senador-t1", pan, () => panorama("senador", 1)),
       depf: emSegundoPlano("nacional-t1", ttl, () => estadosDepFederal(1)), depe: emSegundoPlano("nacional-estadual-t1", ttl, () => estadosDepEstadual(1)),
       pres2: seg ? await obter("presidente", "BR", undefined, 2).catch(() => null) : null, gov2: seg ? emSegundoPlano("pan-governador-t2", pan, () => panorama("governador", 2)) : null };
+  }
+  if (aba === "evolucao") { // o histórico minuto a minuto de Presidente (Brasil, estados e exterior; a região soma os estados dela)
+    const locais = locaisResultado(uf, rota.regiao);
+    const [rp, h] = await Promise.all([obterResultadosPresidente(locais), obterHistorico()]);
+    return { tipo: "evolucao", uf, regiao: rota.regiao, locais, rp, h };
   }
   const acomp = obterAcompanhamento(aba === "camara" ? "dep-federal" : aba);
   if (aba === "presidente") {
@@ -1026,6 +1032,40 @@ function listaDeputadosEleitos(estados, ufs, f) {
     ${boxCandidatos({ titulo: "Deputados federais eleitos", contagem: `${fmt(itens.length)}${buscando(busca) || todos.length !== 513 ? ` de ${fmt(todos.length)}` : " de 513"}`, nota: "Votos nominais de cada eleito e % dos votos válidos do estado. “Projeção” = eleito pela soma dos votos contados até agora; “eleito” = resultado oficial do TSE.", vazio: "Nenhum deputado com esses filtros.", itens, chave: "deps", porPagina: 25, semCartao: true })}`;
 }
 
+// ---------- Evolução: tamanho real do gráfico, tela cheia ----------
+/** Largura do quadro do gráfico em pixels: a medida do que já está na tela; antes disso, uma estimativa pela janela. */
+function larguraEvolucao() {
+  const el = document.querySelector("#conteudo [data-evo-grafico]");
+  if (el?.clientWidth > 100) return el.clientWidth;
+  const cw = document.documentElement.clientWidth;
+  return cw >= 1024 ? Math.min(1096, cw - 240) - 32 - 26 : cw - 32 - 26;
+}
+const alturaEvolucao = () => Math.round(Math.min(620, Math.max(300, window.innerHeight * 0.56))); // 56% da janela, entre 300 e 620px
+const opcoesEvolucao = () => ({ uf: estado.uf, regiao: estado.regiao, base: estado.base, evo: estado.evo, largura: larguraEvolucao(), altura: alturaEvolucao(), agora: Date.now(), inicioApuracao: INICIO_APURACAO, cor: corPartido });
+/** Se o quadro tem outra largura da usada no desenho (janela redimensionada), desenha de novo, uma vez por mudança. */
+let ajusteEvo = 0;
+function agendarAjusteEvolucao() {
+  cancelAnimationFrame(ajusteEvo);
+  ajusteEvo = requestAnimationFrame(() => {
+    const el = document.querySelector("#conteudo [data-evo-grafico]");
+    if (el && Math.abs(el.clientWidth - Number(el.dataset.largura)) > 6 && el.clientWidth > 100) render(true);
+  });
+}
+addEventListener("resize", () => { if (estado.aba === "evolucao") agendarAjusteEvolucao(); if ($("cheia")?.open) desenharCheia(); });
+function desenharCheia() {
+  const v = estado.view, c = $("cheia");
+  if (v?.tipo !== "evolucao" || !c) return;
+  const portrait = window.innerHeight > window.innerWidth;
+  const o = opcoesEvolucao();
+  c.innerHTML = telaCheia(v, { ...o, largura: Math.max(280, window.innerWidth - 24), altura: Math.max(200, window.innerHeight - 52 - (portrait ? 118 : 80) - 40) });
+  reaplicarGraficos(c);
+}
+iniciarGraficos($("cheia"));
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-cheia-abrir]")) { const c = $("cheia"); if (!c.open) { c.showModal(); desenharCheia(); } return; }
+  if (e.target.closest("[data-cheia-fechar]")) $("cheia").close(); // o foco volta ao botão "Tela cheia"; Esc também fecha
+});
+
 /** Aba Comparar turnos: Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno, por país, estado ou município, em quadro e mapa. */
 function telaTurnos(v) {
   const ct0 = estado.ct, { uf, mun } = estado;
@@ -1239,7 +1279,7 @@ let ultimoAc = null; // andamento por estado mais recente, para a navegação ap
 /** A lupa da barra de escopo (44×44): abre a mesma busca da lupa do topo. */
 const botaoLupa = () => `<button type="button" class="escopo-lupa" data-busca-abrir aria-label="Buscar cidade ou candidato"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg><span class="so-desktop">Cidade</span></button>`;
 /** Telas sem navegação por região mas com percentuais: só a base e a lupa, na mesma altura da barra de escopo. */
-const escopoSolo = () => (["geo", "nulos", "cenarios", "turnos"].includes(estado.aba) ? "" : `<div class="escopo-linha escopo-linha--solo">${botaoBase(true)}${botaoLupa()}</div>`);
+const escopoSolo = () => (["geo", "nulos", "cenarios", "turnos", "evolucao"].includes(estado.aba) ? "" : `<div class="escopo-linha escopo-linha--solo">${botaoBase(true)}${botaoLupa()}</div>`);
 function escopoRecolhido(nav) {
   const reg = estado.regiao && REGIOES[estado.regiao] ? REGIOES[estado.regiao].nome : estado.regiao === "exterior" ? "Exterior" : "";
   const cidade = estado.mun ? (estado.municipios[estado.uf] ?? []).find((m) => m.cod === estado.mun)?.nome ?? "" : "";
@@ -1293,12 +1333,14 @@ function render(forcar = false) {
   if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
   setBase(estado.base); setSemSubJudice(estado.semSJ); aplicarBaseNaView(v); // todos os % da tela seguem a base e o cenário escolhidos
   if (v.tipo === "nacional-prop" && v.estados) v.nacional = consolidarNacional(v.estados); // cadeiras do país seguem o cenário
-  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo, nulos: telaNulos, turnos: telaTurnos }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo, nulos: telaNulos, turnos: telaTurnos, evolucao: (x) => telaEvolucao(x, opcoesEvolucao()) }[v.tipo];
   renderNavegacao(v);
   const html = estado.avisoRota ? avisoRotaSemTurno() : tela(v);
   const corpoTela = String(html ?? "").replace(/<[^>]*>|\s/g, "") ? html : vazioDaTela();
   $("conteudo").innerHTML = corpoTela;
   reaplicarGraficos($("conteudo"));
+  if ($("cheia")?.open) desenharCheia();
+  agendarAjusteEvolucao();
   reaplicarZoom($("conteudo"));
   ajustarContrasteChips($("conteudo"));
   if (estado.rolar) { estado.rolar = false; document.querySelector("li.aberto")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
@@ -1551,6 +1593,8 @@ $("conteudo").addEventListener("input", (e) => {
 });
 ligarZoom($("conteudo"));
 $("conteudo").addEventListener("change", (e) => {
+  const eo = e.target.closest?.("[data-evo-onde]");
+  if (eo) { const r = regiaoDoValor(eo.value); estado.regiao = r; navegar({ uf: r ? "BR" : eo.value, mun: "" }); return; }
   const cu = e.target.closest?.("[data-ct-uf], [data-ct-mun]");
   if (cu) { estado.ct.sel = ""; if (cu.matches("[data-ct-uf]")) { const r = regiaoDoValor(cu.value); estado.regiao = r; navegar({ uf: r ? "BR" : cu.value, mun: "" }); } else navegar({ mun: cu.value }); return; }
   const nu = e.target.closest?.("[data-nl-numero], [data-nl-mun]");
@@ -1598,6 +1642,10 @@ $("conteudo").addEventListener("click", (e) => {
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const vm = e.target.closest("[data-vermais]");
   if (vm) { maisItens(vm.dataset.vermais, Number(vm.dataset.passo) || 10, vm.dataset.vermais === "pres-cmp" ? 5 : 10); render(true); return; }
+  const eb = e.target.closest("[data-evo-base]");
+  if (eb) { estado.base = eb.dataset.evoBase; try { localStorage.setItem("base", estado.base); } catch { /* sem armazenamento */ } render(true); return; }
+  const ep = e.target.closest("[data-evo-periodo], [data-evo-linhas]");
+  if (ep) { if (ep.dataset.evoPeriodo) estado.evo.periodo = ep.dataset.evoPeriodo; else estado.evo.linhas = ep.dataset.evoLinhas; render(true); return; }
   const zm = e.target.closest("[data-zoom-grafico]");
   if (zm) { alternarZoom(zm.dataset.zoomGrafico, zm.dataset.zoom === "ampliar"); render(true); return; }
   const ag = e.target.closest("[data-agrup-ufs]");

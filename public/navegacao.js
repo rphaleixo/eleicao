@@ -3,6 +3,7 @@ import { controleTema } from "./tema.js";
 // As áreas que não existem no turno (Senado e deputados no 2º turno) simplesmente não aparecem.
 const ICONES = {
   andamento: "M5 20V10M12 20V4M19 20v-7",
+  evolucao: "M3 18l5-7 4 3 8-9M3 21h18",
   presidente: "M6 21V4M6 4h11l-2 4 2 4H6",
   governadores: "M4 21h16M6 21V9l6-5 6 5v12M10 21v-6h4v6",
   camara: "M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1M9 10a3 3 0 100-6 3 3 0 000 6zM16 14a4 4 0 014 4v2M15 4.2a3 3 0 010 5.6",
@@ -16,7 +17,7 @@ const svg = (id) => id === "mais"
 
 /** Grupos do menu lateral, na ordem do design system. */
 export const GRUPOS = [
-  ["Acompanhar", ["andamento"]],
+  ["Acompanhar", ["andamento", "evolucao"]],
   ["Cargos", ["presidente", "governadores", "senadores", "camara"]],
   ["Estado", ["estados"]],
   ["Análises", ["partidos", "cenarios", "geo", "nulos"]],
@@ -25,7 +26,7 @@ export const GRUPOS = [
 const href = (id) => `#/${id}`;
 const nomeDe = (abas, id) => abas.find((a) => a.id === id)?.nome ?? id;
 
-/** Menu lateral: dez áreas em quatro grupos, numeradas em sequência. */
+/** Menu lateral: onze áreas em quatro grupos, numeradas em sequência. */
 export function menuLateral(abas, atual, turnoTxt) {
   const tem = (id) => abas.some((a) => a.id === id);
   const grupos = GRUPOS.map(([nome, ids]) => [nome, ids.filter(tem)]).filter(([, ids]) => ids.length);

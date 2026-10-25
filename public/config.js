@@ -44,6 +44,7 @@ export const CARGOS = {
 
 const TODAS_ABAS = [
   { id: "andamento", nome: "Apuração" },
+  { id: "evolucao", nome: "Evolução" },
   { id: "presidente", nome: "Presidente" },
   { id: "governadores", nome: "Governadores" },
   { id: "senadores", nome: "Senadores" },
@@ -57,7 +58,7 @@ const TODAS_ABAS = [
 ];
 
 // No 2º turno só há Presidente e o governo de seis estados: sem Senado nem deputados.
-export const ABAS = MODO_ESE ? TODAS_ABAS.filter((a) => a.id === "cenarios") : TURNO2 ? TODAS_ABAS.filter((a) => ["andamento", "presidente", "governadores", "partidos", "cenarios", "estados", "turnos"].includes(a.id)) : TODAS_ABAS;
+export const ABAS = MODO_ESE ? TODAS_ABAS.filter((a) => a.id === "cenarios") : TURNO2 ? TODAS_ABAS.filter((a) => ["andamento", "evolucao", "presidente", "governadores", "partidos", "cenarios", "estados", "turnos"].includes(a.id)) : TODAS_ABAS;
 
 export const UFS = {
   AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",

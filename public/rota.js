@@ -1,5 +1,5 @@
 // Endereço da página (#/aba/estado/...), com a leitura e a montagem em um só lugar.
-export const ABAS_IDS = ["andamento", "presidente", "governadores", "senadores", "camara", "partidos", "cenarios", "geo", "nulos", "estados", "turnos"];
+export const ABAS_IDS = ["andamento", "evolucao", "presidente", "governadores", "senadores", "camara", "partidos", "cenarios", "geo", "nulos", "estados", "turnos"];
 export const CARGOS_ESTADO = ["resumo", "governador", "senador", "dep-federal", "dep-estadual", "presidente", "mapa"];
 const COM_MUNICIPIO = ["governador", "senador", "presidente"];
 
@@ -26,7 +26,7 @@ export function lerRota(hash, { ufs, ufPadrao }) {
     if (uf !== "BR" && uf !== "ZZ" && !ufs[uf]) uf = "BR";
     return { aba, uf, cargo, mun: uf !== "BR" && uf !== "ZZ" && /^\d{5}$/.test(c3 || "") ? c3 : "" };
   }
-  const zzOk = aba === "presidente" || aba === "andamento";
+  const zzOk = aba === "presidente" || aba === "andamento" || aba === "evolucao";
   if (aba === "camara" || aba === "governadores" || aba === "senadores" || !(uf === "BR" || ufs[uf] || (uf === "ZZ" && zzOk))) uf = "BR";
   mun = aba === "presidente" && uf !== "BR" && uf !== "ZZ" && /^\d{5}$/.test(c3 || "") ? c3 : "";
   return { aba, uf, cargo, mun };

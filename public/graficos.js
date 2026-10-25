@@ -20,6 +20,7 @@ export function emendar(pts, ate = 0, fim = FIM_VOTACAO) {
 }
 /** Zoom do eixo vertical: só visual e só na memória (o gráfico sempre abre em "Eixo completo"). */
 const zoomes = new Set();
+export const zoomLigado = (chave) => zoomes.has(chave);
 export const zerarZoom = () => zoomes.clear();
 export const alternarZoom = (chave, ligado) => { if (ligado) zoomes.add(chave); else zoomes.delete(chave); };
 /** Eixo ampliado: do menor valor menos 5 p.p. ao maior mais 5 p.p., em múltiplos de 5, entre 0% e 100% (no mínimo 10 p.p. de altura). */
@@ -173,7 +174,8 @@ export function temTotais(rp, local, inicio = 0) {
   return (rp?.pontos ?? []).some((p) => p.t * 1000 >= inicio && locais.every((l) => p.v?.[l]?.es > 0));
 }
 
-export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6, inicio = 0, ate = 0, base = "validos", excluir = [] } = {}) {
+/** A série por minuto de um lugar (um local ou a soma dos estados de uma região): pontos, candidatos de cima, e como calcular o % de cada um. */
+export function serieResultado(rp, local, { max = 6, inicio = 0, ate = 0, base = "validos", excluir = [] } = {}) {
   const totais = base === "totais" && temTotais(rp, local, inicio); // % sobre todos os aptos apurados, com a linha "Não voto"
   const locais = [].concat(local); // lista = soma de vários locais (estados de uma região)
   const junta = (v) => {
@@ -187,20 +189,27 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
   };
   const pts = (rp?.pontos ?? []).map((p) => ({ t: p.t * 1000, r: junta(p.v) })).filter((p) => p.r && p.r.vv > 0 && p.t >= inicio && (!totais || p.r.es > 0));
   if (ate && pts.length && ate > pts[pts.length - 1].t) pts.push({ ...pts[pts.length - 1], t: ate });
-  if (pts.length < 1) return `<p class="muted vazio-grafico">O gráfico começa quando os primeiros votos forem apurados. O resultado é registrado a cada minuto.</p>`;
+  if (pts.length < 1) return null;
   const ult = pts[pts.length - 1].r;
   const ids = Object.keys(ult.c).sort((a, b) => ult.c[b] - ult.c[a]).slice(0, max);
   const den = (r) => (totais ? r.es : r.vv);
   const pc = (r, id) => ((r.c[id] ?? 0) / den(r)) * 100;
   const pcNv = (r) => ((r.es - r.vv) / r.es) * 100; // não voto: brancos + nulos + abstenções
-  const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => [...ids.map((id) => pc(p.r, id)), ...(totais ? [pcNv(p.r)] : [])])) / 10) * 10);
+  return { pts, ids, totais, ult, den, pc, pcNv, locais };
+}
+
+export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, max = 6, inicio = 0, ate = 0, base = "validos", excluir = [], semNaoVoto = false, comControleZoom = true } = {}) {
+  const S = serieResultado(rp, local, { max, inicio, ate, base, excluir });
+  if (!S) return `<p class="muted vazio-grafico">O gráfico começa quando os primeiros votos forem apurados. O resultado é registrado a cada minuto.</p>`;
+  const { pts, ids, totais, ult, den, pc, pcNv, locais } = S, nv = totais && !semNaoVoto; // nv: a linha "não voto" tracejada (só na base Eleitores aptos)
+  const topo = Math.max(10, Math.ceil(Math.max(...pts.flatMap((p) => [...ids.map((id) => pc(p.r, id)), ...(nv ? [pcNv(p.r)] : [])])) / 10) * 10);
   const m = { e: 56, d: 12, c: 34, b: 24 }; // a faixa de cima abriga a etiqueta da diferença
   altura += 24;
   const kz = emendar(pts, ate), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, kz?.ate ?? ate, t0 + 60000);
   const ext = kz ? 18 : 0; // com a emenda, uma linha a mais embaixo para a legenda do corte
   altura += ext; m.b += ext;
   const chaveZoom = `resultado:${locais.join(",")}`, ampliado = zoomes.has(chaveZoom);
-  const { lo, hi } = ampliado ? eixoAmpliado(pts.flatMap((p) => [...ids.map((id) => pc(p.r, id)), ...(totais ? [pcNv(p.r)] : [])])) : { lo: 0, hi: topo };
+  const { lo, hi } = ampliado ? eixoAmpliado(pts.flatMap((p) => [...ids.map((id) => pc(p.r, id)), ...(nv ? [pcNv(p.r)] : [])])) : { lo: 0, hi: topo };
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
   const y = (v) => m.c + (1 - (v - lo) / (hi - lo)) * (altura - m.c - m.b);
   const passo = topo <= 20 ? 5 : 10, linhasGrade = [];
@@ -213,12 +222,12 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
     const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(pc(p.r, id)).toFixed(1)}`).join(" ");
     return `<path class="g-cand" d="${d}" style="stroke:${cor(partido(id))}"/><circle cx="${x(pts[pts.length - 1].t).toFixed(1)}" cy="${y(pc(ult, id)).toFixed(1)}" r="3.5" style="fill:${cor(partido(id))}"/>`;
   }).join("");
-  const linhaNv = totais ? `<path class="g-cand g-naovoto" d="${pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(pcNv(p.r)).toFixed(1)}`).join(" ")}"/><circle cx="${x(pts[pts.length - 1].t).toFixed(1)}" cy="${y(pcNv(ult)).toFixed(1)}" r="3.5" class="g-nv-ponto"/>` : "";
+  const linhaNv = nv ? `<path class="g-cand g-naovoto" d="${pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(pcNv(p.r)).toFixed(1)}`).join(" ")}"/><circle cx="${x(pts[pts.length - 1].t).toFixed(1)}" cy="${y(pcNv(ult)).toFixed(1)}" r="3.5" class="g-nv-ponto"/>` : "";
   const legenda = ids.map((id) => `<span><i class="pt" style="background:${cor(partido(id))}"></i>${nome(id)} <b>${pct(pc(ult, id))}</b></span>`).join("")
-    + (totais ? `<span><i class="pt pt-nv"></i>Não voto <b>${pct(pcNv(ult))}</b></span>` : "");
+    + (nv ? `<span><i class="pt pt-nv"></i>Não voto <b>${pct(pcNv(ult))}</b></span>` : "");
   const rot = pts.map((p) => textoDiferenca(p.r, nome, den(p.r)));
-  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [...ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [lo, hi] })), ...(totais ? [{ n: "Não voto", cor: "#8a94a3", v: pts.map((p) => pcNv(p.r)), y: [lo, hi] }] : [])], { rot });
+  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [...ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [lo, hi] })), ...(nv ? [{ n: "Não voto", cor: "#8a94a3", v: pts.map((p) => pcNv(p.r)), y: [lo, hi] }] : [])], { rot });
   const ultRot = rot[rot.length - 1];
   const etiqueta = ultRot ? `<g class="g-dif"><rect x="${m.e}" y="5" width="${Math.min(largura - m.e - m.d, ultRot.length * 6.9 + 20)}" height="22" rx="11"/><text x="${m.e + 9}" y="20">${esc(ultRot)}</text></g>` : "";
-  return `${controleZoom(chaveZoom, ampliado)}${ampliado ? notaEixo(lo, hi) : ""}<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}${linhaNv}${corteSvg(kz, x, m, altura, largura)}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
+  return `${comControleZoom ? controleZoom(chaveZoom, ampliado) : ""}${ampliado ? notaEixo(lo, hi) : ""}<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}${linhaNv}${corteSvg(kz, x, m, altura, largura)}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
 }

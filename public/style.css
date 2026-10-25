@@ -1069,3 +1069,20 @@ select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
 .el-subtotal__marca--nulos { background: radial-gradient(circle, var(--texto) 1.4px, transparent 1.6px) 0 0 / 4px 4px, var(--cartao); outline: 1px solid var(--texto-suave); outline-offset: -1px; }
 .cmp-leg-nv .el-detalhe-btn { margin-left: 0; padding-left: 0; font-weight: 400; } .cmp-leg-parte { padding-left: var(--esp-16); color: var(--texto-suave); }
 .el-duelo__nome + .el-detalhe-btn { min-width: 44px; justify-content: center; margin: 0 0 0 calc(var(--esp-4) * -1); padding: 0; color: var(--acento); } /* só a seta ▾ (o nome do botão vai no aria-label): cabe na coluna estreita do celular */
+
+/* tela Evolução: o SVG tem a largura real do quadro, então o contêiner não impõe proporção (o texto nunca é esticado nem achatado) */
+.el-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.el-evolucao__grafico { aspect-ratio: auto; min-height: 0; max-height: none; }
+.el-evolucao__grafico svg.grafico { height: auto; }
+.el-evolucao__grafico .legenda-cand { margin-top: var(--esp-8); }
+.el-evolucao__filtros .el-campo select { min-height: 44px; }
+.el-evolucao__filtros .el-visao button { min-height: 44px; }
+.el-evolucao__leitura { display: flex; flex-wrap: wrap; gap: var(--esp-4) var(--esp-12); align-items: baseline; }
+.g-info:not([hidden]) ~ .el-evolucao__leitura[data-leitura-padrao] { display: none; }
+.el-evolucao__quadro .g-info { margin-top: var(--esp-8); }
+.el-evolucao__quadro .el-botao { min-height: 44px; }
+dialog.el-cheia .el-botao { min-height: 44px; }
+dialog.el-cheia .el-cheia__corpo { overflow: auto; }
+.cheia-gira { display: none; margin: 0 0 var(--esp-4); } @media (orientation: portrait) and (max-width: 700px) { .cheia-gira { display: block; } }
+.el-evolucao__tabela caption { text-align: left; }
+.el-evolucao__quadro:has(.el-evolucao__tabela) { padding: var(--esp-4) var(--esp-4) var(--esp-8); overflow-x: auto; }
