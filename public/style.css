@@ -828,3 +828,27 @@ tr.nv-sep td { text-align: left !important; padding-top: 14px; font-size: .75rem
   .mapa-area-geo .mapa-geo { max-height: 70vh; }
 }
 @media (min-width: 900px) { .geo-ctl { grid-template-columns: 1fr 1fr; } .geo-ctl .geo-selects, .geo-ctl > p { grid-column: 1 / -1; } }
+
+/* Navegação por turno e comparação entre turnos */
+.modos { padding-top: 12px; }
+.modos-seg { padding: 4px; } .modos-seg button { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 8px 4px; line-height: 1.2; min-height: 48px; } .modos-seg button b { font-weight: 700; } .modos-seg button small { font-size: .75rem; font-weight: 500; opacity: .8; }
+.cmp-tab { width: 100%; border-collapse: collapse; } .cmp-tab th, .cmp-tab td { padding: 8px 6px; border-top: 1px solid var(--line); text-align: right; vertical-align: top; font-variant-numeric: tabular-nums; }
+.cmp-tab tr:first-child th, .cmp-tab tr:first-child td { border-top: 0; } .cmp-tab th:first-child { text-align: left; font-weight: 600; } .cmp-tab td b, .cmp-tab td small, .cmp-tab th small { display: block; } .cmp-tab td small { color: var(--muted); }
+.cmp-tab tr:first-child th { font-size: .8rem; } .cmp-total th, .cmp-total td { background: color-mix(in srgb, var(--barra) 40%, transparent); }
+.cmp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.cmp-sobe b, .cmp-sobe small { color: #b45309; } .cmp-desce b, .cmp-desce small { color: #0f766e; } /* subiu = laranja, caiu = verde-azulado (as mesmas cores do mapa) */
+.cmp-barras { margin-top: 12px; display: grid; gap: 8px; } .cmp-linha { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: center; } .cmp-turno { font-size: .8rem; color: var(--muted); }
+.cmp-barra { display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: var(--barra); } .cmp-barra i { display: block; height: 100%; } .cmp-barra.vazia { align-items: center; padding: 0 8px; font-size: .8rem; }
+.gm-lider .c0, .geo-legenda.gm-lider .c0 { fill: #C0122D; background: #C0122D; } .gm-lider .c1, .geo-legenda.gm-lider .c1 { fill: #30306C; background: #30306C; }
+.gm-lider .c2, .geo-legenda.gm-lider .c2 { fill: #8f8fd0; background: #8f8fd0; } .gm-lider .c3, .geo-legenda.gm-lider .c3 { fill: #ec8a97; background: #ec8a97; } .gm-lider .c4, .geo-legenda.gm-lider .c4 { fill: #b9c0cc; background: #b9c0cc; }
+
+.geo-ctl { grid-template-columns: minmax(0, 1fr); } .geo-linha { min-width: 0; max-width: 100%; }
+@media (min-width: 900px) { .geo-ctl { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.cmp-cabeca { display: grid; gap: 2px; font-size: .8rem; color: var(--muted); margin-bottom: 6px; } .cmp-cabeca b { color: var(--txt); }
+@media (min-width: 700px) { .cmp-cabeca { grid-template-columns: 1fr 1fr; } }
+.cmp-lista { display: grid; gap: 8px; } .cmp-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); }
+.cmp-nome { font-weight: 700; margin-bottom: 6px; } .cmp-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cmp-col { display: grid; gap: 1px; font-variant-numeric: tabular-nums; min-width: 0; } .cmp-col small { font-size: .75rem; } .cmp-col b { font-size: .95rem; overflow-wrap: anywhere; } .cmp-col span { font-size: .8rem; color: var(--muted); }
+.cmp-total { background: color-mix(in srgb, var(--barra) 40%, var(--card)); }
+.cmp-sobe b, .cmp-sobe span { color: #b45309; } .cmp-desce b, .cmp-desce span { color: #0f766e; }
+.cmp-col b { font-size: clamp(.8rem, 3.7vw, .95rem); white-space: nowrap; overflow-wrap: normal; }

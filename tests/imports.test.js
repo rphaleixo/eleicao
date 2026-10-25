@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 // Garante que todo nome importado entre os arquivos do site realmente existe
 // (um nome renomeado deixa a página inteira em branco e nenhum outro teste percebe).
-globalThis.location = { search: "" };
+globalThis.location = { search: "?turno=1" }; // fixa o 1º turno: sem isso o resultado dos testes mudaria com a data
 
 test("imports do site apontam para exports que existem", async () => {
   const dir = new URL("../public/", import.meta.url);

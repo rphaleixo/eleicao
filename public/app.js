@@ -4,6 +4,8 @@ import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartido
 import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
 import { lerAbUf, montarLinhas, calcular, classesDeCor, CARGOS_GEO } from "./geo.js";
 import { ligarZoom, reaplicarZoom } from "./zoomMapa.js";
+import { linhaDeResultado, linhaDeArquivo, valorDoMapa, classesDoMapa, extremos, LINHAS, MEDIDAS } from "./comparacao.js";
+import { controlesComparacao, quadroComparacao, barrasComposicao, mapaComparacao, legendaComparacao, fichaComparacao, tabelaExtremos } from "./comparacaoView.js";
 import { rankingNumeros, pontosDoMapa, zonasEmDestaque, CARGOS_NULOS } from "./nulos.js";
 import { controlesNulos, resumoNulos, rankingNulos, mapaNulos, legendaNulos, fichaNulos, tabelaZonas } from "./nulosView.js";
 import { controlesGeo, mapaGeo, legendaGeo, resumoGeo, fichaGeo, tabelaGeo, nomeDasMetricas } from "./geoView.js";
@@ -32,7 +34,7 @@ import { cartoesVotacao } from "./votacao.js";
 import { lerRota, montarRota } from "./rota.js";
 import { cargosBarra, barraEstado, folhaEstados, filtrarEstados, vizinho } from "./seletor.js";
 import { abrirFicha, iniciarFicha } from "./candidato.js";
-import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO } from "./config.js";
+import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO, INICIO_APURACAO_T2 } from "./config.js";
 import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlAndamentoUf, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
@@ -51,7 +53,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "aptos", sel: "", dir: "alta" }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -75,9 +77,27 @@ function lerHash() {
 const gravarHash = () => history.replaceState(null, "", montarRota(estado));
 const permiteMun = () => (estado.aba === "presidente" || (estado.aba === "estados" && ["governador", "senador", "presidente"].includes(estado.cargo))) && estado.uf !== "BR" && estado.uf !== "ZZ";
 
+/** Navegação principal, separada por turno: 1º turno, 2º turno e a comparação entre os dois. */
+function montarModos() {
+  if (MODO_ESE) { $("modos").hidden = true; return; }
+  const cmp = estado.aba === "turnos";
+  const b = (modo, nome, data, ativo) => `<button type="button" data-modo="${modo}" aria-pressed="${ativo}"><b>${nome}</b><small>${data}</small></button>`;
+  $("modos").innerHTML = `<div class="seg modos-seg" role="group" aria-label="Turno da eleição">${b("1", "1º turno", "04/10", !cmp && !TURNO2)}${b("2", "2º turno", "25/10", !cmp && TURNO2)}${b("cmp", "Comparar", "1º × 2º", cmp)}</div>`;
+}
+$("modos").addEventListener("click", (e) => {
+  const m = e.target.closest("[data-modo]");
+  if (!m) return;
+  const modo = m.dataset.modo;
+  if (modo === "cmp") { navegar({ aba: "turnos", uf: "BR", mun: "" }); window.scrollTo({ top: 0 }); return; }
+  if (Number(modo) === (TURNO2 ? 2 : 1)) { if (estado.aba === "turnos") navegar({ aba: "andamento", uf: "BR", mun: "" }); return; } // já está neste turno: sai da comparação
+  const u = new URL(location.href); u.searchParams.set("turno", modo); u.hash = "#/andamento/BR"; location.href = u.toString(); // o turno muda os arquivos do TSE: recarrega
+});
+
 function montarControles() {
   const tira = $("abas");
-  tira.innerHTML = ABAS.map((a) => `<button data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
+  tira.innerHTML = ABAS.filter((a) => a.id !== "turnos").map((a) => `<button data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
+  tira.hidden = estado.aba === "turnos"; // no modo "Comparar" a navegação é a da própria tela
+  montarModos();
   const ativa = tira.querySelector('[aria-current="true"]'); // a aba escolhida fica no centro da tira, que não volta ao começo a cada toque
   if (ativa) tira.scrollLeft = Math.max(0, ativa.offsetLeft - (tira.clientWidth - ativa.offsetWidth) / 2);
   document.querySelector(".filtros").hidden = !permiteMun(); // estado e região são escolhidos na navegação do topo; sobra só o município
@@ -100,7 +120,7 @@ function navegar(mudanca) {
   Object.assign(estado, mudanca);
   if (estado.aba === "estados" && (estado.uf === "BR" || estado.uf === "ZZ")) estado.uf = estado.ufPadrao;
   if (estado.aba === "camara") estado.uf = "BR";
-  if (estado.uf === "ZZ" && estado.aba !== "presidente" && estado.aba !== "andamento") estado.uf = "BR";
+  if (estado.uf === "ZZ" && estado.aba !== "presidente" && estado.aba !== "andamento" && estado.aba !== "turnos") estado.uf = "BR";
   if (mudanca.aba || mudanca.uf || mudanca.cargo) estado.mun = mudanca.mun ?? "";
   if (estado.aba === "estados") { guardarUf(estado.uf); estado.ufPadrao = estado.uf; }
   estado.mostrar = 50; estado.pag = { eleitos: 0, cand: 0, deps: 0, barr: 0 };
@@ -172,6 +192,43 @@ function emSegundoPlano(chave, ttlMs, produtor) {
       .finally(() => { e.emVoo = false; atualizar(); });
   }
   return e.dados;
+}
+
+// ---------- comparação entre turnos: votação por município ----------
+const arquivosMun = {};
+/** Votação de presidente de todos os municípios em um turno, do arquivo guardado no site (public/dados). Só existe depois da coleta. */
+function arquivoMunicipios(turno) {
+  arquivosMun[turno] ??= fetch(`/dados/presidente-t${turno}-municipios.json`).then(async (r) => {
+    if (!r.ok) return null;
+    const j = await r.json();
+    return { final: !!j.final, mapa: new Map(Object.entries(j.municipios).map(([cod, a]) => [cod, { ...linhaDeArquivo(a), uf: a[0], ibge: a[1], cod }])) };
+  }).catch(() => null);
+  return arquivosMun[turno];
+}
+const vivoT2 = new Map(), progT2 = { feitos: 0, total: 0, emVoo: false };
+/**
+ * 2º turno ao vivo: um arquivo por município (6 por vez). Em cada rodada só busca quem ainda não tem arquivo ou não chegou a 100% das seções.
+ * Só começa com 20% do país apurado e para a rodada se vários municípios seguidos ainda não tiverem arquivo (o TSE bloqueia quem gera muitos 404).
+ */
+async function atualizarMunicipiosT2(pctBrasil) {
+  if (progT2.emVoo || pctBrasil < 20) return;
+  progT2.emVoo = true;
+  const agora = Date.now(), fila = [];
+  for (const [uf, lista] of Object.entries(estado.municipios)) {
+    if (uf === "ZZ") continue;
+    for (const m of lista) { const v = vivoT2.get(m.cod); if (!v || (v.pct < 100 && agora - v.t > 90_000)) fila.push({ uf, m }); }
+  }
+  progT2.total = fila.length; progT2.feitos = 0;
+  let seguidosSemArquivo = 0, ultimo = 0;
+  await Promise.all(Array.from({ length: 6 }, async () => {
+    while (fila.length && seguidosSemArquivo < 12) {
+      const { uf, m } = fila.shift();
+      try { const d = await obter("presidente", uf, m.cod, 2); vivoT2.set(m.cod, { ...linhaDeResultado(d), uf, ibge: m.ibge, cod: m.cod, t: Date.now() }); seguidosSemArquivo = 0; } catch { seguidosSemArquivo++; }
+      progT2.feitos++;
+      if (Date.now() - ultimo > 1500 && estado.aba === "turnos") { ultimo = Date.now(); render(); }
+    }
+  }));
+  progT2.emVoo = false;
 }
 
 const dadosNulos = new Map();
@@ -266,6 +323,13 @@ async function carregarView(rota) {
     const lista = emSegundoPlano("pan-" + cargo, CONFIG.atualizarACadaSegundos * 900, () => panorama(cargo));
     const [e, mandatos] = await Promise.all([obterAcompanhamento("governador"), cargo === "senador" ? obterMandatos() : null]);
     return { tipo: "cargo-por-estado", cargo, e, lista, mandatos, visao: rota.visaoSenado };
+  }
+  if (aba === "turnos") { // comparação entre o 1º e o 2º turno de presidente: país, estado ou município, e o mapa de todos os municípios
+    const { uf, mun } = rota, t2aberto = Date.now() >= INICIO_APURACAO_T2;
+    const buscar = async (t) => { if (t === 2 && !t2aberto) return null; try { return await obter("presidente", uf, uf === "BR" || uf === "ZZ" ? undefined : mun || undefined, t); } catch { return null; } };
+    const [d1, d2, malha, a1, a2, ac2] = await Promise.all([buscar(1), buscar(2), obterMalha("BR"), arquivoMunicipios(1), arquivoMunicipios(2), t2aberto ? obterAcompanhamento("presidente", 2).catch(() => null) : null]);
+    if (t2aberto && !a2?.final) emSegundoPlano("t2-municipios", 60_000, () => atualizarMunicipiosT2(ac2?.ufs?.br?.pct ?? 0)); // enquanto o arquivo final não existe, os municípios do 2º turno vêm um a um
+    return { tipo: "turnos", uf, mun, d1, d2, malha, a1, a2, t2aberto };
   }
   if (aba === "nulos") { // números digitados nos votos nulos (RJ por enquanto): somas por zona e locais de votação com coordenadas
     const [dados, malha] = await Promise.all([carregarDadosNulos("rj"), obterMalha("RJ")]);
@@ -829,6 +893,41 @@ function listaDeputadosEleitos(estados, ufs, f) {
     ${boxCandidatos({ titulo: "Deputados federais eleitos", contagem: `${fmt(itens.length)}${buscando(busca) || todos.length !== 513 ? ` de ${fmt(todos.length)}` : " de 513"}`, nota: "Votos nominais de cada eleito e % dos votos válidos do estado. “Projeção” = eleito pela soma dos votos contados até agora; “eleito” = resultado oficial do TSE.", vazio: "Nenhum deputado com esses filtros.", itens, chave: "deps", porPagina: 25, semCartao: true })}`;
 }
 
+/** Aba Comparar turnos: Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno, por país, estado ou município, em quadro e mapa. */
+function telaTurnos(v) {
+  const ct0 = estado.ct, { uf, mun } = estado;
+  const l1 = linhaDeResultado(v.d1), l2 = linhaDeResultado(v.d2);
+  const municipios = estado.municipios[uf] ?? [];
+  const nomes = new Map(Object.values(estado.municipios).flat().map((m) => [m.cod, m.nome]));
+  const ondeNome = mun ? `${nomes.get(mun) ?? mun}, ${UFS[uf]}` : uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf];
+  const t1 = v.a1?.mapa, t2 = v.a2?.final ? v.a2.mapa : vivoT2.size ? vivoT2 : v.a2?.mapa;
+  const status2 = !v.t2aberto ? "O 2º turno começa às 17h (Brasília) e os números dele aparecem aqui sozinhos." : l2 && l2.pct < 100 ? `2º turno em apuração (${pct(l2.pct)} das seções): os números mudam a cada minuto.` : "";
+  const semT2 = !t2 || !t2.size; // enquanto o 2º turno não tem dados por município, o mapa mostra o 1º turno
+  const c = semT2 && ct0.medida !== "p1" ? { ...ct0, medida: "p1" } : ct0;
+  const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2 });
+  let mapa = "";
+  if (!t1) mapa = `<section class="card"><h2>Mapa por município</h2><p class="muted">O arquivo do 1º turno por município ainda não foi gerado.</p></section>`;
+  else {
+    const itens = [...t1.values()].filter((r1) => uf === "BR" || uf === "ZZ" || r1.uf === uf).map((r1) => {
+      const r2 = t2?.get(r1.cod) ?? null;
+      return { ibge: r1.ibge, cod: r1.cod, uf: r1.uf, nome: nomes.get(r1.cod) ?? r1.cod, l1: r1, l2: r2, valor: valorDoMapa(r1, r2, c) };
+    });
+    const cls = classesDoMapa(itens.map((i) => i.valor), c.medida);
+    const sel = c.sel ? itens.find((i) => i.ibge === c.sel) : mun ? itens.find((i) => i.cod === mun) : null;
+    const linhaNome = LINHAS.find(([k]) => k === c.linha)[1], medidaNome = MEDIDAS.find(([k]) => k === c.medida)[1];
+    const semDado = itens.filter((i) => i.valor == null).length;
+    const prog = semT2 && ct0.medida !== "p1" ? `<p class="muted">O 2º turno ainda não tem dados por município: o mapa mostra o % do 1º turno. A variação aparece assim que o 2º turno começar a ser apurado.</p>` : v.t2aberto && !v.a2?.final && progT2.emVoo ? `<div class="progresso-mun"><span>Carregando os municípios do 2º turno: ${fmt(progT2.feitos)} de ${fmt(progT2.total)}</span><div class="barra-prog"><i style="width:${progT2.total ? (progT2.feitos / progT2.total) * 100 : 0}%"></i></div></div>` : !v.t2aberto ? `<p class="muted">Quando o 2º turno começar, o mapa passa a mostrar a variação município a município.</p>` : "";
+    const ext = c.medida === "lider" ? "" : `<section class="card"><div class="titulo-cadeiras"><h2>${c.medida === "pp" || c.medida === "votos" ? "Maiores variações" : "Maiores e menores valores"}</h2>${seg2("data-ct-dir", c.dir, c.medida === "pp" || c.medida === "votos" ? [["alta", "Altas"], ["queda", "Quedas"]] : [["alta", "Maiores"], ["queda", "Menores"]])}</div><p class="muted">Municípios com ${c.dir === "alta" ? "maior" : "menor"} valor de ${esc(linhaNome)} (${esc(medidaNome.toLowerCase())}). Toque em uma linha para ver o município no mapa.</p>${tabelaExtremos(extremos(itens, c.dir), { medida: c.medida, dir: c.dir, linhaNome })}</section>`;
+    mapa = `<section class="card"><h2>Mapa: ${esc(linhaNome)} · ${esc(medidaNome)}</h2>${prog}
+      <div class="mapa-area mapa-area-geo">${mapaComparacao(v.malha, itens, { medida: c.medida, classe: cls.classe, selecionado: sel?.ibge ?? "", uf, municipiosDaUf: municipios, municipioIbge: mun ? municipios.find((m) => m.cod === mun)?.ibge : "" })}</div>
+      ${legendaComparacao(cls, c.medida, linhaNome, { semDado })}
+      ${fichaComparacao(sel, c.base, { ufNome: sel ? sel.uf : "" })}${sel && sel.uf && sel.cod !== mun ? `<button type="button" class="btn-mais" data-ct-abrir="${sel.uf}/${sel.cod}">Abrir só ${esc(sel.nome)}</button>` : ""}</section>${ext}`;
+  }
+  return `${controlesComparacao({ ...ct0, uf, mun }, { municipios })}
+    <section class="card"><h2>${esc(ondeNome)}</h2>${quadro}${barrasComposicao(l1, l2)}</section>${mapa}`;
+}
+const seg2 = (attr, atual, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === atual}">${n}</button>`).join("")}</div>`;
+
 /** Aba Nulos: números digitados nos votos nulos (presidente, governador e senador). */
 function telaNulos(v) {
   const n = estado.nl, { resumo, mapa, malha } = v;
@@ -1010,7 +1109,7 @@ function render(forcar = false) {
   if (!forcar && ["SELECT", "INPUT"].includes(document.activeElement?.tagName) && $("conteudo").contains(document.activeElement)) return; // não fecha a lista de estados enquanto ela está aberta
   setBase(estado.base); setSemSubJudice(estado.semSJ); aplicarBaseNaView(v); // todos os % da tela seguem a base e o cenário escolhidos
   if (v.tipo === "nacional-prop" && v.estados) v.nacional = consolidarNacional(v.estados); // cadeiras do país seguem o cenário
-  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo, nulos: telaNulos }[v.tipo];
+  const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo, nulos: telaNulos, turnos: telaTurnos }[v.tipo];
   renderNavegacao(v);
   $("conteudo").innerHTML = tela(v);
   reaplicarGraficos($("conteudo"));
@@ -1078,15 +1177,12 @@ async function carregarMunicipios() {
 /** Turno, base dos percentuais e "sem sub judice" só aparecem nas abas em que mudam alguma coisa. */
 function montarBase() {
   const b = estado.base, aba = estado.aba;
-  const semTudo = aba === "geo" || aba === "nulos"; // mapas de abstenção e nulos não dependem de turno, base nem sub judice
-  const semTurno = semTudo || aba === "partidos" || aba === "cenarios"; // sempre o resultado do 1º turno
+  const semTudo = aba === "geo" || aba === "nulos" || aba === "turnos"; // mapas de abstenção e nulos não dependem de turno, base nem sub judice
   const semBase = semTudo || aba === "cenarios";
   const sj = aba === "cenarios" || b === "validos";
   $("basebar").hidden = semTudo;
   if (semTudo) { $("basebar").innerHTML = ""; return; }
-  $("basebar").innerHTML = `${semTurno ? "" : `<div class="seg mini turno-chave" role="group" aria-label="Turno da eleição">
-      <button type="button" data-turno="1" aria-pressed="${!TURNO2}">1º turno</button><button type="button" data-turno="2" aria-pressed="${TURNO2}">2º turno</button></div>`}
-    ${semBase ? "" : `<div class="seg mini" role="group" aria-label="Base dos percentuais">
+  $("basebar").innerHTML = `${semBase ? "" : `<div class="seg mini" role="group" aria-label="Base dos percentuais">
       <button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Totais</button></div>`}
     ${sj ? `<button type="button" class="chave-sj" data-sj aria-pressed="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><i aria-hidden="true"></i>Sem sub judice</button>` : ""}
     ${sj && estado.semSJ ? `<p class="muted base-nota">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
@@ -1171,6 +1267,8 @@ $("conteudo").addEventListener("input", (e) => {
 });
 ligarZoom($("conteudo"));
 $("conteudo").addEventListener("change", (e) => {
+  const cu = e.target.closest?.("[data-ct-uf], [data-ct-mun]");
+  if (cu) { estado.ct.sel = ""; if (cu.matches("[data-ct-uf]")) navegar({ uf: cu.value, mun: "" }); else navegar({ mun: cu.value }); return; }
   const nu = e.target.closest?.("[data-nl-numero], [data-nl-mun]");
   if (nu) { if (nu.matches("[data-nl-numero]")) estado.nl.numero = nu.value; else { estado.nl.mun = nu.value; estado.nl.sel = ""; } estado.nl.zonas = 15; render(true); return; }
   const gu = e.target.closest?.("[data-geo-uf], [data-geo-min]");
@@ -1235,6 +1333,14 @@ $("conteudo").addEventListener("click", (e) => {
   if (cz) { estado.cenario = cz.dataset.cenario; gravarHash(); render(); return; }
   const pv = e.target.closest("[data-pvisao]");
   if (pv) { estado.partidoVisao = pv.dataset.pvisao; render(); return; }
+  const ct = e.target.closest("[data-ct-linha], [data-ct-medida], [data-ct-base], [data-ct-ibge], [data-ct-dir], [data-ct-abrir]");
+  if (ct) {
+    const c = estado.ct, d = ct.dataset;
+    if (d.ctAbrir) { const [u, cod] = d.ctAbrir.split("/"); c.sel = ""; navegar({ uf: u, mun: cod }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (d.ctLinha) c.linha = d.ctLinha; else if (d.ctMedida) c.medida = d.ctMedida; else if (d.ctBase) c.base = d.ctBase; else if (d.ctDir) c.dir = d.ctDir;
+    else if (d.ctIbge) { c.sel = c.sel === d.ctIbge ? "" : d.ctIbge; if (ct.matches("tr")) document.querySelector(".mapa-area-geo")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    render(true); return;
+  }
   const nl = e.target.closest("[data-nl-cargo], [data-nl-visao], [data-nl-ponto], [data-nl-mais]");
   if (nl) {
     const n = estado.nl, d = nl.dataset;

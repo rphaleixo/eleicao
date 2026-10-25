@@ -49,8 +49,14 @@ export function urlFoto(cargo, uf, sqcand) {
   return `/api/ele${CONFIG.ano}/${e}/fotos/${pasta}/${sqcand}.jpeg`;
 }
 
-export const urlMunicipios = (cargo = "governador") =>
-  `/api/ele${CONFIG.ano}/${codEleicao(cargo)}/config/mun-e${pad6(codEleicao(cargo))}-cm.json`;
+/**
+ * Lista de municípios (a mesma nos dois turnos). No 2º turno o TSE não publica esta lista com o código do turno,
+ * então usamos a do 1º turno: pedir um arquivo que não existe só gera erros 403/404 e risco de bloqueio.
+ */
+export const urlMunicipios = (cargo = "governador") => {
+  const e = CONFIG.turno === 2 ? CODIGOS[1][CARGOS[cargo].federal ? "federal" : "estadual"] : codEleicao(cargo);
+  return `/api/ele${CONFIG.ano}/${e}/config/mun-e${pad6(e)}-cm.json`;
+};
 
 export async function buscarJson(url) {
   const r = await fetch(url, { cache: "no-store" });

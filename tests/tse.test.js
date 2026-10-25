@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-globalThis.location = { search: "" };
+globalThis.location = { search: "?turno=1" }; // fixa o 1º turno: sem isso o resultado dos testes mudaria com a data
 const { normalizar, num, urlsResultado, urlMunicipios } = await import("../public/tse.js");
 const ler = (nome) => JSON.parse(fs.readFileSync(new URL(`./fixtures/${nome}`, import.meta.url), "utf8"));
 

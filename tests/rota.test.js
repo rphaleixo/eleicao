@@ -1,4 +1,4 @@
-globalThis.location = { search: "" };
+globalThis.location = { search: "?turno=1" }; // fixa o 1º turno: sem isso o resultado dos testes mudaria com a data
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
 const { lerRota, montarRota } = await import("../public/rota.js");
