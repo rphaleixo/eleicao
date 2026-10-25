@@ -569,3 +569,70 @@
 .el-comp__delta small { font: 600 12px/16px var(--font-num); color: var(--texto-suave); }
 .el-comp__sem { color: var(--texto-suave); font: 600 13px/18px var(--font-text); }
 .el-escopo-barra[aria-expanded="true"] { border-bottom-color: transparent; }
+
+/* Selo: ícone centrado de verdade (rodada 9). O ✓ é desenhado em SVG; "2º" e os demais usam a família numérica com line-height 1. */
+.el-selo > i { padding: 0; min-width: 18px; width: auto; flex: none; line-height: 1; }
+.el-selo > i:has(> span:not(:has(svg))) { padding: 0 4px; }
+.el-selo > i > span { display: block; line-height: 1; font-family: var(--font-num); font-weight: 700; font-size: 11px; }
+.el-selo > i > span svg { display: block; width: 12px; height: 12px; }
+.el-selo > i { align-self: center; }
+.el-selo--icone { padding: 3px; gap: 0; }
+.el-selo:not(.el-selo--icone) { gap: 6px; }
+
+/* ===== Rodada 9: achados do site publicado ===== */
+/* foto única: proporção 3:4, mesma largura em todo lugar, foco no rosto */
+.el-cand__foto, .el-pod__foto, .el-ficha__foto { width: var(--foto-p); height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: 50% 20%; flex: none; }
+.el-ficha__foto { width: var(--foto-g); }
+.el-pod--1 .el-pod__foto { width: var(--foto-p); height: auto; }
+/* pódio igual: três colunas iguais, sem degrau, para disputas majoritárias */
+.el-podio--igual { grid-template-columns: repeat(3, 1fr); align-items: stretch; }
+.el-podio--igual .el-pod--1 { padding-top: var(--esp-12); padding-bottom: var(--esp-12); }
+.el-pod--sem-voto .el-pod__pos { visibility: hidden; }
+.el-pod--sem-voto .el-pod__votos { color: var(--texto-suave); font-weight: 600; font-size: 13px; }
+/* placar chapado: sem gradiente nem sombra */
+.el-placar { background: var(--destaque-a); box-shadow: none; }
+/* filete do cartão menos pesado no tema escuro */
+[data-theme="escuro"] .el-cartao, [data-theme="escuro"] .el-painel, [data-theme="escuro"] .el-escopo-painel, [data-theme="escuro"] .el-rodape { border-top-color: color-mix(in srgb, var(--texto) 45%, transparent); }
+/* turno compacto e largura limitada */
+.el-seg--turno { max-width: 480px; }
+.el-seg--turno button { min-height: 44px; }
+@media (min-width: 1024px) { .el-topo__titulo--mobile { display: none; } }
+.el-pagina { max-width: 1064px; margin: 0 auto; }
+@media (min-width: 1024px) { .el-pagina--duas { display: grid; grid-template-columns: minmax(0, 720px) 320px; gap: var(--esp-24); align-items: start; } }
+.el-comp__delta small { white-space: nowrap; text-wrap: balance; }
+/* lista de estados compacta: 56px, detalhe só ao expandir, duas colunas a partir de 480px */
+.el-ufs--duas { display: grid; grid-template-columns: 1fr; column-gap: var(--esp-24); }
+@media (min-width: 480px) { .el-ufs--duas { grid-template-columns: 1fr 1fr; } }
+.el-uf--compacta { min-height: 56px; padding: var(--esp-6) 0; grid-template-columns: 36px 1fr auto 14px; }
+.el-uf--compacta .el-uf__sigla { width: 36px; height: 36px; font-size: 18px; }
+.el-uf--compacta .el-uf__det { display: none; }
+.el-uf--compacta[aria-expanded="true"] .el-uf__det { display: block; }
+.el-uf--compacta .el-uf__barra { margin: 4px 0 0; height: 4px; }
+.el-uf--aguardando .el-uf__barra { display: none; }
+.el-uf--aguardando .el-uf__pct { font: 600 13px/16px var(--font-text); color: var(--texto-suave); }
+.el-uf--eleito .el-uf__pct { color: var(--eleito); font: 700 13px/16px var(--font-text); }
+.el-uf--eleito .el-uf__barra { display: none; }
+/* mapa em blocos: uma casa por estado, cor do líder, percentual apurado */
+.el-blocos { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+@media (min-width: 480px) { .el-blocos { grid-template-columns: repeat(9, 1fr); } }
+.el-bloco { aspect-ratio: 1; display: grid; place-content: center; text-align: center; border: 0; padding: 0; background: var(--cor, var(--trilho)); color: #fff; cursor: pointer; font: 400 18px/18px var(--font-display); }
+.el-bloco small { display: block; font: 600 11px/12px var(--font-num); opacity: .9; }
+.el-bloco--aguardando { background: var(--trilho); color: var(--texto-suave); box-shadow: inset 0 0 0 1px var(--linha); }
+.el-bloco[aria-pressed="true"] { outline: 3px solid var(--texto); outline-offset: 1px; }
+.el-visao { display: inline-flex; border: 1px solid var(--texto); }
+.el-visao button { min-height: 44px; min-width: 56px; padding: 0 var(--esp-12); border: 0; background: none; color: var(--texto); font: 700 13px/16px var(--font-text); cursor: pointer; }
+.el-visao button[aria-pressed="true"] { background: var(--texto); color: var(--fundo); }
+/* carrossel: só a espiada da direita e indicador "1 de 5" */
+.el-carrossel { display: flex; gap: var(--esp-8); overflow-x: auto; scroll-snap-type: x mandatory; padding-right: 28px; scrollbar-width: none; }
+.el-carrossel > * { flex: 0 0 calc(100% - 28px); scroll-snap-align: start; min-width: 0; }
+.el-carrossel__pos { margin-top: var(--esp-8); text-align: center; font: 600 13px/16px var(--font-num); color: var(--texto-suave); }
+/* ajustar mapa: controles raros recolhidos */
+.el-ajuste { border: 1px solid var(--linha); border-top: 3px solid var(--texto); background: var(--cartao); }
+.el-ajuste > summary { min-height: 44px; display: flex; align-items: center; gap: var(--esp-8); padding: 0 var(--esp-12); font: 700 14px/20px var(--font-text); cursor: pointer; list-style: none; }
+.el-ajuste > div { padding: var(--esp-12); display: grid; gap: var(--esp-12); border-top: 1px solid var(--linha); }
+.el-blocos { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (min-width: 480px) { .el-blocos { grid-template-columns: repeat(9, minmax(0, 1fr)); } }
+.el-bloco { min-width: 0; overflow: hidden; }
+.el-bloco { aspect-ratio: auto; height: 54px; }
+.el-blocos { grid-auto-rows: 54px; }
+.el-blocos + .el-apoio { margin-top: var(--esp-12); }

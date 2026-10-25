@@ -1,26 +1,30 @@
 // Linguagem visual única para eleição definida, candidato eleito e 2º turno.
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+/** Ícones do selo: ✓ desenhado em SVG (a fonte do texto deixa o caractere deslocado) e "2º" na família numérica. */
+export const ICONE_OK = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.5l2.5 2.5 4.5-5.5"/></svg>`;
+export const ICONE_2 = `<span class="n2">2º</span>`;
+
 export const TEXTO_SIT = { eleito: "Eleito", segundo: "2º turno" };
 
 /** Selo do candidato: ✓ Eleito (verde) ou ② 2º turno (âmbar). Vazio se não houver situação. */
 export function seloSit(c, { curto = false, rotulo = "Eleito" } = {}) {
   if (c?.sit === "eleito" && c.sitProjetada) return seloProjetado({ curto }); // eleito só no cenário "sem sub judice", antes de terminar a apuração
-  if (c?.sit === "eleito") return `<span class="selo-sit eleito" title="${esc(rotulo)}"><i aria-hidden="true">✓</i>${curto ? "" : esc(rotulo)}</span>`;
-  if (c?.sit === "segundo") return `<span class="selo-sit segundo" title="Vai ao 2º turno"><i aria-hidden="true">2º</i>${curto ? "" : "turno"}</span>`;
+  if (c?.sit === "eleito") return `<span class="selo-sit eleito" title="${esc(rotulo)}"><i aria-hidden="true">${ICONE_OK}</i>${curto ? "" : esc(rotulo)}</span>`;
+  if (c?.sit === "segundo") return `<span class="selo-sit segundo" title="Vai ao 2º turno"><i aria-hidden="true">${ICONE_2}</i>${curto ? "" : "turno"}</span>`;
   return "";
 }
 
 /** Selo da eleição no cabeçalho de um cartão: "Definida" (verde) ou "2º turno" (âmbar). */
 export function seloEleicao(d) {
   const sit = situacaoEleicao(d);
-  if (sit === "eleito") return `<span class="selo-sit eleito" title="Eleição definida"><i aria-hidden="true">✓</i>Definida</span>`;
-  if (sit === "segundo") return `<span class="selo-sit segundo" title="Vai ao 2º turno"><i aria-hidden="true">2º</i>turno</span>`;
+  if (sit === "eleito") return `<span class="selo-sit eleito" title="Eleição definida"><i aria-hidden="true">${ICONE_OK}</i>Definida</span>`;
+  if (sit === "segundo") return `<span class="selo-sit segundo" title="Vai ao 2º turno"><i aria-hidden="true">${ICONE_2}</i>turno</span>`;
   return "";
 }
 
 /** Eleito na projeção (ainda não confirmado pelo TSE): contorno tracejado. */
-export const seloProjetado = ({ curto = false } = {}) => `<span class="selo-sit projetado" title="Eleito na projeção, ainda sem confirmação do TSE"><i aria-hidden="true">✓</i>${curto ? "" : "Projeção"}</span>`;
+export const seloProjetado = ({ curto = false } = {}) => `<span class="selo-sit projetado" title="Eleito na projeção, ainda sem confirmação do TSE"><i aria-hidden="true">${ICONE_OK}</i>${curto ? "" : "Projeção"}</span>`;
 
 /** Texto do selo de um eleito: "Eleito por QP", "Eleito por média"... ou só "Eleito". */
 export const rotuloEleito = (c) => (/^eleito\b/i.test(String(c?.situacao ?? "").trim()) ? String(c.situacao).trim() : "Eleito");
@@ -41,10 +45,10 @@ export function faixaDefinicao(d) {
   const sit = situacaoEleicao(d);
   if (!sit) return "";
   const nomes = d.candidatos.filter((c) => c.sit === sit).map((c) => esc(c.nome));
-  if (sit === "eleito" && d.candidatos.some((c) => c.sit === "eleito" && c.sitProjetada)) return `<div class="faixa-def eleito" role="status"><i aria-hidden="true">✓</i><span><b>Projeção sem sub judice</b>${nomes.length ? ` · ${nomes.join(" e ")} ${nomes.length > 1 ? "eleitos" : "eleito"}` : ""}</span></div>`;
-  if (sit === "eleito") return `<div class="faixa-def eleito" role="status"><i aria-hidden="true">✓</i><span><b>Eleição definida</b>${nomes.length ? ` · ${nomes.join(" e ")} ${nomes.length > 1 ? "eleitos" : "eleito"}` : ""}</span></div>`;
-  return `<div class="faixa-def segundo" role="status"><i aria-hidden="true">2º</i><span><b>Vai ao 2º turno</b>${nomes.length ? ` · ${nomes.join(" × ")}` : ""}</span></div>`;
+  if (sit === "eleito" && d.candidatos.some((c) => c.sit === "eleito" && c.sitProjetada)) return `<div class="faixa-def eleito" role="status"><i aria-hidden="true">${ICONE_OK}</i><span><b>Projeção sem sub judice</b>${nomes.length ? ` · ${nomes.join(" e ")} ${nomes.length > 1 ? "eleitos" : "eleito"}` : ""}</span></div>`;
+  if (sit === "eleito") return `<div class="faixa-def eleito" role="status"><i aria-hidden="true">${ICONE_OK}</i><span><b>Eleição definida</b>${nomes.length ? ` · ${nomes.join(" e ")} ${nomes.length > 1 ? "eleitos" : "eleito"}` : ""}</span></div>`;
+  return `<div class="faixa-def segundo" role="status"><i aria-hidden="true">${ICONE_2}</i><span><b>Vai ao 2º turno</b>${nomes.length ? ` · ${nomes.join(" × ")}` : ""}</span></div>`;
 }
 
 /** Legenda para as telas com vários estados. O Senado não tem 2º turno. */
-export const legendaSituacao = (comSegundoTurno = true) => `<p class="legenda-sit"><span class="selo-sit eleito"><i aria-hidden="true">✓</i>Eleito</span>${comSegundoTurno ? `<span class="selo-sit segundo"><i aria-hidden="true">2º</i>2º turno</span>` : ""}<span class="muted">Eleição definida ou em andamento</span></p>`;
+export const legendaSituacao = (comSegundoTurno = true) => `<p class="legenda-sit"><span class="selo-sit eleito"><i aria-hidden="true">${ICONE_OK}</i>Eleito</span>${comSegundoTurno ? `<span class="selo-sit segundo"><i aria-hidden="true">${ICONE_2}</i>2º turno</span>` : ""}<span class="muted">Eleição definida ou em andamento</span></p>`;

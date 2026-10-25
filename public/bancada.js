@@ -1,4 +1,5 @@
 // Bancada do Senado em 2027: os 54 senadores que a eleição de hoje renova + os 27 que seguem no mandato (até 2031).
+import { ICONE_OK } from "./situacao.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { UFS } from "./config.js";
@@ -97,7 +98,7 @@ function tabelaEstados(b) {
     const chips = [...cont.entries()].sort((x, y) => y[1] - x[1]).map(([r, n]) => `<span class="chip" style="--cor:${corPartido(r)}">${esc(r)} ${n}</span>`).join(" ");
     const sit = situacaoUf(u);
     return `<tr><td class="uf-nome">${esc(UFS[u.uf] ?? u.uf)}</td><td>${u.vagas ?? 2}</td><td><span class="mini-barra"><i style="width:${Math.min(100, u.apurado ?? 0)}%"></i></span>${pct(u.apurado ?? 0)}</td>
-      <td>${sit === "definida" ? `<span class="selo-sit eleito"><i aria-hidden="true">✓</i>definida</span>` : sit}</td><td style="text-align:left;white-space:normal">${chips || "–"}</td></tr>`;
+      <td>${sit === "definida" ? `<span class="selo-sit eleito"><i aria-hidden="true">${ICONE_OK}</i>definida</span>` : sit}</td><td style="text-align:left;white-space:normal">${chips || "–"}</td></tr>`;
   }).join("");
   return `<div class="tab-scroll"><table><tr><th>Estado</th><th>Vagas</th><th>Apurado</th><th>Situação</th><th style="text-align:right">Senadores em 2027 por partido/federação</th></tr>${linhas}</table></div>
     <p class="muted">Cada estado tem 3 senadores em 2027: o eleito em 2022 mais os 2 eleitos agora (projeção: os 2 mais votados).</p>`;

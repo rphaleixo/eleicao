@@ -132,13 +132,26 @@ export function legendaPresenca(a) {
 
 export function linhaEstado(uf, u, aberto = false, painel = "") {
   const a = doEstado(u);
-  const estadoCls = u?.andamento === "f" ? "f" : u?.andamento === "p" ? "p" : "n";
-  const d = divisaoEleitorado(a);
-  return `<li class="${aberto ? "aberto" : ""}"><button type="button" class="linha-estado" data-uf="${uf}" aria-expanded="${aberto}"><span class="sigla">${uf === "ZZ" ? "EX" : uf}</span>
-    <span class="le-meio"><span class="le-nome">${esc(nomeEstado(uf))}<i class="ponto ${estadoCls}" title="${TEXTO_SITUACAO[u?.andamento] ?? TEXTO_SITUACAO.n}"></i></span>
-      <span class="le-barra" role="img" aria-label="Presentes ${pct(d.comp)}, ausentes ${pct(d.aus)}, a apurar ${pct(d.falta)}"><i class="pres" style="width:${d.comp}%"></i><i class="aus" style="width:${d.aus}%"></i></span>
-      <span class="le-det">${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}` : "–"}</span>${legendaPresenca(a)}</span>
-    <span class="le-pct">${pct(a?.pct ?? 0)}<small>das seções</small></span><span class="seta" aria-hidden="true">${aberto ? "⌃" : "⌄"}</span></button>${aberto ? painel : ""}</li>`;
+  const aguardando = !a || !(a.st > 0 || u?.andamento === "p" || u?.andamento === "f");
+  const ponto = u?.andamento === "f" ? "final" : u?.andamento === "p" ? "apurando" : "";
+  return `<li class="${aberto ? "aberto" : ""}"><button type="button" class="el-uf el-uf--compacta${aguardando ? " el-uf--aguardando" : ""}" data-uf="${uf}" aria-expanded="${aberto}"><span class="el-uf__sigla">${uf === "ZZ" ? "EX" : uf}</span>
+    <span><span class="el-uf__nome"><span class="el-uf__ponto${ponto ? ` el-uf__ponto--${ponto}` : ""}" title="${TEXTO_SITUACAO[u?.andamento] ?? TEXTO_SITUACAO.n}"></span>${esc(nomeEstado(uf))}</span>
+      ${aguardando ? "" : `<span class="el-uf__barra"><i style="width:${Math.min(100, a.pct ?? 0)}%"></i></span><span class="el-uf__det">${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}${legendaPresenca(a)}</span>`}</span>
+    <span class="el-uf__pct">${aguardando ? "Aguardando" : `${pct(a.pct ?? 0)}<small>apurado</small>`}</span><span class="el-uf__seta" aria-hidden="true">${aberto ? "⌃" : "⌄"}</span></button>${aberto ? painel : ""}</li>`;
+}
+
+/** Visão em blocos: uma casa por estado com a sigla e o % apurado; o estado aberto mostra o resumo logo abaixo da grade. */
+export function blocosEstados(v, estado) {
+  const ac = v.f, ufs = ufsVisiveis(estado.regiao);
+  if (estado.ordem === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
+  const bloco = (uf) => {
+    const u = ac.ufs[uf.toLowerCase()], a = doEstado(u), nome = nomeEstado(uf);
+    const aguardando = !a || !(a.st > 0 || u?.andamento === "p" || u?.andamento === "f");
+    const cor = u?.andamento === "f" ? "var(--eleito)" : "var(--acento)";
+    return `<button type="button" class="el-bloco${aguardando ? " el-bloco--aguardando" : ""}" ${aguardando ? "" : `style="--cor:${cor}"`} data-uf="${uf}" aria-pressed="${estado.uf === uf}" aria-label="${esc(nome)}${aguardando ? ", aguardando" : `, ${pct(a.pct ?? 0)} apurado`}"><span>${uf === "ZZ" ? "EX" : uf}<small>${aguardando ? "—" : `${Math.floor(a.pct ?? 0)}%`}</small></span></button>`;
+  };
+  const aberto = ufs.includes(estado.uf) ? `<div class="bloco-aberto">${painelEstado(v, estado.uf)}</div>` : "";
+  return `<div class="el-blocos">${ufs.map(bloco).join("")}</div>${aberto}`;
 }
 
 // ---------- resumo do estado (campo expansível) ----------
@@ -186,7 +199,7 @@ export function painelEstado(v, uf) {
   return `<div class="expandido">
     <div class="resumo-estado">${celula("Eleitores aptos", fmt(a.eleitores))}${celula("Compareceram", fmt(a.comparecimento), a.temPresenca ? `${pct(a.pctComp)} dos apurados` : "")}
       ${celula("Abstenções", fmt(a.abstencao), a.temPresenca ? `${pct(a.pctAbst)} dos apurados` : "")}${celula("Seções", `${fmt(a.st)} de ${fmt(a.ts)}`, est && uf !== "ZZ" ? `Estaduais: ${pct(est.pct)}` : "")}</div>
-    <div class="carrossel" role="region" aria-label="Resumo das eleições em ${esc(nomeEstado(uf))}">${cargos.map(([titulo, aba, dd]) => cardCargo({ titulo, aba, uf, d: dd })).join("")}</div>
+    <div class="carrossel el-carrossel" role="region" aria-label="Resumo das eleições em ${esc(nomeEstado(uf))}">${cargos.map(([titulo, aba, dd]) => cardCargo({ titulo, aba, uf, d: dd })).join("")}</div><div class="el-carrossel__pos" aria-live="polite">1 de ${cargos.length}</div>
     ${uf === "ZZ" ? "" : `<button type="button" class="link" data-abrir-estado="${uf}">Ver todas as eleições em ${esc(nomeEstado(uf))} ›</button>`}</div>`;
 }
 
@@ -250,8 +263,9 @@ export function telaMarcha(v, estado, comNav = true) {
   return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas() : ""}${hero}
     <p class="muted nota-fonte">Acompanhamento do TSE, no horário de Brasília. Os resultados por cargo (aba Presidente) são publicados em arquivos separados e podem estar alguns minutos atrás deste acompanhamento.</p>
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
-      <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div></div>
-      <ul class="lista-estados">${listaOrdenada(v, estado)}</ul>
+      <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div>
+      <div class="el-visao" role="group" aria-label="Visão dos estados"><button type="button" data-visao-ufs="blocos" aria-pressed="${estado.visaoUfs !== "lista"}">Blocos</button><button type="button" data-visao-ufs="lista" aria-pressed="${estado.visaoUfs === "lista"}">Lista</button></div></div>
+      ${estado.visaoUfs === "lista" ? `<ul class="lista-estados el-ufs el-ufs--duas">${listaOrdenada(v, estado)}</ul>` : blocosEstados(v, estado)}
       <p class="muted nota">Toque em um estado para ver o resumo da situação e das eleições para Presidente, Governador e Senador. Porcentagens de candidatos: votos no candidato ÷ ${getBase() === "totais" ? "eleitores aptos das seções apuradas" : "votos válidos"}.</p></section>
     ${blocoEventos(v.eventos ?? null)}`;
 }

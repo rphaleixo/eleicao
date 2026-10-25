@@ -1,5 +1,6 @@
 // Tela "Nulos": números digitados nos votos nulos, em ranking, mapa (locais de votação e zonas) e tabela de zonas.
 import { fmt, pct } from "./formato.js";
+import { ajusteMapa } from "./ajuste.js";
 import { viewBoxDoEstado } from "./geo.js";
 import { caixaZoom } from "./zoomMapa.js";
 import { CARGOS_NULOS, CORES_NUMERO, COR_OUTROS, rotuloNumero, corPorParticipacao } from "./nulos.js";
@@ -13,8 +14,8 @@ export function controlesNulos(n, { mapa, municipios }) {
   const muns = `<option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === n.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}`;
   return `<div class="geo-ctl"><div class="geo-linha"><span class="gp-leg">Cargo</span>${seg("data-nl-cargo", n.cargo, CARGOS_NULOS)}</div>
     <div class="geo-linha"><span class="gp-leg">No mapa</span>${seg("data-nl-visao", n.visao, [["locais", "Locais de votação"], ["zonas", "Zonas eleitorais"]])}</div>
-    <div class="geo-linha geo-selects"><label class="f-sel"><span>Número</span><select data-nl-numero aria-label="Número digitado">${numeros}</select></label>
-      <label class="f-sel"><span>Município</span><select data-nl-mun aria-label="Município">${muns}</select></label></div></div>`;
+    ${ajusteMapa("nulos", `${n.numero ? `Número ${n.numero}` : "Mais frequente"} · ${n.mun ? "município escolhido" : "todo o estado"}`, `<div class="geo-linha geo-selects"><label class="f-sel"><span>Número</span><select data-nl-numero aria-label="Número digitado">${numeros}</select></label>
+      <label class="f-sel"><span>Município</span><select data-nl-mun aria-label="Município">${muns}</select></label></div>`)}</div>`;
 }
 
 export function resumoNulos(r, cargoNome) {

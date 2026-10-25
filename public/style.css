@@ -127,7 +127,7 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .seg.mini { flex: none; } .seg.mini button { flex: none; padding: 5px 10px; min-height: 32px; font-size: .8rem; }
 
 /* painel de destaque */
-.hero { background: linear-gradient(150deg, var(--destaque-a), var(--destaque-b)); border: 0; color: #fff; box-shadow: var(--sombra-painel); }
+.hero { background: var(--destaque-a); border: 0; color: #fff; box-shadow: none; }
 .hero h2 { color: #fff; margin: 0; font: 400 28px/28px var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
 .hero .seg { background: rgba(255, 255, 255, .14); margin-bottom: 14px; }
 .hero .seg button { color: rgba(255, 255, 255, .78); }
@@ -859,3 +859,31 @@ body { padding-bottom: 72px; }
 .folha-mais li a[aria-current="true"] { box-shadow: inset 5px 0 0 var(--acento); padding-left: var(--esp-12); }
 .folha-mais button { margin-top: var(--esp-12); width: 100%; min-height: 44px; border: 2px solid var(--texto); background: var(--cartao); color: var(--texto); font: 700 14px/20px var(--font-text); cursor: pointer; }
 .el-menu li a:focus-visible, .el-nav-inf a:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
+
+/* selos: ícone de 18px centrado de verdade (✓ em SVG, "2º" na fonte numérica) */
+.selo-sit i, .rn-selo i, .faixa-def > i { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0; line-height: 1; }
+.faixa-def > i { width: 28px; height: 28px; min-width: 28px; }
+.selo-sit i svg, .rn-selo i svg, .faixa-def > i svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.faixa-def > i svg { width: 16px; height: 16px; }
+.n2 { font: 700 11px/1 var(--font-num); }
+.selo-sit, .rn-selo, .chip { vertical-align: middle; }
+
+/* foto única em todo o app: largura foto-p, proporção 3:4, rosto no alto */
+.foto, .foto-vazia, .foto.mini, .pod-foto, .pod-1 .pod-foto, .cu-foto, .dp-foto, .se .foto, .dv .foto, .rn-cand .foto, .pp-d .foto, .cu-dest.sintetico .cu-foto { width: var(--foto-p); height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: 50% 20%; border-radius: var(--raio-sm); flex: none; }
+.ficha-foto { width: var(--foto-g); height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: 50% 20%; }
+@media (max-width: 520px), (min-width: 700px) { .foto, .foto-vazia, .pod-foto, .pod-1 .pod-foto, .ficha-foto { height: auto; } .foto, .foto-vazia, .pod-foto, .pod-1 .pod-foto { width: var(--foto-p); } .ficha-foto { width: var(--foto-g); } }
+/* pódio de disputa majoritária: três colunas iguais; sem votos, a posição some */
+.el-podio--igual { align-items: stretch; } .el-podio--igual .pod-1 .pod-pct { font-size: 1.05rem; }
+.pod-sem-voto .pod-pos { visibility: hidden; } .pod-sem-voto .pod-votos { font-weight: 600; font-size: .8rem; }
+
+/* carrossel: só a espiada da direita (28px) e o indicador "n de N" */
+.carrossel.el-carrossel { margin: 14px 0 0; padding: 0 28px 0 0; gap: var(--esp-8); }
+.el-carrossel > .card-cargo { flex: 0 0 calc(100% - 28px); min-width: 0; }
+@media (min-width: 760px) { .carrossel.el-carrossel { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0; margin: 14px 0 0; } .el-carrossel > .card-cargo { flex: none; } .el-carrossel + .el-carrossel__pos { display: none; } }
+
+/* turno: régua de até 480px; título do topo só no celular (no desktop a marca fica no menu); variação sem palavra órfã */
+.modos .el-seg--turno { max-width: 480px; }
+.cmp-col span, .cmp-col b, .cmp-col small { white-space: nowrap; }
+
+/* tema escuro: filete superior dos cartões menos pesado */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="claro"]) .card, :root:not([data-theme="claro"]) .el-painel, :root:not([data-theme="claro"]) .el-ajuste { border-top-color: color-mix(in srgb, var(--texto) 45%, transparent); } }

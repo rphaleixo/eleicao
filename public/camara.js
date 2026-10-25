@@ -1,4 +1,5 @@
 // Câmara dos Deputados: os 513 deputados somados dos 27 estados, em visões por partido, por estado, mapa e tabela.
+import { ICONE_OK } from "./situacao.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { UFS } from "./config.js";
@@ -46,7 +47,7 @@ export function cardsEstadosCamara(n, ufs) {
     const barra = ban.map((b) => `<i style="width:${(b.vagas / (u.vagas || 1)) * 100}%;background:${corPartido(b.sigla)}" title="${esc(b.sigla)} ${b.vagas}"></i>`).join("");
     const chips = ban.slice(0, 6).map((b) => `<span class="chip" style="--cor:${corPartido(b.sigla)}">${esc(b.sigla)} ${b.vagas}</span>`).join("") + (ban.length > 6 ? `<span class="chip mais">+${ban.length - 6}</span>` : "");
     return `<li><button type="button" class="card-uf card-camara${u.oficial ? " eleicao-eleito" : ""}" data-uf="${uf}" aria-label="${esc(UFS[uf])}: ver deputados">
-      <span class="cu-topo"><span class="sigla">${uf}</span><span class="cu-nome-uf"><b>${esc(UFS[uf])}</b>${u.oficial ? `<span class="selo-sit eleito"><i aria-hidden="true">✓</i>oficial</span>` : ""}</span>
+      <span class="cu-topo"><span class="sigla">${uf}</span><span class="cu-nome-uf"><b>${esc(UFS[uf])}</b>${u.oficial ? `<span class="selo-sit eleito"><i aria-hidden="true">${ICONE_OK}</i>oficial</span>` : ""}</span>
         <span class="cu-pilula ${u.oficial ? "f" : "p"}"><i class="ponto ${u.oficial ? "f" : "p"}"></i>${pct(u.pct)}</span></span>
       <span class="cc-vagas"><strong>${ocupadas}</strong> de ${u.vagas} cadeiras <small>(${situacao(u)})</small></span>
       <span class="cc-barra" role="img" aria-label="Cadeiras por partido">${barra}</span>

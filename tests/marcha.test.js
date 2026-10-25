@@ -51,7 +51,7 @@ test("ordenar por % apurado", () => {
 });
 
 test("estado aberto: resumo, gráfico e carrossel com top 5 e votos brancos/nulos/válidos", () => {
-  const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ" }));
+  const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ", visaoUfs: "lista" }));
   assert.ok(h.includes('aria-expanded="true"') && h.includes("expandido") && h.includes("carrossel"));
   assert.ok(h.includes("Eleitores aptos") && h.includes("Abstenções"));
   assert.ok(!h.includes("exp-grafico")); // sem gráfico de evolução dentro do estado
@@ -80,7 +80,7 @@ test("válidos, brancos e nulos mostram total e percentual", () => {
 });
 
 test("cada estado mostra presentes, ausentes e a apurar, que somam 100%", () => {
-  const h = telaMarcha(v, est({}));
+  const h = telaMarcha(v, est({ visaoUfs: "lista" }));
   assert.ok(h.includes("Presentes <b>40,00%</b>") && h.includes("Ausentes <b>10,00%</b>") && h.includes("A apurar <b>50,00%</b>"));
 });
 
@@ -102,7 +102,7 @@ test("o painel acompanha a região escolhida", () => {
 });
 
 test("painel da Marcha alterna entre o resumo geral e as barras por região", () => {
-  const geral = telaMarcha(v, est({}));
+  const geral = telaMarcha(v, est({ visaoUfs: "lista" }));
   assert.ok(geral.includes('data-painel="geral" aria-pressed="true"') && geral.includes("anel") && !geral.includes("barras-regiao"));
   const reg = telaMarcha(v, est({ painel: "regioes" }));
   assert.ok(reg.includes('data-painel="regioes" aria-pressed="true"') && reg.includes("barras-regiao") && !reg.includes("anel-valor"));
@@ -112,9 +112,15 @@ test("painel da Marcha alterna entre o resumo geral e as barras por região", ()
 });
 
 test("a Marcha mostra os eleitores aptos junto das seções (painel, barras por região e lista)", () => {
-  const geral = telaMarcha(v, est({}));
+  const geral = telaMarcha(v, est({ visaoUfs: "lista" }));
   assert.ok(geral.includes("eleitores aptos") && geral.includes("de 270 seções"));
   assert.match(geral, /de 10 seções · ([\d.]+ votos apurados \| )?([\d.]+ ausentes \| )?100 eleitores aptos/); // linha de um estado
   const reg = telaMarcha(v, est({ painel: "regioes" }));
   assert.ok(reg.includes("seções · ") && reg.includes("eleitores aptos"));
+});
+
+test("estados em blocos (visão padrão): sigla, % apurado e o estado aberto com o resumo abaixo da grade", () => {
+  const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ" }));
+  assert.ok(h.includes('class="el-blocos"') && h.includes('aria-pressed="true"') && h.includes("bloco-aberto") && h.includes("carrossel"));
+  assert.ok(telaMarcha(v, est({ visaoUfs: "lista" })).includes("el-ufs"));
 });

@@ -1,5 +1,6 @@
 // Tela "Comparar turnos": quadro, barras e mapa de Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno.
 import { UFS } from "./config.js";
+import { ajusteMapa } from "./ajuste.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { viewBoxDoEstado } from "./geo.js";
@@ -18,9 +19,9 @@ export function controlesComparacao(c, { municipios }) {
   const ufs = `<option value="BR">Brasil</option>${Object.entries(UFS).filter(([u]) => u !== "ZZ").sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).map(([u, n]) => `<option value="${u}"${u === c.uf ? " selected" : ""}>${esc(n)}</option>`).join("")}<option value="ZZ"${c.uf === "ZZ" ? " selected" : ""}>Exterior</option>`;
   const muns = c.uf === "BR" || c.uf === "ZZ" ? "" : `<label class="f-sel"><span>Município</span><select data-ct-mun aria-label="Município"><option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === c.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
   return `<div class="geo-ctl"><div class="geo-linha geo-selects"><label class="f-sel"><span>Onde</span><select data-ct-uf aria-label="Estado">${ufs}</select></label>${muns}</div>
-    <div class="geo-linha"><span class="gp-leg">Percentuais sobre</span>${seg("data-ct-base", c.base, [["aptos", "Eleitores aptos"], ["validos", "Votos válidos"]])}</div>
     <div class="geo-linha"><span class="gp-leg">Mapa: quem</span>${seg("data-ct-linha", c.linha, LINHAS)}</div>
-    <div class="geo-linha"><span class="gp-leg">Mapa: o que mostrar</span>${seg("data-ct-medida", c.medida, MEDIDAS)}</div></div>`;
+    ${ajusteMapa("comparar", `${MEDIDAS.find(([k]) => k === c.medida)?.[1] ?? ""} · ${c.base === "validos" ? "votos válidos" : "eleitores aptos"}`, `<div class="geo-linha"><span class="gp-leg">Mapa: o que mostrar</span>${seg("data-ct-medida", c.medida, MEDIDAS)}</div>
+      <div class="geo-linha"><span class="gp-leg">Percentuais sobre</span>${seg("data-ct-base", c.base, [["aptos", "Eleitores aptos"], ["validos", "Votos válidos"]])}</div>`)}</div>`;
 }
 
 const bloco = (rotulo, v, p) => `<div class="cmp-col"><small class="muted">${rotulo}</small>${v == null ? `<span class="muted">—</span>` : `<b>${fmt(v)}</b><span>${p == null ? "" : pct(p)}</span>`}</div>`;

@@ -1,5 +1,6 @@
 // Tela da aba Geografia: controles, mapa dos municípios, legenda, ficha do município e tabela.
 import { UFS } from "./config.js";
+import { ajusteMapa } from "./ajuste.js";
 import { fmt, pct } from "./formato.js";
 import { caixaZoom } from "./zoomMapa.js";
 import { METRICAS, VISOES, MINIMOS, CARGOS_GEO, valorDaVisao, viewBoxDoEstado } from "./geo.js";
@@ -24,9 +25,9 @@ export function controlesGeo(g, { cargoAtivo }) {
   const mins = MINIMOS.map(([v, n]) => `<option value="${v}"${v === g.min ? " selected" : ""}>${esc(n)}</option>`).join("");
   return `<div class="geo-ctl"><div class="geo-linha"><span class="gp-leg">Medir</span><div class="geo-chips">${chips}<button type="button" class="geo-chip geo-nv" data-geo-nv aria-pressed="${todas}" title="Soma abstenção, brancos e nulos">Não voto (as três)</button></div></div>
     ${cargoAtivo ? `<div class="geo-linha"><span class="gp-leg">Cargo</span>${seg("data-geo-cargo", g.cargo, CARGOS_GEO)}</div>` : `<p class="muted nota">A abstenção é a mesma em todos os cargos. Escolha brancos ou nulos para comparar por cargo.</p>`}
-    <div class="geo-linha"><span class="gp-leg">Mostrar</span>${seg("data-geo-visao", g.visao, VISOES)}</div>
+    ${ajusteMapa("geo", `${VISOES.find(([k]) => k === g.visao)?.[1] ?? ""} · ${g.uf ? UFS[g.uf] : "Brasil"} · ${MINIMOS.find(([v]) => v === g.min)?.[1] ?? ""}`, `<div class="geo-linha"><span class="gp-leg">Mostrar</span>${seg("data-geo-visao", g.visao, VISOES)}</div>
     <div class="geo-linha geo-selects"><label class="f-sel"><span>Estado</span><select data-geo-uf aria-label="Estado">${ufs}</select></label>
-      <label class="f-sel"><span>Tamanho do município</span><select data-geo-min aria-label="Tamanho mínimo do município">${mins}</select></label></div></div>`;
+      <label class="f-sel"><span>Tamanho do município</span><select data-geo-min aria-label="Tamanho mínimo do município">${mins}</select></label></div>`)}</div>`;
 }
 
 /** O desenho dos 5.570 municípios; cada um com a classe de cor da visão (c0 a c4) ou sem dado (cx). */
