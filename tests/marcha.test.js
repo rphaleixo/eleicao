@@ -56,12 +56,13 @@ test("ordenar por % apurado", () => {
 
 test("estado aberto: resumo, gráfico e carrossel com top 5 e votos brancos/nulos/válidos", () => {
   const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ", visaoUfs: "lista" }));
-  assert.ok(h.includes('aria-expanded="true"') && h.includes("expandido") && h.includes("carrossel"));
+  assert.ok(h.includes('aria-expanded="true"') && h.includes("expandido") && h.includes("el-cargos"));
   assert.ok(h.includes("Eleitores aptos") && h.includes("Abstenções"));
   assert.ok(!h.includes("exp-grafico")); // sem gráfico de evolução dentro do estado
   assert.equal((h.match(/data-sq=/g) || []).length, 5); // só os 5 primeiros do Presidente
   assert.ok(h.includes("Válidos") && h.includes("Brancos") && h.includes("Nulos"));
-  assert.ok(h.includes("Dados indisponíveis") && h.includes("Carregando")); // Governador falhou, Senador ainda carregando
+  assert.ok(h.includes("el-cargo--vazio") && h.includes("Aguardando") && h.includes("Ainda sem votos apurados neste estado.") && h.includes("Carregando") && !h.includes("Dados indisponíveis")); // Governador falhou, Senador ainda carregando
+  assert.ok(/<small>[\d.]+ votos<\/small>|\d votos<\/small>/.test(h) && !h.includes("overflow-wrap: anywhere")); // o número pequeno diz que são votos
   assert.equal((h.match(/aria-expanded="true"/g) || []).length, 1);
 });
 
@@ -70,12 +71,11 @@ test("exterior aberto mostra só o Presidente", () => {
   assert.ok(h.includes("expandido") && h.includes('data-ir="presidente"') && !h.includes('data-ir="governador"') && !h.includes('data-ir="senador"'));
 });
 
-test("sem votos, os 5 candidatos aparecem em ordem alfabética", () => {
+test("cargo com candidatos mas sem votos vira cartão vazio de uma linha, não uma lista de zeros", () => {
   const nomes = ["Zeca", "Ana", "Mário", "Bia", "Carlos", "Débora", "Ênio"];
   const d0 = { candidatos: nomes.map((n, i) => ({ id: String(i), nome: n, partido: "P", votos: 0, pct: 0 })), votosValidos: 0, brancos: 0, nulos: 0, pctSecoes: 0, divulgaVotos: false };
   const h = telaMarcha({ ...v, detalhe: { pres: d0, gov: null, sen: null } }, est({ uf: "RJ" }));
-  const ordem = [...h.matchAll(/class="cc-nome"><b>([^<]+)<\/b>/g)].map((m) => m[1]);
-  assert.deepEqual(ordem.slice(0, 5), ["Ana", "Bia", "Carlos", "Débora", "Ênio"]);
+  assert.ok(h.includes("el-cargo--vazio") && !h.includes("Zeca"));
 });
 
 test("válidos, brancos e nulos mostram total e percentual", () => {
@@ -135,7 +135,7 @@ test("a Marcha mostra os eleitores aptos junto das seções (painel, barras por 
 
 test("estados em blocos (visão padrão): sigla, % apurado e o estado aberto com o resumo abaixo da grade", () => {
   const h = telaMarcha({ ...v, detalhe }, est({ uf: "RJ" }));
-  assert.ok(h.includes('class="el-blocos"') && h.includes('aria-pressed="true"') && h.includes("bloco-aberto") && h.includes("carrossel"));
+  assert.ok(h.includes('class="el-blocos"') && h.includes('aria-pressed="true"') && h.includes("bloco-aberto") && h.includes("el-cargos"));
   assert.ok(telaMarcha(v, est({ visaoUfs: "lista" })).includes("el-ufs"));
 });
 

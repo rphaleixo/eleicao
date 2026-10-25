@@ -170,18 +170,17 @@ export function blocoVotos(d) {
 }
 
 export function cardCargo({ titulo, aba, uf, d }) {
-  if (d === undefined) return `<article class="card-cargo"><h3>${esc(titulo)}</h3><p class="muted">Carregando…</p></article>`;
-  if (!d) return `<article class="card-cargo"><h3>${esc(titulo)}</h3><p class="muted">Dados indisponíveis no momento.</p></article>`;
-  // Mais votados primeiro; sem votos (apuração não começou), ordem alfabética.
+  const vazio = (txt, frase) => `<article class="el-cargo el-cargo--vazio"><div class="el-cargo__topo"><h3>${esc(titulo)}</h3><small>${txt}</small></div>${frase ? `<p>${frase}</p>` : ""}</article>`;
+  if (d === undefined) return vazio("Carregando…", "");
+  if (!d || !d.candidatos?.some((c) => c.votos > 0)) return vazio("Aguardando", "Ainda sem votos apurados neste estado.");
+  // Mais votados primeiro (a posição é por votos, não por lado)
   const top = d.candidatos.slice().sort((x, y) => y.votos - x.votos || x.nome.localeCompare(y.nome, "pt-BR")).slice(0, 5);
-  const itens = top.length
-    ? top.map((c, i) => `<li class="${classeSit(c).trim()}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato"><span class="pos">${i + 1}</span>
-        <img class="foto mini" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
-        <span class="cc-nome"><b>${esc(c.nome)}</b><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${seloSit(c, { curto: true })}</span>
-        <span class="cc-votos"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)}</small></span></li>`).join("")
-    : `<li class="vazio muted">Sem candidatos no arquivo do TSE.</li>`;
-  return `<article class="card-cargo"><div class="cc-topo"><h3>${esc(titulo)}</h3>${seloEleicao(d) || `<span class="muted">${pct(d.pctSecoes)} apurado</span>`}</div>
-    <ol class="cc-lista">${itens}</ol>${getBase() === "totais" ? blocoVotos(d) : ""}<button type="button" class="link" data-ir="${aba}">Ver completo ›</button></article>`;
+  const itens = top.map((c, i) => `<li class="${classeSit(c).trim()}" data-sq="${esc(c.id)}" role="button" tabindex="0" title="Ver ficha do candidato"><span class="el-cargo__pos">${i + 1}</span>
+        <img class="foto" loading="lazy" alt="" src="${urlFoto(aba, uf, c.id)}" onerror="if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}">
+        <span><span class="el-cargo__nome">${esc(c.nome)}</span><span class="el-chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span>${seloSit(c, { curto: true })}</span>
+        <span class="el-cargo__pct">${pct(c.pct)}<small>${fmt(c.votos)} votos</small></span></li>`).join("");
+  return `<article class="el-cargo"><div class="el-cargo__topo"><h3>${esc(titulo)}</h3>${seloEleicao(d) || `<small>${pct(d.pctSecoes)} apurado</small>`}</div>
+    <ol>${itens}</ol>${getBase() === "totais" ? blocoVotos(d) : ""}<button type="button" class="link el-cargo__mais" data-ir="${aba}">Ver completo ›</button></article>`;
 }
 
 /** Cartão da bancada de deputados de um estado: partidos/federações com mais cadeiras. */
@@ -207,7 +206,7 @@ export function painelEstado(v, uf) {
   return `<div class="expandido">
     <div class="resumo-estado">${celula("Eleitores aptos", fmt(a.eleitores))}${celula("Compareceram", fmt(a.comparecimento), a.temPresenca ? `${pct(a.pctComp)} dos apurados` : "")}
       ${celula("Abstenções", fmt(a.abstencao), a.temPresenca ? `${pct(a.pctAbst)} dos apurados` : "")}${celula("Seções", `${fmt(a.st)} de ${fmt(a.ts)}`, est && uf !== "ZZ" ? `Estaduais: ${pct(est.pct)}` : "")}</div>
-    <div class="carrossel el-carrossel" role="region" aria-label="Resumo das eleições em ${esc(nomeEstado(uf))}">${cargos.map(([titulo, aba, dd]) => cardCargo({ titulo, aba, uf, d: dd })).join("")}</div><div class="el-carrossel__pos" aria-live="polite">1 de ${cargos.length}</div>
+    <div class="el-cargos" role="region" aria-label="Resumo das eleições em ${esc(nomeEstado(uf))}">${cargos.map(([titulo, aba, dd]) => cardCargo({ titulo, aba, uf, d: dd })).join("")}</div><div class="el-carrossel__pos" aria-live="polite">1 de ${cargos.length}</div>
     ${uf === "ZZ" ? "" : `<button type="button" class="link" data-abrir-estado="${uf}">Ver todas as eleições em ${esc(nomeEstado(uf))} ›</button>`}</div>`;
 }
 

@@ -634,7 +634,7 @@ function resumoEstado(v) {
     cardBancada({ titulo: "Deputados Estaduais", cargo: "dep-estadual", d: dt.depe === undefined ? undefined : dt.depe?.d, dist: dt.depe?.dist }),
     cardCargo({ titulo: "Presidente no estado", aba: "presidente", uf, d: dt.pres }),
   ];
-  return `${hero}<div class="carrossel el-carrossel" role="region" aria-label="Resumo das eleições em ${esc(UFS[uf])}">${cards.join("")}</div><div class="el-carrossel__pos" aria-live="polite">1 de ${cards.length}</div>
+  return `${hero}<div class="el-cargos" role="region" aria-label="Resumo das eleições em ${esc(UFS[uf])}">${cards.join("")}</div><div class="el-carrossel__pos" aria-live="polite">1 de ${cards.length}</div>
     <p class="muted nota-estado"><span class="so-celular">Deslize para ver todas as eleições.</span> Porcentagens de candidatos: votos no candidato ÷ ${getBase() === "totais" ? "eleitores aptos das seções apuradas" : "votos válidos"}.</p>`;
 }
 
@@ -1387,7 +1387,7 @@ document.addEventListener("click", (e) => { const g = e.target.closest("[data-ga
 /** Carrossel: o indicador "n de N" acompanha o cartão que está encostado à esquerda. */
 document.addEventListener("scroll", (e) => {
   const c = e.target;
-  if (!c.classList?.contains("el-carrossel")) return;
+  if (!c.classList?.contains("el-cargos")) return;
   const pos = c.nextElementSibling; if (!pos?.classList.contains("el-carrossel__pos")) return;
   const filhos = [...c.children], i = filhos.reduce((m, f, k) => (Math.abs(f.offsetLeft - c.offsetLeft - c.scrollLeft) < Math.abs(filhos[m].offsetLeft - c.offsetLeft - c.scrollLeft) ? k : m), 0);
   pos.textContent = `${i + 1} de ${filhos.length}`;

@@ -216,7 +216,7 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .cc-lista { list-style: none; margin: 6px 0 0; padding: 0; }
 .cc-lista li { display: grid; grid-template-columns: 18px var(--foto-p) 1fr auto; gap: 12px; align-items: center; padding: 7px 0; border-top: 1px solid var(--linha); cursor: pointer; }
 .cc-lista li:first-child { border-top: 0; } .cc-lista li.vazio { display: block; cursor: default; }
-.cc-nome b { display: block; font-size: .9rem; line-height: 1.2; overflow-wrap: anywhere; } .cc-nome .chip { margin: 3px 0 0; }
+.cc-nome b { display: block; font-size: .9rem; line-height: 1.2; overflow-wrap: normal; word-break: normal; } .cc-nome .chip { margin: 3px 0 0; }
 .cc-votos { text-align: right; } .cc-votos strong { display: block; font-variant-numeric: tabular-nums; } .cc-votos small { color: var(--texto-suave); font-size: .75rem; }
 .foto.mini { width: 36px; height: 36px; border-width: 2px; border-color: var(--linha); }
 .votos-tipos { display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--linha); font-size: .76rem; color: var(--texto-suave); }
@@ -879,8 +879,11 @@ body { padding-bottom: 72px; }
 
 /* carrossel: só a espiada da direita (28px) e o indicador "n de N" */
 .carrossel.el-carrossel { margin: 14px 0 0; padding: 0 28px 0 0; gap: var(--esp-8); }
-.el-carrossel > .card-cargo { flex: 0 0 calc(100% - 28px); min-width: 0; }
-@media (min-width: 760px) { .carrossel.el-carrossel { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0; margin: 14px 0 0; } .el-carrossel > .card-cargo { flex: none; } .el-carrossel + .el-carrossel__pos { display: none; } }
+@media (min-width: 720px) { .el-cargos + .el-carrossel__pos { display: none; } } /* cartões empilhados: sem indicador "n de N" */
+.el-cargos { margin: 14px 0 0; } .el-cargos > .card-cargo { flex: 0 0 calc(100% - 28px); } @media (min-width: 720px) { .el-cargos > .card-cargo { flex: none; } }
+.el-cargos > .el-cargo, .el-cargos > .card-cargo, .el-cargos > a.el-duplo { min-width: 0; }
+button.el-cargo__mais { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; cursor: pointer; } /* o link "Ver completo ›" é um botão: sem o fundo do navegador */
+.el-cargo .foto { width: var(--foto-p); height: auto; border-width: 3px; border-color: var(--cor, var(--linha)); } .el-cargo li { cursor: pointer; } .el-cargo li.sit-eleito, .el-cargo li.sit-segundo { box-shadow: inset 3px 0 0 var(--borda-sit); }
 
 /* turno: régua de até 480px; título do topo só no celular (no desktop a marca fica no menu); variação sem palavra órfã */
 .cmp-col span, .cmp-col b, .cmp-col small { white-space: nowrap; }
@@ -1049,3 +1052,4 @@ select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
 
 /* emenda do eixo do gráfico de evolução (votação prorrogada) */
 .g-corte line { stroke: var(--texto-suave); stroke-width: 1; stroke-dasharray: 3 3; } .g-corte path { stroke: var(--texto); stroke-width: 1.5; fill: none; } .g-corte text { fill: var(--texto-suave); font: 600 11px var(--font-text); }
+.el-cargo li.sit-eleito, .el-cargo li.sit-segundo { padding-left: var(--esp-6); }
