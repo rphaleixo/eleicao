@@ -8,3 +8,4 @@ O consumidor fornece: a hora do fechamento e o roteiro do dia (começando pelo m
 - O roteiro usa o mesmo desenho de `Definicoes`, com a faixa lateral tracejada em `ausencia`: ainda não aconteceu.
 - Diga a fonte: "resultados do TSE". Nunca invente uma previsão de quem vai ganhar.
 - Quando a apuração começa, a contagem some e o `Placar` entra com o selo "Em apuração".
+O horário de início da divulgação nunca é escrito direto no texto: vem de uma única constante de configuração do app (hoje 19h de Brasília no 2º turno, por causa da prorrogação). Se mudar, muda em um lugar só.
