@@ -897,7 +897,7 @@ body { padding-bottom: 72px; }
 .topo { position: sticky; top: 0; z-index: 40; }
 /* seletor de turno (el-turnos-barra): preso abaixo do topo; some ao rolar para baixo */
 :root { --alt-fixa: 96px; }
-.modos.el-turnos-barra { padding-top: var(--esp-4); padding-bottom: var(--esp-4); z-index: 39; }
+.modos.el-turnos-barra { padding-top: 0; padding-bottom: 0; z-index: 39; }
 .modos .el-turnos { margin: 0; }
 .el-premissas { margin: 0 -14px; padding: 0 14px; }
 .el-premissas__painel { left: 0; right: 0; }
@@ -965,3 +965,26 @@ dialog.el-gaveta::backdrop { background: rgba(0, 0, 0, .5); }
 .el-base-atual { margin: var(--esp-14) 0 0; min-height: 44px; } /* alvo de toque de 44px, ainda que o desenho seja discreto */
 .folha-sobre { margin-top: var(--esp-12); width: 100%; min-height: 44px; border: 2px solid var(--texto); background: var(--cartao); color: var(--texto); font: 700 14px/20px var(--font-text); cursor: pointer; }
 .el-menu__sobre button:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
+
+/* escopo e base na mesma linha (celular): a barra de escopo de 46px com a base à direita */
+.escopo-linha { display: flex; align-items: stretch; gap: var(--esp-6); margin-top: 0; }
+.escopo-linha .el-escopo-barra { flex: 1 1 auto; min-width: 0; width: auto; margin-top: 0; }
+.escopo-base { flex: none; min-height: 46px; padding: 0 var(--esp-10); border: 1px solid var(--linha); border-bottom: 2px solid var(--texto); border-radius: var(--raio-xs); background: var(--cartao); color: var(--texto-suave); font: 600 12px/16px var(--font-text); cursor: pointer; text-align: center; }
+.escopo-base b { color: var(--texto); } .escopo-base:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.base-longa { display: none; } .base-curta { font-weight: 700; color: var(--texto); }
+@media (min-width: 1024px) {
+  .escopo-linha .el-escopo-barra { display: none; }
+  .escopo-base { border: 1px solid var(--linha); min-height: 32px; padding: 0 var(--esp-8); }
+  .base-curta { display: none; } .base-longa { display: inline; }
+}
+/* carimbo do topo em uma linha: no celular só a hora e o símbolo; "próxima em N s" fica para o desktop e o leitor de tela */
+.status-ico { margin-left: var(--esp-4); }
+@media (max-width: 1023px) {
+  .topo .status { white-space: nowrap; max-width: none; }
+  .status-prox, .status-longo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (min-width: 1024px) { .status-ico { display: none; } }
+/* rótulo "no 1º turno" na linha de baixo do percentual, sem quebrar o número */
+.dp-cand strong { white-space: nowrap; } .no-primeiro { display: block; font: 700 11px/14px var(--font-text); letter-spacing: .04em; text-transform: uppercase; color: var(--texto-suave); margin: 0; }
+
+#nav { padding-top: 0; padding-bottom: 0; } #nav .el-escopo-barra { margin-top: 0; }

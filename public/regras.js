@@ -39,3 +39,10 @@ export function baseAtual(aba, base) {
   if (aba === "nulos") return ["Percentuais sobre os nulos digitados", ""];
   return ["Percentuais sobre", base === "totais" ? "eleitores aptos" : "votos válidos"];
 }
+
+/** O rótulo curto da base, para a barra de escopo no celular. */
+export function baseCurta(aba, base) {
+  if (aba === "geo") return "Aptos";
+  if (aba === "nulos") return "Nulos";
+  return base === "totais" ? "Aptos" : "Válidos";
+}

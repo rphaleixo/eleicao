@@ -38,7 +38,7 @@ import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABE
 import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
 import { menuLateral, barraInferior } from "./navegacao.js";
 import { painelLista, limiteDe, maisItens, verMais, zerarLimites } from "./lista.js";
-import { regrasDaTela, TEXTO_BASE, baseAtual } from "./regras.js";
+import { regrasDaTela, TEXTO_BASE, baseAtual, baseCurta } from "./regras.js";
 import { htmlBusca, buscarCidades, buscarCandidatos, maisProxima, acharCidade } from "./busca.js";
 import { lerTema, aplicarTema, escolherTema, controleTema } from "./tema.js";
 import {
@@ -722,7 +722,7 @@ function telaCargoPorEstado(v) {
   const ufs = (regiao && REGIOES[regiao] ? REGIOES[regiao].ufs : Object.keys(UFS)).filter((u) => !governador || UFS_GOV.includes(u));
   const de2022 = new Map((v.mandatos?.senadores ?? []).map((x) => [x.uf, x]));
   const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
-  const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra,
+  const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra, painel: governador ? "gov-estados" : "sen-estados",
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
   return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${governador ? blocoCompararGovernadores(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}${governador && TURNO2 ? avisoDecididosPrimeiroTurno() : ""}`;
 }
@@ -1191,7 +1191,7 @@ function escopoRecolhido(nav) {
   const reg = estado.regiao && REGIOES[estado.regiao] ? REGIOES[estado.regiao].nome : estado.regiao === "exterior" ? "Exterior" : "";
   const cidade = estado.mun ? (estado.municipios[estado.uf] ?? []).find((m) => m.cod === estado.mun)?.nome ?? "" : "";
   const caminho = ["Brasil", reg, estado.uf !== "BR" ? (UFS[estado.uf] ?? (estado.uf === "ZZ" ? "Exterior" : estado.uf)) : "", cidade].filter(Boolean).join(" › ");
-  return `<button type="button" class="el-escopo-barra" data-escopo aria-expanded="${estado.escopoAberto}"><small>Escopo</small>${esc(caminho)}</button><div class="el-escopo-painel${estado.escopoAberto ? " aberto" : ""}">${nav}<button type="button" class="el-botao busca-cidade" data-busca-abrir>${cidade ? `Cidade: ${esc(cidade)} · trocar` : "Buscar uma cidade"}</button></div>`;
+  return `<div class="escopo-linha"><button type="button" class="el-escopo-barra" data-escopo aria-expanded="${estado.escopoAberto}"><small>Escopo</small>${esc(caminho)}</button>${botaoBase(true)}</div><div class="el-escopo-painel${estado.escopoAberto ? " aberto" : ""}">${nav}<button type="button" class="el-botao busca-cidade" data-busca-abrir>${cidade ? `Cidade: ${esc(cidade)} · trocar` : "Buscar uma cidade"}</button></div>`;
 }
 /** Endereço de uma área que não existe neste turno (Senado, deputados…): explica e oferece o caminho para o 1º turno, em vez de uma tela vazia. */
 function avisoRotaSemTurno() {
@@ -1244,7 +1244,7 @@ function render(forcar = false) {
   renderNavegacao(v);
   const html = estado.avisoRota ? avisoRotaSemTurno() : tela(v);
   const corpoTela = String(html ?? "").replace(/<[^>]*>|\s/g, "") ? html : vazioDaTela();
-  $("conteudo").innerHTML = (estado.avisoRota ? "" : botaoBase()) + corpoTela;
+  $("conteudo").innerHTML = (estado.avisoRota || $("nav").querySelector(".escopo-linha") ? "" : botaoBase()) + corpoTela;
   reaplicarGraficos($("conteudo"));
   reaplicarZoom($("conteudo"));
   ajustarContrasteChips($("conteudo"));
@@ -1295,13 +1295,12 @@ function mostrarStatus() {
   if (encerradas.has(chaveRota()) && memo.ultima) { // apuração encerrada: sem atualização automática
     el.classList.remove("erro");
     el.title = `Apuração encerrada · atualizado às ${hora(memo.ultima)}`;
-    el.innerHTML = `Encerrada · <button type="button" class="link" data-reabrir>atualizar agora</button>`;
+    el.innerHTML = `Encerrada · <button type="button" class="link" data-reabrir aria-label="Atualizar agora"><span class="status-longo">atualizar agora</span><span class="status-ico" aria-hidden="true">↻</span></button>`;
     return;
   }
   el.title = memo.erro ? `Falha na última tentativa: ${memo.erro}` : "";
-  el.textContent = memo.ultima
-    ? `${hora(memo.ultima)} · próxima em ${seg} s${memo.erro ? " · falha" : ""}`
-    : memo.erro || "Carregando…";
+  if (memo.ultima) el.innerHTML = `${hora(memo.ultima)} <span class="status-ico" aria-hidden="true">↻</span><span class="status-prox"> · próxima em ${seg} s</span>${memo.erro ? " · falha" : ""}`; // no celular só a hora e o símbolo; o resto fica para o desktop e o leitor de tela
+  else el.textContent = memo.erro || "Carregando…";
 }
 
 async function carregarMunicipios() {
@@ -1311,9 +1310,10 @@ async function carregarMunicipios() {
 // ---------- base dos percentuais (votos válidos x votos totais) ----------
 /** Turno, base dos percentuais e "sem sub judice" só aparecem nas abas em que mudam alguma coisa. */
 /** O botão da base ativa, logo abaixo do título de cada tela: a premissa nunca fica escondida e abre a gaveta. */
-function botaoBase() {
-  const [rotulo, valor] = baseAtual(estado.aba, estado.base);
-  return `<button type="button" class="el-base-atual" data-gaveta aria-haspopup="dialog">${rotulo}${valor ? ` <b>${valor}</b>` : ""} · ${estado.aba === "geo" || estado.aba === "nulos" ? "como calcular" : "alterar"}</button>`;
+function botaoBase(naBarra = false) {
+  const [rotulo, valor] = baseAtual(estado.aba, estado.base), acao = estado.aba === "geo" || estado.aba === "nulos" ? "como calcular" : "alterar";
+  // Na barra de escopo (celular): só o rótulo curto à direita ("Válidos · alterar"); sozinho, a frase inteira.
+  return `<button type="button" class="${naBarra ? "escopo-base" : "el-base-atual"}" data-gaveta aria-haspopup="dialog" aria-label="${esc(`${rotulo} ${valor}`.trim())}: ${acao}"><span class="base-curta">${esc(baseCurta(estado.aba, estado.base))}</span><span class="base-longa">${rotulo}${valor ? ` <b>${valor}</b>` : ""}</span> · ${acao}</button>`;
 }
 
 /** Gaveta "Como calcular": base dos percentuais, opções, regras da tela de onde foi aberta e a fonte. Abre pela direita (desktop) ou pela base (celular). */
