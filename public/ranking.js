@@ -47,7 +47,7 @@ export function rankingMajoritario(d, { aba, uf, limite = 40, vagas = d.vagas ||
   if (!todos.length) return `<p class="muted">Sem candidatos neste arquivo.</p>`;
   const semVoto = todos.every((c) => !c.votos); // antes da apuração: ordem de urna, sem posição
   if (semVoto) todos = todos.slice().sort((x, y) => Number(x.numero) - Number(y.numero) || String(x.nome).localeCompare(String(y.nome), "pt-BR"));
-  const igual = aba === "presidente" || aba === "governador"; // disputas majoritárias: três colunas iguais, sem degrau
+  const igual = ["presidente", "governador", "senador"].includes(aba); // disputas majoritárias: três colunas iguais, sem degrau
   const topo = todos.slice(0, 3), resto = todos.slice(3, limite);
   const max = Math.max(1, todos[0].votos);
   const corte = aba === "senador" && vagas > 1 ? vagas : 0; // senador: duas vagas
