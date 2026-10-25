@@ -1086,3 +1086,5 @@ dialog.el-cheia .el-cheia__corpo { overflow: auto; }
 .cheia-gira { display: none; margin: 0 0 var(--esp-4); } @media (orientation: portrait) and (max-width: 700px) { .cheia-gira { display: block; } }
 .el-evolucao__tabela caption { text-align: left; }
 .el-evolucao__quadro:has(.el-evolucao__tabela) { padding: var(--esp-4) var(--esp-4) var(--esp-8); overflow-x: auto; }
+.el-evolucao__filtros > div > .el-apoio, .el-evolucao__filtros .el-campo { display: block; } .el-evolucao__filtros > div > .el-apoio { margin-bottom: var(--esp-4); }
+.el-evolucao__filtros .el-campo { display: grid; gap: var(--esp-4); }

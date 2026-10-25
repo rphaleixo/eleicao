@@ -1061,6 +1061,7 @@ function desenharCheia() {
   reaplicarGraficos(c);
 }
 iniciarGraficos($("cheia"));
+$("cheia")?.addEventListener("close", () => { $("cheia").innerHTML = ""; document.querySelector("#conteudo [data-cheia-abrir]")?.focus(); }); // Fechar e Esc devolvem o foco ao botão "Tela cheia"
 document.addEventListener("click", (e) => {
   if (e.target.closest("[data-cheia-abrir]")) { const c = $("cheia"); if (!c.open) { c.showModal(); desenharCheia(); } return; }
   if (e.target.closest("[data-cheia-fechar]")) $("cheia").close(); // o foco volta ao botão "Tela cheia"; Esc também fecha
