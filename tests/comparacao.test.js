@@ -165,3 +165,18 @@ test("legenda do 'Não voto' na barra de composição abre as três partes", asy
   assert.equal((aberta.match(/cmp-leg-parte/g) || []).length, 3);
   assert.ok(!barrasComposicao(l, l, "validos", { nvAberto: true }).includes("data-ct-nv"));
 });
+
+test("busca de cidade no Comparar: campo de 44px antes do seletor, até 5 resultados 'Cidade · UF', sem acento e 'Onde Cidade · UF'", async () => {
+  const { controlesComparacao, listaCidades } = await import("../public/comparacaoView.js");
+  const { buscarCidades } = await import("../public/busca.js");
+  const munis = { RJ: [{ cod: "60011", nome: "Niterói", ibge: "3303302" }, { cod: "60012", nome: "Nova Iguaçu", ibge: "1" }], SP: [{ cod: "71072", nome: "São Paulo", ibge: "2" }, { cod: "71073", nome: "São Pedro", ibge: "3" }] };
+  const achadas = buscarCidades(munis, "NITEROI");
+  assert.deepEqual(achadas.map((m) => `${m.nome} ${m.uf}`), ["Niterói RJ"]); // ignora acento e maiúsculas
+  assert.ok(listaCidades(achadas, "NITEROI").includes("Niterói · RJ") && listaCidades(achadas, "NITEROI").includes("data-ct-cidade=\"RJ/60011\""));
+  assert.equal((listaCidades(buscarCidades(munis, "sao"), "sao").match(/data-ct-cidade/g) || []).length, 2);
+  assert.equal(listaCidades([], "a"), ""); // menos de 2 letras: sem resultados
+  assert.ok(listaCidades([], "xyzw").includes("Nada encontrado"));
+  const h = controlesComparacao({ uf: "RJ", mun: "60011", regiao: "", base: "validos", linha: "lula", medida: "pp", premissas: true, busca: "nit" }, { municipios: munis.RJ, cidades: achadas });
+  assert.ok(h.indexOf("Buscar uma cidade") < h.indexOf("data-ct-uf") && h.includes('data-ct-busca value="nit"') && h.includes('role="listbox"'));
+  assert.ok(h.includes("Niterói · RJ")); // a faixa de premissas: ONDE Cidade · UF
+});

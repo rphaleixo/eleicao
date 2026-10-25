@@ -6,7 +6,7 @@ import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
 import { lerAbUf, montarLinhas, calcular, classesDeCor, CARGOS_GEO } from "./geo.js";
 import { ligarZoom, reaplicarZoom } from "./zoomMapa.js";
 import { linhaDeResultado, linhaDeArquivo, linhaDeExterior, agruparPorPais, somarLinhas, valorDoMapa, classesDoMapa, extremos, LINHAS, MEDIDAS } from "./comparacao.js";
-import { exteriorPorPais, controlesComparacao, quadroComparacao, barrasComposicao, mapaComparacao, legendaComparacao, fichaComparacao, tabelaExtremos } from "./comparacaoView.js";
+import { listaCidades, exteriorPorPais, controlesComparacao, quadroComparacao, barrasComposicao, mapaComparacao, legendaComparacao, fichaComparacao, tabelaExtremos } from "./comparacaoView.js";
 import { rankingNumeros, pontosDoMapa, zonasEmDestaque, CARGOS_NULOS } from "./nulos.js";
 import { controlesNulos, resumoNulos, rankingNulos, mapaNulos, legendaNulos, fichaNulos, tabelaZonas } from "./nulosView.js";
 import { controlesGeo, mapaGeo, legendaGeo, resumoGeo, fichaGeo, tabelaGeo, nomeDasMetricas } from "./geoView.js";
@@ -1082,7 +1082,7 @@ function telaTurnos(v) {
   const nomes = new Map(Object.values(estado.municipios).flat().map((m) => [m.cod, m.nome]));
   const ondeNome = reg ? reg.nome : mun ? `${nomes.get(mun) ?? mun}, ${UFS[uf]}` : uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf];
   const t1 = v.a1?.mapa, t2 = v.a2?.final ? v.a2.mapa : vivoT2.size ? vivoT2 : v.a2?.mapa;
-  const status2 = !(l2 && l2.pct > 0) ? "Aguardando o início da divulgação do TSE: os números do 2º turno aparecem aqui sozinhos." : l2 && l2.pct < 100 ? `2º turno em apuração (${pct(l2.pct)} das seções): os números mudam a cada minuto.` : "";
+  const status2 = !(l2 && l2.pct > 0) ? (mun ? "Aguardando o 2º turno nesta cidade." : "Aguardando o início da divulgação do TSE: os números do 2º turno aparecem aqui sozinhos.") : l2 && l2.pct < 100 ? `2º turno em apuração (${pct(l2.pct)} das seções): os números mudam a cada minuto.` : "";
   const semT2 = !t2 || !t2.size; // enquanto o 2º turno não tem dados por município, o mapa mostra o 1º turno
   const c = semT2 && ct0.medida !== "p1" ? { ...ct0, medida: "p1" } : ct0;
   const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2, nvAberto: !!estado.ct.nvAberto });
@@ -1114,7 +1114,7 @@ function telaTurnos(v) {
       ${fichaComparacao(sel, c.base, { ufNome: sel ? sel.uf : "" })}${sel && sel.uf && sel.cod !== mun ? `<button type="button" class="btn-mais" data-ct-abrir="${sel.uf}/${sel.cod}">Abrir só ${esc(sel.nome)}</button>` : ""}</section>${ext}`;
   }
   const abrirExt = uf === "BR" && !reg ? `<button type="button" class="el-botao" data-ct-abrir="ZZ/">Ver o exterior por país</button>` : "";
-  return `${controlesComparacao({ ...ct0, uf, mun, regiao: v.regiao }, { municipios })}
+  return `${controlesComparacao({ ...ct0, uf, mun, regiao: v.regiao }, { municipios, cidades: buscarCidades(estado.municipios, ct0.busca ?? "") })}
     <section class="card">${quadro}${barrasComposicao(l1, l2, c.base, { nvAberto: !!estado.ct.nvAberto })}${abrirExt}</section>${mapa}`;
 }
 const seg2 = (attr, atual, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === atual}">${n}</button>`).join("")}</div>`;
@@ -1584,7 +1584,23 @@ function apuracaoDe(sq) {
   return c ? { votos: c.votos, pct: c.pct, situacao: c.sit ? TEXTO_SIT[c.sit] : c.eleito ? c.situacao || "Eleito" : !c.elegivel ? c.situacaoVoto : null } : null;
 }
 iniciarGraficos($("conteudo"));
+$("conteudo").addEventListener("keydown", (e) => { // setas percorrem o campo e os resultados da busca de cidade
+  if (!["ArrowDown", "ArrowUp", "Escape"].includes(e.key)) return;
+  const dentro = e.target.closest?.("[data-ct-busca], [data-ct-cidade]"); if (!dentro) return;
+  const itens = [...document.querySelectorAll("#ct-busca-lista [data-ct-cidade]")], campo = document.querySelector("[data-ct-busca]");
+  const i = itens.indexOf(e.target);
+  if (e.key === "Escape") { if (campo) { campo.focus(); } return; }
+  e.preventDefault();
+  if (e.key === "ArrowDown") (i < 0 ? itens[0] : itens[Math.min(i + 1, itens.length - 1)])?.focus();
+  else if (i <= 0) campo?.focus(); else itens[i - 1].focus();
+});
 $("conteudo").addEventListener("input", (e) => {
+  const cb = e.target.closest?.("[data-ct-busca]");
+  if (cb) { // só a lista de cidades se refaz: o campo e o lugar da comparação ficam como estão (apagar o texto limpa os resultados)
+    estado.ct.busca = cb.value;
+    const lista = $("ct-busca-lista"); if (lista) lista.innerHTML = listaCidades(buscarCidades(estado.municipios, cb.value), cb.value);
+    cb.setAttribute("aria-expanded", String(cb.value.trim().length >= 2)); return;
+  }
   const campo = e.target.closest?.("[data-busca-texto]");
   if (!campo) return;
   const pos = campo.selectionStart;
@@ -1643,6 +1659,8 @@ $("conteudo").addEventListener("click", (e) => {
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const vm = e.target.closest("[data-vermais]");
   if (vm) { maisItens(vm.dataset.vermais, Number(vm.dataset.passo) || 10, vm.dataset.vermais === "pres-cmp" ? 5 : 10); render(true); return; }
+  const cid = e.target.closest("[data-ct-cidade]");
+  if (cid) { const [u, cod] = cid.dataset.ctCidade.split("/"); estado.ct.busca = ""; estado.ct.sel = ""; estado.ct.premissas = false; estado.regiao = ""; navegar({ uf: u, mun: cod }); return; } // a tela compara os dois turnos na cidade escolhida
   const eb = e.target.closest("[data-evo-base]");
   if (eb) { estado.base = eb.dataset.evoBase; try { localStorage.setItem("base", estado.base); } catch { /* sem armazenamento */ } render(true); return; }
   const ep = e.target.closest("[data-evo-periodo], [data-evo-linhas]");

@@ -7,6 +7,7 @@ import { caixaZoom } from "./zoomMapa.js";
 import { faixaPremissas } from "./ajuste.js";
 import { avisoDadosIniciais, REGIOES } from "./marcha.js";
 import { opcoesDeLugar, valorRegiao } from "./lugares.js";
+import { LIMITE } from "./busca.js";
 import { LINHAS, linhasDaBase, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas, percentual, valorDeOrdem } from "./comparacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -20,15 +21,23 @@ const seta = (n) => (n > 0 ? "▲" : n < 0 ? "▼" : "•");
 const abas = (attr, atual, opcoes) => `<div class="el-abas" role="group">${opcoes.map(([k, n]) => `<button type="button" class="el-aba" ${attr}="${k}" aria-pressed="${String(k) === String(atual)}">${esc(n)}</button>`).join("")}</div>`;
 
 /** Faixa de premissas fixa (design system, PremissasFixas): onde, base e mapa à vista; todos os controles no painel "Ajustar". */
-export function controlesComparacao(c, { municipios }) {
+/** Os resultados da busca de cidade (até 5): "Cidade · UF", navegáveis por teclado. */
+export function listaCidades(cidades, texto = "") {
+  if (String(texto).trim().length < 2) return "";
+  if (!cidades.length) return `<li class="el-apoio" role="presentation">Nada encontrado para “${esc(texto)}”.</li>`;
+  return cidades.slice(0, LIMITE).map((m) => `<li role="presentation"><button type="button" role="option" data-ct-cidade="${esc(m.uf)}/${esc(m.cod)}">${esc(m.nome)} · ${esc(m.uf)}<small>${esc(UFS[m.uf] ?? m.uf)}</small></button></li>`).join("");
+}
+
+export function controlesComparacao(c, { municipios, cidades = [] }) {
   const regiao = c.regiao && REGIOES[c.regiao] ? c.regiao : "";
   const ufs = opcoesDeLugar({ selecionado: regiao ? valorRegiao(regiao) : c.uf });
   const semMun = c.uf === "BR" || c.uf === "ZZ" || !!regiao;
   const muns = semMun ? "" : `<label class="el-campo">Município<select data-ct-mun aria-label="Município"><option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === c.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
-  const onde = regiao ? REGIOES[regiao].nome : c.uf === "BR" ? "Brasil" : c.uf === "ZZ" ? "Exterior" : `${c.uf} · ${c.mun ? (municipios.find((m) => m.cod === c.mun)?.nome ?? "Município") : "Todo o estado"}`;
+  const onde = regiao ? REGIOES[regiao].nome : c.uf === "BR" ? "Brasil" : c.uf === "ZZ" ? "Exterior" : c.mun ? `${municipios.find((m) => m.cod === c.mun)?.nome ?? "Município"} · ${c.uf}` : `${c.uf} · Todo o estado`;
   const baseNome = c.base === "validos" ? "Votos válidos" : "Eleitores aptos";
   const mapaNome = `${linhasDaBase(c.base).find(([k]) => k === c.linha)?.[1] ?? ""} · ${MEDIDAS.find(([k]) => k === c.medida)?.[1] ?? ""}`;
-  const corpo = `<div class="el-campos"><label class="el-campo">Onde<select data-ct-uf aria-label="Onde">${ufs}</select></label>${muns}</div>
+  const busca = `<div class="el-busca"><label class="el-campo">Buscar uma cidade<input type="search" data-ct-busca value="${esc(c.busca ?? "")}" placeholder="Ex.: Niterói, São Paulo" autocomplete="off" role="combobox" aria-expanded="${String(c.busca ?? "").trim().length >= 2}" aria-controls="ct-busca-lista" aria-autocomplete="list"></label><ul class="el-resultados" id="ct-busca-lista" role="listbox" aria-label="Cidades encontradas">${listaCidades(cidades, c.busca ?? "")}</ul></div>`;
+  const corpo = `${busca}<div class="el-campos"><label class="el-campo">Onde<select data-ct-uf aria-label="Onde">${ufs}</select></label>${muns}</div>
       <div><span class="el-apoio">Percentuais sobre</span>${abas("data-ct-base", c.base, [["validos", "Votos válidos"], ["aptos", "Eleitores aptos"]])}</div>
       <div><span class="el-apoio">Mapa: quem</span>${abas("data-ct-linha", c.linha, linhasDaBase(c.base))}</div>
       <div><span class="el-apoio">Mapa: o que mostrar</span>${abas("data-ct-medida", c.medida, MEDIDAS)}</div>`;

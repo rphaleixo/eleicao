@@ -1088,3 +1088,7 @@ dialog.el-cheia .el-cheia__corpo { overflow: auto; }
 .el-evolucao__quadro:has(.el-evolucao__tabela) { padding: var(--esp-4) var(--esp-4) var(--esp-8); overflow-x: auto; }
 .el-evolucao__filtros > div > .el-apoio, .el-evolucao__filtros .el-campo { display: block; } .el-evolucao__filtros > div > .el-apoio { margin-bottom: var(--esp-4); }
 .el-evolucao__filtros .el-campo { display: grid; gap: var(--esp-4); }
+
+/* busca de cidade do Comparar: lupa no campo (44px) */
+.el-busca input[data-ct-busca] { min-height: 44px; padding-left: 38px; background: no-repeat 12px 50% / 18px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23808a99' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l5 5'/%3E%3C/svg%3E"), var(--cartao); }
+.el-busca .el-resultados button small { margin-left: var(--esp-8); }
