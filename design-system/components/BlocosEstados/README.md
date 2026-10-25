@@ -11,3 +11,6 @@ O consumidor fornece: sigla, percentual apurado, partido líder (cor) e o destin
 
 
 Dois modos de cor (rodada 9c). Na Marcha da apuração, que só traz o andamento, o bloco é colorido pela situação: verde para encerrada, azul para em apuração, cinza para aguardando, sempre com o percentual apurado escrito. Nas telas que carregam votos por estado (Presidente, Governadores), o bloco usa a cor do partido do líder. Mostre uma legenda curta dizendo qual dos dois modos está ativo. O preview mostra o modo do líder.
+
+
+Percentual com duas casas decimais, sempre (57,59%, 0,60%, 0,00%), nunca arredondado para inteiro: 0,60% e 0% parecem iguais e não são. A célula tem 52px; em 9 colunas o número cabe com a fonte numérica estreita e `tabular-nums`. Use o valor exato do TSE, sem arredondar duas vezes.

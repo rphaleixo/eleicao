@@ -86,3 +86,6 @@ Regra de base dos percentuais (vale para todo o sistema): votos válidos são os
 
 
 Correção da regra (rodada 10b): o "não voto" só existe na base Eleitores aptos. Na base Votos válidos, nenhum elemento da tela mostra não voto: nem barra de composição, nem legenda, nem a opção "Não voto" em "Mapa: quem", nem a linha do Duelo. A barra de composição na base Votos válidos soma 100% com os candidatos e "Outros"; na base Eleitores aptos soma 100% incluindo o não voto. Uma tela nunca mistura as duas bases (por exemplo, líder sobre válidos e barra com não voto sobre aptos).
+
+
+Regra de formatação: todo percentual do sistema mostra duas casas decimais, inclusive em blocos, mapas, legendas e gráficos (0,60%, nunca 1%).
