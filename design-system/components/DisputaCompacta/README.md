@@ -10,3 +10,5 @@ O consumidor fornece: o cargo ou o estado, os dois candidatos (nome de urna, par
 - Rodapé de uma linha: situação da apuração e o link "Ver apuração ›". Os votos absolutos saem do cartão (ficam na tela da disputa).
 - Percentuais sempre com duas casas decimais.
 - Em telas abaixo de 360px, o nome quebra em até duas linhas; a altura sobe poucos pixels.
+
+- Ordem fixa dos finalistas do 2º turno de presidente: Lula sempre à esquerda e Flávio Bolsonaro sempre à direita, qualquer que seja o resultado, o turno ou a base. Quem está à frente é dito por texto ou ícone, nunca pela posição.
