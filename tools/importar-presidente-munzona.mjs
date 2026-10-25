@@ -55,4 +55,9 @@ const saida = join(pasta, `presidente-t${turno}-municipios.json`);
 writeFileSync(saida, JSON.stringify({ turno, eleicao: turno === 1 ? "6257" : "6258", geradoEm: new Date().toISOString(), fonte: "dados abertos do TSE (votação por município e zona)", final: true, candidatos,
   colunas: ["uf", "ibge", "aptos", "comparecimento", "abstencao", "brancos", "nulos", "lula", "flavio", "outros", "validos", "pctSecoes"], municipios }));
 const soma = (i) => Object.values(municipios).reduce((t, a) => t + a[i], 0);
+// mantém o índice dos arquivos de dados do site (o app só pede o que consta nele)
+const arqIndice = join(pasta, "indice.json");
+let indice = { arquivos: [] }; try { indice = JSON.parse(readFileSync(arqIndice, "utf8")); } catch { /* ainda não existe */ }
+for (const nome of [`presidente-t${turno}-municipios.json`, `presidente-t${turno}-exterior.json`]) if (!indice.arquivos.includes(nome)) indice.arquivos.push(nome);
+writeFileSync(arqIndice, JSON.stringify(indice));
 console.log(`Exterior: ${Object.keys(localidades).length} localidades. ${Object.keys(municipios).length} municípios. Aptos ${soma(2)}, abstenções ${soma(4)}, brancos ${soma(5)}, nulos ${soma(6)}, Lula ${soma(7)}, Flávio ${soma(8)}, outros ${soma(9)}, válidos ${soma(10)}. Salvo em ${saida}`);

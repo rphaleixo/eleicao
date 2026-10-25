@@ -105,11 +105,11 @@ const ROTULO = { vitoria: "Vitória", segundo: "2º turno", derrota: "Derrota", 
 const pilula = (l) => `<span class="pp-res ${l.resultado}">${l.resultado === "vitoria" ? "✓ " : ""}${ROTULO[l.resultado]}${l.turno2 && (l.resultado === "vitoria" || l.resultado === "derrota") ? " no 2º turno" : ""}</span>`;
 const tile = (valor, rotulo, sub = "", classe = "") => `<div class="pp-tile ${classe}"><strong>${valor}</strong><span>${rotulo}</span>${sub ? `<small>${sub}</small>` : ""}</div>`;
 const carregando = (rotulo) => `<p class="muted">Carregando ${rotulo}…</p>`;
-export const VISOES_PARTIDO = [["maj", "Majoritárias"], ["depf", "Dep. federais"], ["depe", "Dep. estaduais"], ["clausula", "Cláusula"]];
+export const VISOES_PARTIDO = [["maj", "Majoritárias"], ["depf", "Deputado Federal"], ["depe", "Deputado Estadual"], ["clausula", "Cláusula"]];
 
 function tabelaMajoritaria(r) {
-  const linha = (nome, x) => (x ? `<tr><th scope="row">${nome}</th><td>${x.candidaturas}</td><td><b class="pp-v">${x.vitorias}</b></td><td>${x.segundos}</td><td>${x.derrotas}</td><td>${x.abertas}</td><td>${pct(x.pct)}</td></tr>` : "");
-  return `<div class="tab-scroll"><table class="pp-tabela"><tr><th></th><th title="Candidaturas">Cand.</th><th>Vitórias</th><th>2º turno</th><th>Derrotas</th><th>Em aberto</th><th>% válidos</th></tr>
+  const linha = (nome, x) => (x ? `<tr><th scope="row">${nome}</th><td>${x.candidaturas}</td><td><b class="pp-v">${x.vitorias}</b></td><td>${x.segundos}</td><td>${x.derrotas}</td><td>${x.abertas}</td><td>${nome === "Total" ? `<span title="Cargos diferentes têm bases diferentes: não se soma percentual">—</span>` : pct(x.pct)}</td></tr>` : "");
+  return `<div class="tab-scroll"><table class="pp-tabela"><tr><th></th><th>Candidaturas</th><th>Vitórias</th><th>2º turno</th><th>Derrotas</th><th>Em aberto</th><th>% dos votos válidos do cargo</th></tr>
     ${linha("Presidente", r.pres)}${linha("Governador", r.gov)}${linha("Senador", r.sen)}${linha("Total", r.total).replace("<tr>", '<tr class="pp-total">')}</table></div>`;
 }
 
@@ -145,10 +145,10 @@ export function blocoPartido(des, seletor = "", visao = "maj") {
   const r = des.resumo, gov = r.gov, sen = r.sen, cl = des.clausula;
   const v = VISOES_PARTIDO.some(([k]) => k === visao) ? visao : "maj";
   const tiles = `<div class="pp-tiles">
-    ${tile(gov ? gov.vitorias : "…", "governos", gov ? `de 27 vagas · ${gov.segundos ? `${gov.segundos} no 2º turno · ` : ""}${gov.candidaturas} cand.` : "", "eleito")}
-    ${tile(sen ? sen.vitorias : "…", "senadores", sen ? `de 54 vagas · ${sen.candidaturas} cand.` : "", "eleito")}
-    ${tile(des.depf ? des.depf.eleitos : "…", "dep. federais", des.depf ? `de ${fmt(des.depf.vagas)} vagas · ${des.depf.candidatos} cand.` : "", "eleito")}
-    ${tile(des.depe ? des.depe.eleitos : "…", "dep. estaduais", des.depe ? `de ${fmt(des.depe.vagas)} vagas · ${des.depe.candidatos} cand.` : "", "eleito")}
+    ${tile(gov ? gov.vitorias : "…", "governos", gov ? `de 27 vagas · ${gov.segundos ? `${gov.segundos} no 2º turno · ` : ""}${gov.candidaturas} candidatos` : "", "eleito")}
+    ${tile(sen ? sen.vitorias : "…", "senadores", sen ? `de 54 vagas · ${sen.candidaturas} candidatos` : "", "eleito")}
+    ${tile(des.depf ? des.depf.eleitos : "…", "deputados federais", des.depf ? `de ${fmt(des.depf.vagas)} vagas · ${des.depf.candidatos} candidatos` : "", "eleito")}
+    ${tile(des.depe ? des.depe.eleitos : "…", "deputados estaduais", des.depe ? `de ${fmt(des.depe.vagas)} vagas · ${des.depe.candidatos} candidatos` : "", "eleito")}
     ${cl ? tile(cl.status === "atingiu" ? "✓" : cl.status === "nao" ? "✕" : "…", "cláusula", cl.status === "atingiu" ? "atingiu" : cl.status === "nao" ? "não atingiu" : "pode atingir", cl.status) : des.depf ? tile("–", "cláusula", "sem dep. federal") : ""}
     ${r.total.candidaturas ? tile(`${r.total.vitorias}×${r.total.derrotas}`, "vitórias × derrotas", "majoritárias", r.total.vitorias >= r.total.derrotas ? "atingiu" : "") : ""}</div>`;
   const abas = `<div class="seg mini seg-rolavel pp-abas" role="tablist" aria-label="Visão do partido">${VISOES_PARTIDO.map(([k, n]) => `<button type="button" role="tab" data-pvisao="${k}" aria-pressed="${k === v}">${n}</button>`).join("")}</div>`;

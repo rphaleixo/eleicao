@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="pular" href="#conteudo">Pular para o conteúdo</a>
   <nav id="menu" class="el-menu" aria-label="Áreas da apuração"></nav>
   <header class="topo">
     <div class="wrap topo-in">
@@ -20,26 +21,28 @@
     </div>
   </header>
 
-  <a class="faixa-eventos" id="faixa" href="#/andamento" hidden aria-live="polite"></a>
-  <nav class="wrap modos el-turnos-barra" id="modos" aria-label="Turno da eleição"></nav>
-  <nav class="wrap abas el-abas" id="abas" aria-label="Cargos e andamento" hidden></nav>
+  <div class="el-pagina" id="pagina">
+    <a class="faixa-eventos" id="faixa" href="#/andamento" hidden aria-live="polite"></a>
+    <nav class="modos el-turnos-barra" id="modos" aria-label="Turno da eleição"></nav>
+    <nav class="abas el-abas" id="abas" aria-label="Cargos e andamento" hidden></nav>
 
-  <div id="nav" class="wrap"></div>
+    <div id="nav"></div>
 
-  <div id="sub" class="wrap sub" hidden></div>
+    <div id="sub" class="sub" hidden></div>
 
-  <section class="wrap filtros" aria-label="Filtros">
-    <label id="lbl-mun">Município
-      <select id="mun"></select>
-    </label>
-  </section>
+    <section class="filtros" aria-label="Filtros" hidden>
+      <label id="lbl-mun">Município
+        <select id="mun"></select>
+      </label>
+    </section>
 
-  <main id="conteudo" class="wrap" aria-live="off"></main>
+    <main id="conteudo" tabindex="-1" aria-live="off"></main>
 
-  <footer class="wrap rodape">
-    <p>Fonte: arquivos de divulgação de resultados do TSE (resultados.tse.jus.br), conforme a Resolução TSE nº 23.751/2026. Site independente, sem vínculo com o TSE. Os números só são oficiais no site do TSE. As vagas de deputados enquanto a apuração não termina são uma projeção calculada a partir dos votos e podem diferir do resultado oficial.</p>
-    <div class="rodape-tema"><span class="el-apoio">Tema</span><div id="tema-rodape"></div></div>
-  </footer>
+    <footer class="rodape">
+      <p>Fonte: arquivos de divulgação de resultados do TSE (resultados.tse.jus.br), conforme a Resolução TSE nº 23.751/2026. Site independente, sem vínculo com o TSE. Os números só são oficiais no site do TSE. As vagas de deputados enquanto a apuração não termina são uma projeção calculada a partir dos votos e podem diferir do resultado oficial.</p>
+      <div class="rodape-tema"><span class="el-apoio">Tema</span><div id="tema-rodape"></div></div>
+    </footer>
+  </div>
 
   <nav id="barra-inf" class="el-nav-inf el-nav-inf--fixa" aria-label="Navegação principal"></nav>
   <dialog id="gaveta" class="el-gaveta el-gaveta--lado" aria-labelledby="gaveta-titulo"></dialog>

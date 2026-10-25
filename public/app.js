@@ -224,11 +224,18 @@ function emSegundoPlano(chave, ttlMs, produtor) {
 }
 
 // ---------- comparação entre turnos: votação por município ----------
+// Os arquivos de dados guardados no site (public/dados) que já existem ficam listados em dados/indice.json: só se pedem os que constam,
+// assim não há 404 à toa no console nem pedidos repetidos por um arquivo do 2º turno que ainda não foi gerado.
+let indiceDados = null;
+const temArquivo = async (nome) => {
+  indiceDados ??= fetch("/dados/indice.json").then((r) => (r.ok ? r.json() : { arquivos: [] })).then((j) => new Set(j.arquivos ?? [])).catch(() => new Set());
+  return (await indiceDados).has(nome);
+};
 const arquivosMun = {};
 /** Votação de presidente de todos os municípios em um turno, do arquivo guardado no site (public/dados). Só existe depois da coleta. */
 function arquivoMunicipios(turno) {
-  arquivosMun[turno] ??= fetch(`/dados/presidente-t${turno}-municipios.json`).then(async (r) => {
-    if (!r.ok) return null;
+  arquivosMun[turno] ??= temArquivo(`presidente-t${turno}-municipios.json`).then((tem) => (tem ? fetch(`/dados/presidente-t${turno}-municipios.json`) : null)).then(async (r) => {
+    if (!r?.ok) return null;
     const j = await r.json();
     return { final: !!j.final, mapa: new Map(Object.entries(j.municipios).map(([cod, a]) => [cod, { ...linhaDeArquivo(a), uf: a[0], ibge: a[1], cod }])) };
   }).catch(() => null);
@@ -238,7 +245,7 @@ const arquivosExt = {}, vivoExtT2 = new Map();
 let paisesDoExterior = null;
 /** Exterior no 1º turno (e no 2º, quando existir o arquivo final): uma linha por cidade das representações brasileiras. */
 function arquivoExterior(turno) {
-  arquivosExt[turno] ??= fetch(`/dados/presidente-t${turno}-exterior.json`).then(async (r) => (r.ok ? new Map(Object.entries((await r.json()).localidades).map(([cod, a]) => [cod, { ...linhaDeExterior(a), nome: a[0] }])) : null)).catch(() => null);
+  arquivosExt[turno] ??= temArquivo(`presidente-t${turno}-exterior.json`).then((tem) => (tem ? fetch(`/dados/presidente-t${turno}-exterior.json`) : null)).then(async (r) => (r?.ok ? new Map(Object.entries((await r.json()).localidades).map(([cod, a]) => [cod, { ...linhaDeExterior(a), nome: a[0] }])) : null)).catch(() => null);
   return arquivosExt[turno];
 }
 /** Cidade -> país (agrupamento feito à mão, não oficial). */
@@ -627,7 +634,7 @@ function resumoEstado(v) {
     cardCargo({ titulo: "Presidente no estado", aba: "presidente", uf, d: dt.pres }),
   ];
   return `${hero}<div class="carrossel el-carrossel" role="region" aria-label="Resumo das eleições em ${esc(UFS[uf])}">${cards.join("")}</div><div class="el-carrossel__pos" aria-live="polite">1 de ${cards.length}</div>
-    <p class="muted nota-estado">Deslize para ver todas as eleições. Porcentagens de candidatos: votos no candidato ÷ ${getBase() === "totais" ? "eleitores aptos das seções apuradas" : "votos válidos"}.</p>`;
+    <p class="muted nota-estado"><span class="so-celular">Deslize para ver todas as eleições.</span> Porcentagens de candidatos: votos no candidato ÷ ${getBase() === "totais" ? "eleitores aptos das seções apuradas" : "votos válidos"}.</p>`;
 }
 
 function telaMapaMunicipal(v) {
@@ -1032,14 +1039,14 @@ function telaTurnos(v) {
     const sel = c.sel ? itens.find((i) => i.ibge === c.sel) : mun ? itens.find((i) => i.cod === mun) : null;
     const linhaNome = LINHAS.find(([k]) => k === c.linha)[1], medidaNome = MEDIDAS.find(([k]) => k === c.medida)[1];
     const semDado = itens.filter((i) => i.valor == null).length;
-    const prog = semT2 && ct0.medida !== "p1" ? `<p class="muted">O 2º turno ainda não tem dados por município: o mapa mostra o % do 1º turno. A variação aparece assim que o 2º turno começar a ser apurado.</p>` : v.t2aberto && !v.a2?.final && progT2.emVoo ? `<div class="progresso-mun"><span>Carregando os municípios do 2º turno: ${fmt(progT2.feitos)} de ${fmt(progT2.total)}</span><div class="barra-prog"><i style="width:${progT2.total ? (progT2.feitos / progT2.total) * 100 : 0}%"></i></div></div>` : !v.t2aberto ? `<p class="muted">Quando o 2º turno começar, o mapa passa a mostrar a variação município a município.</p>` : "";
+    const prog = semT2 && ct0.medida !== "p1" ? `<div class="el-vazio" role="status"><h3>2º turno ainda sem dados por município</h3><p>O mapa mostra o % do 1º turno. A variação aparece assim que o 2º turno tiver municípios com seções apuradas.</p></div>` : v.t2aberto && !v.a2?.final && progT2.emVoo ? `<div class="progresso-mun"><span>Carregando os municípios do 2º turno: ${fmt(progT2.feitos)} de ${fmt(progT2.total)}</span><div class="barra-prog"><i style="width:${progT2.total ? (progT2.feitos / progT2.total) * 100 : 0}%"></i></div></div>` : !v.t2aberto ? `<p class="muted">Quando o 2º turno começar, o mapa passa a mostrar a variação município a município.</p>` : "";
     const ext = c.medida === "lider" ? "" : `<section class="card"><div class="titulo-cadeiras"><h2>${c.medida === "pp" || c.medida === "votos" ? "Maiores variações" : "Maiores e menores valores"}</h2>${seg2("data-ct-dir", c.dir, c.medida === "pp" || c.medida === "votos" ? [["alta", "Altas"], ["queda", "Quedas"]] : [["alta", "Maiores"], ["queda", "Menores"]])}</div><p class="muted">Municípios com ${c.dir === "alta" ? "maior" : "menor"} valor de ${esc(linhaNome)} (${esc(medidaNome.toLowerCase())}). Toque em uma linha para ver o município no mapa.</p>${tabelaExtremos(extremos(itens, c.dir), { medida: c.medida, dir: c.dir, linhaNome })}</section>`;
     mapa = `<section class="card"><h2>Mapa: ${esc(linhaNome)} · ${esc(medidaNome)}</h2>${prog}
       <div class="mapa-area mapa-area-geo">${mapaComparacao(v.malha, itens, { medida: c.medida, classe: cls.classe, selecionado: sel?.ibge ?? "", uf, municipiosDaUf: municipios, municipioIbge: mun ? municipios.find((m) => m.cod === mun)?.ibge : "" })}</div>
       ${legendaComparacao(cls, c.medida, linhaNome, { semDado })}${v.t2aberto && !v.a2?.final && t2?.size ? `<p class="muted nota">Os municípios entram no mapa assim que têm seções apuradas no 2º turno. Enquanto um município não chega a 100%, os números dele são parciais: o % já é uma boa pista, mas a variação em votos só é comparável no fim.</p>` : ""}
       ${fichaComparacao(sel, c.base, { ufNome: sel ? sel.uf : "" })}${sel && sel.uf && sel.cod !== mun ? `<button type="button" class="btn-mais" data-ct-abrir="${sel.uf}/${sel.cod}">Abrir só ${esc(sel.nome)}</button>` : ""}</section>${ext}`;
   }
-  const abrirExt = uf === "BR" ? `<button type="button" class="btn-mais" data-ct-abrir="ZZ/">Ver o exterior por país</button>` : "";
+  const abrirExt = uf === "BR" ? `<button type="button" class="el-botao" data-ct-abrir="ZZ/">Ver o exterior por país</button>` : "";
   return `${controlesComparacao({ ...ct0, uf, mun }, { municipios })}
     <section class="card">${quadro}${barrasComposicao(l1, l2, c.base)}${abrirExt}</section>${mapa}`;
 }
@@ -1202,11 +1209,15 @@ function usaRegiao() {
 let navAnterior = "", subAnterior = "";
 let ultimoAc = null; // andamento por estado mais recente, para a navegação aparecer enquanto a tela carrega
 /** Escopo recolhido (celular): uma linha com o caminho Brasil › Região › Estado; tocar abre a navegação por região e estado. No desktop o painel fica sempre à vista. */
+/** A lupa da barra de escopo (44×44): abre a mesma busca da lupa do topo. */
+const botaoLupa = () => `<button type="button" class="escopo-lupa" data-busca-abrir aria-label="Buscar cidade ou candidato"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg><span class="so-desktop">Cidade</span></button>`;
+/** Telas sem navegação por região mas com percentuais: só a base e a lupa, na mesma altura da barra de escopo. */
+const escopoSolo = () => (["geo", "nulos", "cenarios", "turnos"].includes(estado.aba) ? "" : `<div class="escopo-linha escopo-linha--solo">${botaoBase(true)}${botaoLupa()}</div>`);
 function escopoRecolhido(nav) {
   const reg = estado.regiao && REGIOES[estado.regiao] ? REGIOES[estado.regiao].nome : estado.regiao === "exterior" ? "Exterior" : "";
   const cidade = estado.mun ? (estado.municipios[estado.uf] ?? []).find((m) => m.cod === estado.mun)?.nome ?? "" : "";
   const caminho = ["Brasil", reg, estado.uf !== "BR" ? (UFS[estado.uf] ?? (estado.uf === "ZZ" ? "Exterior" : estado.uf)) : "", cidade].filter(Boolean).join(" › ");
-  return `<div class="escopo-linha"><button type="button" class="el-escopo-barra" data-escopo aria-expanded="${estado.escopoAberto}"><small>Escopo</small>${esc(caminho)}</button>${botaoBase(true)}</div><div class="el-escopo-painel${estado.escopoAberto ? " aberto" : ""}">${nav}<button type="button" class="el-botao busca-cidade" data-busca-abrir>${cidade ? `Cidade: ${esc(cidade)} · trocar` : "Buscar uma cidade"}</button></div>`;
+  return `<div class="escopo-linha"><button type="button" class="el-escopo-barra" data-escopo aria-expanded="${estado.escopoAberto}"><small>Escopo</small>${esc(caminho)}</button>${botaoBase(true)}${botaoLupa()}</div><div class="el-escopo-painel${estado.escopoAberto ? " aberto" : ""}">${nav}</div>`;
 }
 /** Endereço de uma área que não existe neste turno (Senado, deputados…): explica e oferece o caminho para o 1º turno, em vez de uma tela vazia. */
 function avisoRotaSemTurno() {
@@ -1242,7 +1253,7 @@ function renderNavegacao(v) {
     el.querySelectorAll(".tira, .be-cargos, .chips").forEach((c) => { c.scrollLeft = rolagem; });
     return html;
   };
-  navAnterior = preserva($("nav"), nav ? escopoRecolhido(nav) : "", navAnterior);
+  navAnterior = preserva($("nav"), nav ? escopoRecolhido(nav) : escopoSolo(), navAnterior);
   subAnterior = preserva($("sub"), sub, subAnterior);
   $("sub").hidden = !sub;
   // mantém o estado e o cargo escolhidos à vista nas faixas roláveis
@@ -1259,7 +1270,7 @@ function render(forcar = false) {
   renderNavegacao(v);
   const html = estado.avisoRota ? avisoRotaSemTurno() : tela(v);
   const corpoTela = String(html ?? "").replace(/<[^>]*>|\s/g, "") ? html : vazioDaTela();
-  $("conteudo").innerHTML = (estado.avisoRota || $("nav").querySelector(".escopo-linha") ? "" : botaoBase()) + corpoTela;
+  $("conteudo").innerHTML = corpoTela;
   reaplicarGraficos($("conteudo"));
   reaplicarZoom($("conteudo"));
   ajustarContrasteChips($("conteudo"));

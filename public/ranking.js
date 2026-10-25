@@ -53,6 +53,6 @@ export function rankingMajoritario(d, { aba, uf, limite = 40, vagas = d.vagas ||
   const corte = aba === "senador" && vagas > 1 ? vagas : 0; // senador: duas vagas
   const itens = resto.map((c, i) => linha(c, i + 3, max) + (corte && i + 3 === corte - 1 && todos.length > corte ? `<li class="linha-corte" role="presentation">posição de eleito (${vagas} vagas)</li>` : "")).join("");
   const corteNoTopo = corte && corte <= 3 && todos.length > corte ? `<p class="linha-corte">Os ${corte} primeiros ocupam as vagas de senador.</p>` : "";
-  return `<ol class="podio${igual ? " el-podio--igual" : ""}">${topo.map((c, i) => pódio(c, i, aba, uf, semVoto)).join("")}</ol>${corteNoTopo}
+  return `<ol class="podio${igual ? " el-podio--igual" : ""}${topo.length === 2 ? " podio-dois" : ""}">${topo.map((c, i) => pódio(c, i, aba, uf, semVoto)).join("")}</ol>${corteNoTopo}
     ${resto.length ? `<ol class="lista-compacta" start="4">${itens}</ol>` : ""}${todos.length > limite ? `<p class="muted">Mostrando os ${limite} primeiros de ${fmt(todos.length)} candidatos.</p>` : ""}`;
 }

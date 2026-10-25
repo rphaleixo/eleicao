@@ -56,7 +56,7 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
     const sinalL = lider === "lula" ? 1 : -1, ant = m1 == null ? null : sinalL * m1, agora = Math.abs(refe);
     const parcial = tem2 && l2.pct < 100 ? ` · parcial, ${pct(l2.pct)} apurado` : "";
     const detalhe = tem2
-      ? `No 1º turno: ${ant >= 0 ? "+" : "−"}${ptBr(Math.abs(ant))} p.p. · ${agora - ant >= 0 ? "▲ ampliou" : "▼ reduziu"} ${ptBr(Math.abs(agora - ant))} p.p.${parcial}`
+      ? `No 1º turno, ${ant >= 0 ? NOME_CURTO[lider] : NOME_CURTO[outro]} estava ${ptBr(Math.abs(ant))} p.p. à frente · ${ant < 0 ? `▲ virou ${ptBr(Math.abs(agora - ant))} p.p. a favor de ${NOME_CURTO[lider]}` : `${agora - ant >= 0 ? "▲ ampliou" : "▼ reduziu"} ${ptBr(Math.abs(agora - ant))} p.p.`}${parcial}`
       : "2º turno ainda sem dados apurados";
     vantagem = inicial
       ? `${avisoDadosIniciais(l2.pct)}<div class="el-duelo__vantagem el-duelo__vantagem--inicial"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> na frente por enquanto sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`
@@ -72,7 +72,7 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
   }).join("");
   const baseTxt = base === "validos" ? "Percentuais dos candidatos sobre os votos válidos (só candidatos)." : "Percentuais sobre os eleitores aptos das seções apuradas; o não voto soma abstenções, brancos e nulos.";
   return `<section class="el-duelo"><header class="el-duelo__topo"><h3>${esc(ondeNome)}</h3><span>1º turno ${l1 ? pct(l1.pct) : "—"} · 2º turno ${tem2 ? `${pct(l2.pct)} apurado` : "ainda sem dados"}</span></header>${vantagem}
-    <div class="el-duelo__tabela"><div class="el-duelo__linha el-duelo__linha--cab"><span>Candidato</span><span>1º turno</span><span>2º turno</span><span>${tem2 && l2.pct < 100 ? "Variação parcial" : "Variação"}</span></div>${corpo}</div></section>
+    <div class="el-duelo__tabela"><div class="el-duelo__linha el-duelo__linha--cab"><span>Candidato</span><span>1º turno</span><span>2º turno</span><span>Variação${tem2 && l2.pct < 100 ? "<small>parcial</small>" : ""}</span></div>${corpo}</div></section>
     <p class="muted nota">${status2 ?? ""} ${baseTxt} Variação em pontos percentuais: 2º turno menos 1º turno.</p>`;
 }
 

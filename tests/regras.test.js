@@ -43,3 +43,12 @@ test("nenhum horário de divulgação fixo no código nem nos textos", () => {
   const hero = fs.readFileSync(new URL("../public/marcha.js", import.meta.url), "utf8");
   assert.ok(hero.includes("avisoDadosIniciais") && hero.includes("Os números iniciais mudam bastante"));
 });
+
+test("alinhamento: um só contêiner de página, sem larguras diferentes por rota", () => {
+  const css = fs.readFileSync(new URL("../public/style.css", import.meta.url), "utf8"), html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+  assert.ok(!/body\[data-aba[^{]*\.wrap/.test(css) && !/body\[data-aba[^{]*#conteudo\s*\{[^}]*max-width/.test(css), "nenhuma regra por rota muda a largura ou a borda do conteúdo");
+  assert.equal((html.match(/class="el-pagina"/g) || []).length, 1);
+  assert.ok(html.indexOf('class="el-pagina"') < html.indexOf('id="modos"') && html.indexOf('id="modos"') < html.indexOf('id="conteudo"') && html.indexOf('id="conteudo"') < html.indexOf('class="rodape"'));
+  assert.ok(!/<(nav|div|section|main|footer)[^>]*class="wrap/.test(html.slice(html.indexOf('class="el-pagina"'), html.indexOf('id="barra-inf"'))), "nada de .wrap irmão dentro da página");
+  assert.ok(html.includes('class="pular"') && html.includes('id="conteudo" tabindex="-1"'));
+});

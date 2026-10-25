@@ -9,7 +9,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const sinal = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
 const chip = (rotulo) => `<span class="chip" style="--cor:${corPartido(rotulo)}">${esc(rotulo)}</span>`;
 
-export const seletorCenarios = (atual) => `<div class="el-abas el-abas--filtro lista-vertical" role="group" aria-label="Cenário">${Object.entries(CENARIOS).map(([k, c]) => `<button type="button" class="el-aba" data-cenario="${k}" aria-pressed="${k === atual}">${esc(c.titulo)}</button>`).join("")}</div>`;
+const APOIO = { "psol-pt": "PSOL e Rede passam a fazer parte da federação do PT, PCdoB e PV.", "pdt-psol-rede-pt": "PDT, PSOL e Rede entram na mesma federação do PT, PCdoB e PV.", "sem-minimo": "A cadeira vai para o mais votado do partido, sem o piso de 10% do quociente eleitoral." };
+/** Escolha única (componente Escolha): fieldset com botões de rádio, rótulo inteiro e frase de apoio; troca na hora, sem botão Aplicar. */
+export const seletorCenarios = (atual) => `<fieldset class="el-escolha"><legend class="el-escolha__legenda">Escolha um cenário</legend>${Object.entries(CENARIOS).map(([k, c]) => `<label class="el-escolha__op"><input type="radio" name="cenario" value="${esc(k)}" data-cenario="${esc(k)}"${k === atual ? " checked" : ""}><span class="el-escolha__rotulo"><b>${esc(c.titulo)}</b><small>${esc(APOIO[k] ?? c.pergunta.replace(/^E se /, "").replace(/\?$/, "."))}</small></span></label>`).join("")}</fieldset>`;
 
 function tabelaBancada(cmp, comSenado) {
   const linhas = cmp.linhas.filter((l) => l.antes || l.depois || l.senado).map((l) => `<tr${l.delta ? ' class="cn-mudou"' : ""}><td>${chip(l.rotulo)}</td><td>${l.antes}</td><td><b>${l.depois}</b></td>

@@ -18,7 +18,8 @@ const codEleicao = (cargo, turno = CONFIG.turno) =>
 export function urlsResultado(cargo, uf, municipio, turno = CONFIG.turno) {
   const e = codEleicao(cargo, turno);
   const base = `/api/ele${CONFIG.ano}/${e}`;
-  const arq = (sigla) => `${sigla}-c${c4(cargo)}-e${pad6(e)}`;
+  const cod = cargo === "dep-estadual" && String(uf).toUpperCase() === "DF" ? "0008" : c4(cargo); // no DF o cargo é deputado distrital (código 8)
+  const arq = (sigla) => `${sigla}-c${cod}-e${pad6(e)}`;
   if (uf === "BR") return [`${base}/dados/br/${arq("br")}-u.json`];
   const u = uf.toLowerCase();
   if (municipio) return [`${base}/dados/${u}/${arq(u + String(municipio).padStart(5, "0"))}-u.json`];

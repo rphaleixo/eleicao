@@ -101,7 +101,7 @@ test("poucas urnas (menos de 5%): aviso, 'na frente por enquanto', sem 'lidera' 
   const h = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "" });
   assert.ok(h.includes("Apenas 0,25% das urnas apuradas. Os números iniciais mudam bastante."));
   assert.ok(h.includes("na frente por enquanto") && !h.includes("lidera") && !h.includes("el-duelo__linha--lider"));
-  assert.ok(h.includes("Variação parcial") && h.includes("el-duelo__vantagem--inicial"));
+  assert.ok(h.includes("<small>parcial</small>") && h.includes("el-duelo__vantagem--inicial"));
   const depois = quadroComparacao(l1, { ...l2, pct: 40 }, { base: "validos", ondeNome: "Brasil", status2: "" });
-  assert.ok(depois.includes("lidera") && !depois.includes("Apenas") && depois.includes("Variação parcial")); // com 5% ou mais volta ao normal, ainda parcial
+  assert.ok(depois.includes("lidera") && !depois.includes("Apenas") && depois.includes("<small>parcial</small>")); // com 5% ou mais volta ao normal, ainda parcial
 });

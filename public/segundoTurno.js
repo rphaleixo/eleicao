@@ -12,7 +12,8 @@ const foto = (d, c) => d.cargo === "presidente" ? `/api/ele2026/6257/fotos/br/${
 export const tituloDisputa = (d) => (d.cargo === "presidente" ? "Presidente da República" : `Governo · ${UFS[d.uf] ?? d.uf}`);
 export const hrefDisputa = (d) => (d.cargo === "presidente" ? "#/presidente" : `#/estados/${d.uf}/governador`);
 
-const ERRO_FOTO = "if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;this.src='img/sem-foto.png'}";
+const ERRO_FOTO = "if(!this.dataset.t&&this.src.includes('/api/ele')){this.dataset.t=1;this.src='https://resultados.tse.jus.br/oficial/'+this.src.split('/api/')[1]}else{this.onerror=null;var s=document.createElement('span');s.className='foto-iniciais';s.style.setProperty('--cor',this.dataset.cor);s.textContent=this.dataset.i;this.replaceWith(s)}";
+const iniciais = (nome) => { const p = String(nome ?? "").trim().split(/\s+/).filter((x) => x.length > 2 || /^[A-ZÀ-Ý]$/.test(x)); return ((p[0]?.[0] ?? "") + (p.length > 1 ? p.at(-1)[0] : "")).toUpperCase(); };
 
 /** O resultado do 2º turno de uma disputa, quando já há seções apuradas: { pct (seções), por número do candidato }. */
 export function resultado2(d2, d) {
@@ -23,7 +24,7 @@ export function resultado2(d2, d) {
 }
 
 function lado(d, c, valor) {
-  return `<div class="el-duplo__lado" style="--cor:${corPartido(c.partido)}"><img class="el-duplo__foto" loading="lazy" alt="" src="${foto(d, c)}" onerror="${ERRO_FOTO}"><span><span class="el-duplo__nome">${esc(c.nome)}</span><span class="el-chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span><span class="el-duplo__pct">${pct(valor)}</span></span></div>`;
+  return `<div class="el-duplo__lado" style="--cor:${corPartido(c.partido)}"><img class="el-duplo__foto" loading="lazy" alt="" data-i="${esc(iniciais(c.nome))}" data-cor="${corPartido(c.partido)}" src="${foto(d, c)}" onerror="${ERRO_FOTO}"><span><span class="el-duplo__nome">${esc(c.nome)}</span><span class="el-chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span><span class="el-duplo__pct">${pct(valor)}</span></span></div>`;
 }
 
 /**
@@ -35,7 +36,7 @@ export function duplo(d, d2 = null) {
   const pe = r2
     ? `1º turno: ${pct(a.pct)} × ${pct(b.pct)} · 2º turno: ${pct(r2.pctSecoes)} das seções · <u>Ver apuração ›</u>`
     : `Resultado do 1º turno · ${pct(d.pctApurado)} das seções · <u>Ver apuração ›</u>`;
-  return `<a class="el-duplo" href="${hrefDisputa(d)}" data-ver-completa><span class="el-duplo__topo"><span>${esc(tituloDisputa(d))}</span><span class="el-selo el-selo--segundo"><i aria-hidden="true"><span>2º</span></i>2º turno</span></span>
+  return `<a class="el-duplo" href="${hrefDisputa(d)}" data-ver-completa><span class="el-duplo__topo"><span>${esc(tituloDisputa(d))}</span><span class="el-selo el-selo--segundo"><i aria-hidden="true"><span>2º</span></i>turno</span></span>
     <span class="el-duplo__corpo">${lado(d, a, r2 ? r2.por[a.numero] : a.pct)}<span class="el-duplo__x" aria-hidden="true">×</span>${lado(d, b, r2 ? r2.por[b.numero] : b.pct)}</span>
     <span class="el-duplo__pe">${pe}</span></a>`;
 }

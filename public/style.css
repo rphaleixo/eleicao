@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--fundo); color: var(--texto); font: 400 15px/22px var(--font-text); }
-.wrap { max-width: 1040px; margin: 0 auto; padding: 0 14px; }
+.wrap, .el-pagina { max-width: 1096px; margin: 0 auto; padding: 0 16px; } /* um só contêiner, a mesma largura e o mesmo recuo em todas as telas */
 .muted { color: var(--texto-suave); font-size: .9rem; }
 h2 { font-size: 17px; line-height: 22px; font-weight: 700; margin: 0 0 10px; }
 small { font-size: .75rem; }
@@ -97,7 +97,7 @@ details.como { margin-top: 12px; } details.como summary { cursor: pointer; font-
 details.como ol { padding-left: 20px; margin: 8px 0 0; } details.como li { margin-bottom: 6px; }
 .rodape { padding-bottom: 32px; margin-top: 28px; color: var(--texto-suave); font-size: .85rem; }
 @media (max-width: 520px) {
-  .rank-item { grid-template-columns: 22px 44px 1fr auto; gap: 4px 9px; }
+  .rank-item { grid-template-columns: 22px var(--foto-p) 1fr auto; gap: 4px 12px; }
   .foto, .foto-vazia { width: 44px; height: 44px; }
   .prog-pct { font-size: 1.7rem; }
 }
@@ -216,7 +216,7 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .card-cargo h3 { margin: 0; text-transform: none; letter-spacing: 0; font-size: 1rem; color: var(--texto); }
 .cc-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .cc-lista { list-style: none; margin: 6px 0 0; padding: 0; }
-.cc-lista li { display: grid; grid-template-columns: 18px 36px 1fr auto; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--linha); cursor: pointer; }
+.cc-lista li { display: grid; grid-template-columns: 18px var(--foto-p) 1fr auto; gap: 12px; align-items: center; padding: 7px 0; border-top: 1px solid var(--linha); cursor: pointer; }
 .cc-lista li:first-child { border-top: 0; } .cc-lista li.vazio { display: block; cursor: default; }
 .cc-nome b { display: block; font-size: .9rem; line-height: 1.2; overflow-wrap: anywhere; } .cc-nome .chip { margin: 3px 0 0; }
 .cc-votos { text-align: right; } .cc-votos strong { display: block; font-variant-numeric: tabular-nums; } .cc-votos small { color: var(--texto-suave); font-size: .75rem; }
@@ -328,7 +328,7 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 /* deputados: cartão único e eleitos paginados */
 .prog-mini { margin: 6px 0 10px; } .prog-linha { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .prog-linha strong { font-size: 1.15rem; }
 .lista-eleitos { list-style: none; margin: 8px 0 0; padding: 0; }
-.ce { display: grid; grid-template-columns: 24px 36px 1fr auto; gap: 2px 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--linha); cursor: pointer; }
+.ce { display: grid; grid-template-columns: 24px var(--foto-p) 1fr auto; gap: 2px 12px; align-items: center; padding: 7px 0; border-top: 1px solid var(--linha); cursor: pointer; }
 .ce:first-child { border-top: 0; } .ce-nome { min-width: 0; } .ce-nome b { font-size: .9rem; overflow-wrap: anywhere; } .ce-nome .chip { margin-left: 6px; } .ce-nome small { color: var(--texto-suave); margin-left: 6px; }
 .ce-votos { font-weight: 700; font-variant-numeric: tabular-nums; }
 .ce .cr-barra { grid-column: 3 / -1; }
@@ -482,7 +482,7 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 .f-uf { flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; } .f-uf select { flex: 1; min-width: 0; }
 /* lista de senadores eleitos */
 .lista-se { list-style: none; margin: 8px 0 0; padding: 0; }
-.se { display: grid; grid-template-columns: 36px 40px 1fr auto; grid-template-areas: "s f q c" "s f v e"; gap: 2px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--linha); cursor: pointer; }
+.se { display: grid; grid-template-columns: 36px var(--foto-p) 1fr auto; grid-template-areas: "s f q c" "s f v e"; gap: 2px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--linha); cursor: pointer; }
 .se .sigla { grid-area: s; width: 36px; height: 36px; font-size: .75rem; border-radius: 2px; } .se .foto { grid-area: f; width: 40px; height: 40px; }
 .se-quem { grid-area: q; display: flex; flex-direction: column; min-width: 0; } .se-quem b { font-size: .95rem; overflow-wrap: anywhere; } .se-quem .muted { font-size: .75rem; }
 .se .chip { grid-area: c; margin: 0; justify-self: end; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -547,7 +547,7 @@ svg.interativo { touch-action: pan-y; cursor: crosshair; }
 /* Deputados mais votados */
 .seg-rolavel { overflow-x: auto; scrollbar-width: none; max-width: 100%; } .seg-rolavel::-webkit-scrollbar { display: none; } .seg-rolavel button { white-space: nowrap; }
 .lista-dv { list-style: none; margin: 8px 0 0; padding: 0; }
-.dv { display: grid; grid-template-columns: 1.6rem 40px 1fr auto; grid-template-areas: "p f q v" "b b b b"; gap: 4px 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--linha); cursor: pointer; }
+.dv { display: grid; grid-template-columns: 1.6rem var(--foto-p) 1fr auto; grid-template-areas: "p f q v" "b b b b"; gap: 4px 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--linha); cursor: pointer; }
 .dv .pos { grid-area: p; font-weight: 700; color: var(--texto-suave); text-align: center; } .dv .foto { grid-area: f; width: 40px; height: 40px; }
 .dv-quem { grid-area: q; display: flex; flex-direction: column; min-width: 0; } .dv-quem b { overflow: hidden; text-overflow: ellipsis; }
 .dv-votos { grid-area: v; text-align: right; display: flex; flex-direction: column; } .dv-votos small { color: var(--texto-suave); }
@@ -899,7 +899,7 @@ body { padding-bottom: 72px; }
 :root { --alt-fixa: 96px; }
 .modos.el-turnos-barra { padding-top: 0; padding-bottom: 0; z-index: 39; }
 .modos .el-turnos { margin: 0; }
-.el-premissas { margin: 0 -14px; padding: 0 14px; }
+.el-premissas { margin: 0; padding: 0; }
 .el-premissas__painel { left: 0; right: 0; }
 .el-premissas .el-abas { overflow-x: auto; margin-top: var(--esp-4); }
 .el-premissas__painel > * + * { margin-top: var(--esp-12); }
@@ -934,8 +934,7 @@ body { padding-bottom: 72px; }
 
 /* desktop: leitura em 720px; onde há resumo (Placar) ele vai para a coluna lateral de 320px (el-pagina--duas) */
 @media (min-width: 1024px) {
-  body[data-aba="governadores"] #conteudo, body[data-aba="senadores"] #conteudo { max-width: 720px; margin-inline: 0; }
-  body[data-aba="andamento"] .wrap, body[data-aba="presidente"] .wrap { max-width: 1092px; }
+  body[data-aba="governadores"] #conteudo > *, body[data-aba="senadores"] #conteudo > * { max-width: 720px; }
   body[data-aba="andamento"] #conteudo:has(> .hero), body[data-aba="presidente"] #conteudo:has(> .hero) { display: grid; grid-template-columns: minmax(0, 720px) 320px; column-gap: var(--esp-24); align-items: start; }
   body[data-aba="andamento"] #conteudo:has(> .hero) > *, body[data-aba="presidente"] #conteudo:has(> .hero) > * { grid-column: 1; }
   body[data-aba="andamento"] #conteudo:has(> .hero) > .hero, body[data-aba="presidente"] #conteudo:has(> .hero) > .hero { grid-column: 2; grid-row: 1 / span 12; align-self: start; position: sticky; top: calc(var(--alt-fixa, 96px) + var(--esp-12)); max-height: calc(100vh - var(--alt-fixa, 96px) - var(--esp-24)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; margin-top: var(--esp-14); }
@@ -1000,3 +999,46 @@ a.el-duplo { display: block; color: inherit; text-decoration: none; }
 a.el-duplo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
 .el-duplo__pe u { color: var(--acento); }
 .el-duplo__pe, .el-duplo__corpo, .el-duplo__topo { display: block; } .el-duplo__corpo { display: grid; } .el-duplo__topo { display: flex; }
+
+/* pular para o conteúdo e título acessível */
+.pular { position: absolute; left: var(--esp-8); top: -60px; z-index: 100; padding: var(--esp-10) var(--esp-16); background: var(--texto); color: var(--fundo); font: 700 14px/20px var(--font-text); text-decoration: none; }
+.pular:focus { top: var(--esp-8); }
+@media (min-width: 1024px) { .el-topo__titulo--mobile { display: block; position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
+#conteudo:focus { outline: none; }
+/* tema só no menu a partir de 1024px */
+@media (min-width: 1024px) { .rodape-tema { display: none; } }
+
+/* barra de escopo: [Escopo ▾ | Válidos · alterar | lupa 44×44]; a lupa fica sempre à direita */
+.escopo-lupa { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--esp-6); min-width: 46px; min-height: 46px; padding: 0 var(--esp-10); border: 1px solid var(--linha); border-bottom: 2px solid var(--texto); border-radius: var(--raio-xs); background: var(--cartao); color: var(--texto); font: 700 13px/16px var(--font-text); cursor: pointer; }
+.escopo-lupa svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.escopo-lupa:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.so-desktop { display: none; } @media (min-width: 1024px) { .so-desktop { display: inline; } }
+.escopo-linha--solo { justify-content: flex-end; }
+.escopo-linha--solo .escopo-base { margin-left: 0; }
+@media (min-width: 1024px) { .escopo-linha { align-items: center; justify-content: flex-start; } .escopo-linha .escopo-lupa { margin-left: auto; } .escopo-linha--solo .escopo-lupa { margin-left: 0; } .escopo-linha .escopo-base { flex: none; } .escopo-linha--solo { justify-content: space-between; } }
+
+/* área de toque de 44px sem mexer no desenho: links e botões de texto ganham uma margem invisível */
+.link, .f-limpar, .btn-mais, .chip-exterior { position: relative; }
+.link::after, .f-limpar::after { content: ""; position: absolute; inset: -12px -6px; }
+.link, .f-limpar { min-height: 20px; }
+/* Meu estado: a dica de deslizar só vale com toque */
+@media (min-width: 1024px) { .so-celular { display: none; } }
+/* título do Duelo em cor de texto (o h3 global é cinza) e coluna de variação sem quebrar */
+.el-duelo__topo h3 { color: var(--texto); text-transform: uppercase; letter-spacing: .02em; font-size: 24px; margin: 0; }
+.el-duelo__linha--cab > span:last-child small { display: block; font: 600 10px/12px var(--font-text); letter-spacing: .04em; text-transform: none; }
+/* dois finalistas: duas colunas iguais */
+.podio.podio-dois { grid-template-columns: repeat(2, 1fr); }
+/* foto que falhou: iniciais no lugar, sem buraco */
+.foto-iniciais { display: grid; place-items: center; width: var(--foto-p); aspect-ratio: 3 / 4; background: var(--trilho); color: var(--texto); border: 3px solid var(--cor, var(--sem-cor)); font: 400 22px/1 var(--font-display); letter-spacing: .04em; }
+
+/* escolha única (el-escolha): fieldset com rádios reais, lista vertical, linhas de 48px, opção ativa com faixa lateral e fundo */
+.el-escolha { margin: var(--esp-12) 0 0; padding: 0; border: 0; display: grid; gap: 0; min-width: 0; }
+.el-escolha__legenda { padding: 0; font: 700 11px/14px var(--font-text); letter-spacing: .08em; text-transform: uppercase; color: var(--texto-suave); margin-bottom: var(--esp-6); }
+.el-escolha__op { display: grid; grid-template-columns: 24px 1fr; gap: var(--esp-12); align-items: center; min-height: 48px; padding: var(--esp-8) var(--esp-12); border-bottom: 1px solid var(--linha); cursor: pointer; }
+.el-escolha__op:has(input:checked) { box-shadow: inset 4px 0 0 var(--acento); background: color-mix(in srgb, var(--acento) 10%, var(--cartao)); }
+.el-escolha__op input { appearance: none; width: 22px; height: 22px; margin: 0; border: 2px solid var(--texto); border-radius: 50%; background: var(--cartao); display: grid; place-content: center; cursor: pointer; }
+.el-escolha__op input::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--acento); transform: scale(0); }
+.el-escolha__op input:checked::before { transform: scale(1); }
+.el-escolha__op input:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.el-escolha__rotulo b { display: block; font: 700 15px/20px var(--font-text); }
+.el-escolha__rotulo small { display: block; font: 400 13px/18px var(--font-text); color: var(--texto-suave); }
