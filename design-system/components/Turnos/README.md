@@ -7,5 +7,6 @@ O consumidor fornece: os turnos que existem (some o que não existe, ex.: 2º tu
 - 44px de altura, `aria-pressed` na ativa, máximo de 480px.
 - Comparar leva o símbolo ⇄ e aparece só quando os dois turnos têm dados.
 - Trocar de turno mantém a tela e o escopo atuais (mesma área, mesmo estado) sempre que a área existir no outro turno; se não existir, `Aviso` com link, nunca tela vazia.
-- `el-turnos-barra` fica presa abaixo do topo (48px) e se esconde ao rolar para baixo, voltando ao rolar para cima: o app marca `data-turno-oculto` no `<html>` e as premissas fixas sobem sozinhas (`--alt-fixa` passa de 92px para 48px). Com isso, quem lê tabelas longas ganha 44px.
+- `el-turnos-barra` fica presa abaixo do topo (48px) e se esconde ao rolar para baixo, voltando ao rolar para cima: o app marca `data-turno-oculto` no `<html>` e as premissas fixas sobem sozinhas (`--alt-fixa` passa de 96px para 48px). Com isso, quem lê tabelas longas ganha 44px.
 - Opcional: deslizar o dedo para o lado troca de turno.
+Altura real da barra de turno: 48px (44px de botão mais a borda de 2px), sem folga em cima nem embaixo. Por isso --alt-fixa padrão é 96px.
