@@ -55,9 +55,9 @@ const quantil = (ordenado, p) => (ordenado.length ? ordenado[Math.min(ordenado.l
  * taxa (% dos eleitores aptos), pessoas (número absoluto) e acima da média (pessoas a mais ou a menos do que a taxa nacional daria).
  * `minimo`: municípios com menos eleitores ficam de fora das cores e da média.
  */
-export function calcular(linhas, { metricas, minimo = 0, uf = "" }) {
+export function calcular(linhas, { metricas, minimo = 0, uf = "", ufs = null }) {
   const ms = [...metricas];
-  const base = linhas.filter((l) => l.aptos > 0 && (!uf || l.uf === uf));
+  const base = linhas.filter((l) => l.aptos > 0 && (!uf || l.uf === uf) && (!ufs || ufs.includes(l.uf)));
   const dentro = (l) => l.aptos >= minimo;
   const comValor = base.map((l) => ({ ...l, valor: somar(l, ms), fora: !dentro(l) }));
   const considerados = comValor.filter((l) => l.valor != null && !l.fora);

@@ -105,3 +105,24 @@ test("poucas urnas (menos de 5%): aviso, 'na frente por enquanto', sem 'lidera' 
   const depois = quadroComparacao(l1, { ...l2, pct: 40 }, { base: "validos", ondeNome: "Brasil", status2: "" });
   assert.ok(depois.includes("lidera") && !depois.includes("Apenas") && depois.includes("<small>parcial</small>")); // com 5% ou mais volta ao normal, ainda parcial
 });
+
+test("seletor de lugar: Brasil, Regiões (Norte… Sul e Exterior) e os 27 Estados, nesta ordem, em optgroup", async () => {
+  const { opcoesDeLugar, regiaoDoValor } = await import("../public/lugares.js");
+  const h = opcoesDeLugar({ selecionado: "r:nordeste" });
+  const grupos = [...h.matchAll(/<optgroup label="([^"]+)">(.*?)<\/optgroup>/g)];
+  assert.deepEqual(grupos.map((g) => g[1]), ["Brasil", "Regiões", "Estados"]);
+  const nomes = (i) => [...grupos[i][2].matchAll(/>([^<]+)<\/option>/g)].map((m) => m[1]);
+  assert.deepEqual(nomes(1), ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul", "Exterior"]);
+  assert.equal(nomes(2).length, 27);
+  assert.deepEqual(nomes(2), [...nomes(2)].sort((a, b) => a.localeCompare(b, "pt-BR")));
+  assert.ok(grupos[1][2].includes('<option value="r:nordeste" selected>'));
+  assert.ok(!opcoesDeLugar({ selecionado: "", brasil: "", comExterior: false }).includes("Exterior"));
+  assert.equal(regiaoDoValor("r:sul"), "sul"); assert.equal(regiaoDoValor("SP"), ""); assert.equal(regiaoDoValor("r:xx"), "");
+});
+
+test("Comparar turnos com região: o 'Onde' mostra o nome da região e o seletor de município some", async () => {
+  const { controlesComparacao } = await import("../public/comparacaoView.js");
+  const c = { uf: "BR", mun: "", regiao: "nordeste", base: "validos", linha: "lula", medida: "pp", premissas: true };
+  const h = controlesComparacao(c, { municipios: [] });
+  assert.ok(h.includes("Nordeste") && h.includes('<option value="r:nordeste" selected>') && !h.includes("data-ct-mun"));
+});

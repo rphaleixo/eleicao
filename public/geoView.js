@@ -1,5 +1,7 @@
 // Tela da aba Geografia: controles, mapa dos municípios, legenda, ficha do município e tabela.
 import { UFS } from "./config.js";
+import { opcoesDeLugar, regiaoDoValor } from "./lugares.js";
+import { REGIOES } from "./marcha.js";
 import { faixaPremissas, opcoesAba } from "./ajuste.js";
 import { fmt, pct } from "./formato.js";
 import { caixaZoom } from "./zoomMapa.js";
@@ -21,15 +23,15 @@ const seg = (attr, atual, opcoes) => `<div class="seg mini seg-rolavel" role="gr
 export function controlesGeo(g, { cargoAtivo }) {
   const chips = METRICAS.map(([k, n]) => `<button type="button" class="geo-chip" data-geo-metrica="${k}" aria-pressed="${g.metricas.has(k)}">${n}</button>`).join("");
   const todas = g.metricas.size === 3;
-  const ufs = `<option value="">Brasil</option>${Object.entries(UFS).filter(([u]) => u !== "ZZ").sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).map(([u, n]) => `<option value="${u}"${u === g.uf ? " selected" : ""}>${esc(n)}</option>`).join("")}`;
+  const ufs = opcoesDeLugar({ selecionado: g.uf, brasil: "", comExterior: false }); // sem Exterior: não tem município
   const mins = MINIMOS.map(([v, n]) => `<option value="${v}"${v === g.min ? " selected" : ""}>${esc(n)}</option>`).join("");
   const corpo = `<div class="geo-linha"><span class="gp-leg">Medir (sempre sobre os eleitores aptos)</span><div class="geo-chips">${chips}<button type="button" class="geo-chip geo-nv" data-geo-nv aria-pressed="${todas}" title="Soma abstenção, brancos e nulos">Não voto (as três)</button></div></div>
     ${cargoAtivo ? `<div class="geo-linha"><span class="gp-leg">Cargo</span>${opcoesAba("data-geo-cargo", g.cargo, CARGOS_GEO)}</div>` : `<p class="el-apoio">A abstenção é a mesma em todos os cargos. Escolha brancos ou nulos para comparar por cargo.</p>`}
     <div class="geo-linha"><span class="gp-leg">Mostrar</span>${opcoesAba("data-geo-visao", g.visao, VISOES)}</div>
-    <div class="el-campos"><label class="el-campo">Estado<select data-geo-uf aria-label="Estado">${ufs}</select></label>
+    <div class="el-campos"><label class="el-campo">Onde<select data-geo-uf aria-label="Onde">${ufs}</select></label>
       <label class="el-campo">Tamanho do município<select data-geo-min aria-label="Tamanho mínimo do município">${mins}</select></label></div>`;
   // Geografia mede abstenção, brancos e nulos sempre sobre os eleitores aptos: a base é fixa e vem escrita na faixa.
-  return faixaPremissas("data-geo-premissas", [["Onde", g.uf ? UFS[g.uf] : "Brasil"], ["Base", "Eleitores aptos"], ["Medir", nomeDasMetricas(g.metricas)]], corpo, g.premissas);
+  return faixaPremissas("data-geo-premissas", [["Onde", g.uf ? (regiaoDoValor(g.uf) ? REGIOES[regiaoDoValor(g.uf)].nome : UFS[g.uf]) : "Brasil"], ["Base", "Eleitores aptos"], ["Medir", nomeDasMetricas(g.metricas)]], corpo, g.premissas);
 }
 
 /** O desenho dos 5.570 municípios; cada um com a classe de cor da visão (c0 a c4) ou sem dado (cx). */

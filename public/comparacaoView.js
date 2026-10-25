@@ -5,7 +5,8 @@ import { fmt, pct } from "./formato.js";
 import { viewBoxDoEstado } from "./geo.js";
 import { caixaZoom } from "./zoomMapa.js";
 import { faixaPremissas } from "./ajuste.js";
-import { avisoDadosIniciais } from "./marcha.js";
+import { avisoDadosIniciais, REGIOES } from "./marcha.js";
+import { opcoesDeLugar, valorRegiao } from "./lugares.js";
 import { LINHAS, linhasDaBase, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas, percentual, valorDeOrdem } from "./comparacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -20,13 +21,14 @@ const abas = (attr, atual, opcoes) => `<div class="el-abas" role="group">${opcoe
 
 /** Faixa de premissas fixa (design system, PremissasFixas): onde, base e mapa à vista; todos os controles no painel "Ajustar". */
 export function controlesComparacao(c, { municipios }) {
-  const ufs = `<option value="BR">Brasil</option>${Object.entries(UFS).filter(([u]) => u !== "ZZ").sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).map(([u, n]) => `<option value="${u}"${u === c.uf ? " selected" : ""}>${esc(n)}</option>`).join("")}<option value="ZZ"${c.uf === "ZZ" ? " selected" : ""}>Exterior</option>`;
-  const semMun = c.uf === "BR" || c.uf === "ZZ";
+  const regiao = c.regiao && REGIOES[c.regiao] ? c.regiao : "";
+  const ufs = opcoesDeLugar({ selecionado: regiao ? valorRegiao(regiao) : c.uf });
+  const semMun = c.uf === "BR" || c.uf === "ZZ" || !!regiao;
   const muns = semMun ? "" : `<label class="el-campo">Município<select data-ct-mun aria-label="Município"><option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === c.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
-  const onde = c.uf === "BR" ? "Brasil" : c.uf === "ZZ" ? "Exterior" : `${c.uf} · ${c.mun ? (municipios.find((m) => m.cod === c.mun)?.nome ?? "Município") : "Todo o estado"}`;
+  const onde = regiao ? REGIOES[regiao].nome : c.uf === "BR" ? "Brasil" : c.uf === "ZZ" ? "Exterior" : `${c.uf} · ${c.mun ? (municipios.find((m) => m.cod === c.mun)?.nome ?? "Município") : "Todo o estado"}`;
   const baseNome = c.base === "validos" ? "Votos válidos" : "Eleitores aptos";
   const mapaNome = `${linhasDaBase(c.base).find(([k]) => k === c.linha)?.[1] ?? ""} · ${MEDIDAS.find(([k]) => k === c.medida)?.[1] ?? ""}`;
-  const corpo = `<div class="el-campos"><label class="el-campo">Onde<select data-ct-uf aria-label="Estado">${ufs}</select></label>${muns}</div>
+  const corpo = `<div class="el-campos"><label class="el-campo">Onde<select data-ct-uf aria-label="Onde">${ufs}</select></label>${muns}</div>
       <div><span class="el-apoio">Percentuais sobre</span>${abas("data-ct-base", c.base, [["validos", "Votos válidos"], ["aptos", "Eleitores aptos"]])}</div>
       <div><span class="el-apoio">Mapa: quem</span>${abas("data-ct-linha", c.linha, linhasDaBase(c.base))}</div>
       <div><span class="el-apoio">Mapa: o que mostrar</span>${abas("data-ct-medida", c.medida, MEDIDAS)}</div>`;
