@@ -10,3 +10,6 @@ O consumidor fornece: sigla, nome, situação, percentual apurado, os dois líde
 - Estado cujo governo foi decidido no 1º turno (ex.: RJ no 2º turno): `el-uf--eleito`, sem barra, com o texto "Eleito no 1º turno" no lugar do percentual.
 - O ponto de situação é redundante com a barra e as palavras; não é o único sinal.
 - Para 27 estados, ofereça filtro por região e situação (`Abas`) e a ordenação "Mais apurados / Ordem alfabética".
+
+
+Rodada 9c: na Marcha da apuração a linha descreve andamento (eleitorado, seções, presença), não candidatos; os dois líderes (`el-uf__det`) só aparecem em telas que carregam votos. "Eleito no 1º turno" só se aplica onde existe a lista de governos (ex.: Meu estado); no 2º turno, a lista de Governadores mostra os seis com disputa e uma linha de aviso diz quantos governos foram decididos no 1º turno, com link para o 1º turno.

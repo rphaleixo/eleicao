@@ -8,3 +8,6 @@ O consumidor fornece: sigla, percentual apurado, partido líder (cor) e o destin
 - Estado selecionado: `aria-pressed="true"` com contorno de 3px.
 - Alvo de toque: cada bloco tem pelo menos 52px no celular.
 - O nome completo vai em `aria-label`.
+
+
+Dois modos de cor (rodada 9c). Na Marcha da apuração, que só traz o andamento, o bloco é colorido pela situação: verde para encerrada, azul para em apuração, cinza para aguardando, sempre com o percentual apurado escrito. Nas telas que carregam votos por estado (Presidente, Governadores), o bloco usa a cor do partido do líder. Mostre uma legenda curta dizendo qual dos dois modos está ativo. O preview mostra o modo do líder.
