@@ -36,11 +36,14 @@ test("exterior por país em votos válidos não mostra não voto", () => {
   assert.ok(NV.test(exteriorPorPais(paises, { base: "aptos", ordem: "aptos", abertos: new Set(), limite: 10 })));
 });
 
-test("Presidente, partidos e votação: em votos válidos nada de não voto; em Eleitores aptos entra", () => {
+test("Presidente, partidos e votação: em votos válidos nada de não voto; em Eleitores aptos entra", async () => {
   const d = { pctSecoes: 90, brancos: 30, nulos: 20, abstencao: 150, votosValidos: 800, eleitorado: { apuradas: 1000, abstencao: 150 }, votos: { total: 850, validos: 800, brancos: 30, nulos: 20 },
     candidatos: [{ id: "1", nome: "A", partido: "PT", votos: 400 }, { id: "2", nome: "B", partido: "PL", votos: 300 }, { id: "3", nome: "C", partido: "PSD", votos: 100 }],
     partidos: [{ sigla: "PT", votosNominais: 400, votosLegenda: 0, votosSJ: 0, candidatos: [] }, { sigla: "PL", votosNominais: 300, votosLegenda: 0, votosSJ: 0, candidatos: [] }, { sigla: "PSD", votosNominais: 100, votosLegenda: 0, votosSJ: 0, candidatos: [] }] };
   setBase("validos");
+  const { blocoComparar } = await import("../public/comparar.js");
+  const bloco = blocoComparar({ candidatos: d.candidatos, local: { rotulo: "Brasil", uf: "BR", d }, itens: [{ uf: "SP", d }], cmp: { a: "1", b: "2", ordem: "maiorMargem" } });
+  assert.ok(!/Não voto|não voto/.test(bloco)); // nem a legenda, nem o texto, nem as linhas
   assert.equal(linhaComparacao("SP", d, "1", "2").pctNaoVoto, null);
   assert.equal(linhaComparacao("SP", d, "1", "2").pctA, 50); // 400 sobre 800 candidatos
   assert.ok(!barrasPartidos(d, { linhas: [{ sigla: "PT", vagas: 1 }] }).itens.some((i) => i.id === "__naovoto"));

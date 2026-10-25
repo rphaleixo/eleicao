@@ -4,6 +4,7 @@ import { UFS } from "./config.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { naoVoto, getBase } from "./base.js";
+import { painelLista, limiteDe, verMais } from "./lista.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const ORDENS = {
@@ -64,7 +65,7 @@ function linhaHtml(l, rotulo, destaque, nomeA, nomeB, corA, corB, extra = "") {
 /**
  * @param {{titulo:string, candidatos:{id:string,nome:string,partido:string}[], local:{rotulo:string, uf:string, d:object}, itens:{uf:string,d:object}[], cmp:{a:string,b:string,ordem:string}}} o
  */
-export function blocoComparar({ candidatos, local, itens, cmp }) {
+export function blocoComparar({ candidatos, local, itens, cmp, paginar = null }) {
   const ids = candidatos.map((c) => c.id);
   const a = ids.includes(cmp.a) ? cmp.a : ids[0], b = ids.includes(cmp.b) && cmp.b !== a ? cmp.b : ids.find((i) => i !== a);
   const cA = candidatos.find((c) => c.id === a), cB = candidatos.find((c) => c.id === b);
@@ -74,14 +75,17 @@ export function blocoComparar({ candidatos, local, itens, cmp }) {
   const linhas = ordenarComparacao(itens.map(({ uf, d }) => linhaComparacao(uf, d, a, b)).filter(Boolean), cmp.ordem);
   const total = linhaComparacao(local.uf, local.d, a, b);
   const curto = (c) => c.nome.split(" ")[0];
-  return `<section class="card"><h2>Comparar candidatos</h2>
-    <p class="muted">Diferença entre dois candidatos em cada estado. A base é o total de eleitores aptos das seções apuradas, então os quatro pedaços somam 100%: os dois candidatos, os demais candidatos e o “não voto” (brancos + nulos + abstenções).</p>
+  const mostrar = paginar ? limiteDe(paginar.chave, paginar.base) : linhas.length;
+  const interior = `
+    <p class="muted">Diferença entre dois candidatos em cada estado. ${getBase() === "totais" ? "A base é o total de eleitores aptos das seções apuradas: os dois candidatos, os demais candidatos e o “não voto” somam 100%." : "A base são os votos válidos: os dois candidatos e os demais candidatos somam 100%; brancos, nulos e abstenções ficam de fora."}</p>
     <div class="cp-controles">
       <label class="f-sel"><span>1º candidato</span><select data-cmp-a aria-label="Primeiro candidato">${opt(a, b)}</select></label>
       <label class="f-sel"><span>2º candidato</span><select data-cmp-b aria-label="Segundo candidato">${opt(b, a)}</select></label>
       <label class="f-sel cp-ordem"><span>Ordenar por</span><select data-cmp-ordem aria-label="Ordenar">${Object.entries(ORDENS).map(([k, n]) => `<option value="${k}"${k === cmp.ordem ? " selected" : ""}>${n}</option>`).join("")}</select></label></div>
-    <p class="cp-legenda"><span><i style="background:${corA}"></i>${esc(cA.nome)}</span><span><i style="background:${corB}"></i>${esc(cB.nome)}</span><span><i class="cp-l-outros"></i>Demais candidatos</span><span><i class="cp-l-nv"></i>Não voto</span></p>
-    <ul class="cp-lista">${total ? linhaHtml(total, local.rotulo, true, curto(cA), curto(cB), corA, corB) : ""}${linhas.map((l) => linhaHtml(l, UFS[l.uf] ?? (l.uf === "ZZ" ? "Exterior" : l.uf), false, curto(cA), curto(cB), corA, corB)).join("")}</ul></section>`;
+    <p class="cp-legenda"><span><i style="background:${corA}"></i>${esc(cA.nome)}</span><span><i style="background:${corB}"></i>${esc(cB.nome)}</span><span><i class="cp-l-outros"></i>Demais candidatos</span>${getBase() === "totais" ? `<span><i class="cp-l-nv"></i>Não voto</span>` : ""}</p>
+    <ul class="cp-lista">${total ? linhaHtml(total, local.rotulo, true, curto(cA), curto(cB), corA, corB) : ""}${linhas.slice(0, mostrar).map((l) => linhaHtml(l, UFS[l.uf] ?? (l.uf === "ZZ" ? "Exterior" : l.uf), false, curto(cA), curto(cB), corA, corB)).join("")}</ul>${paginar ? verMais(paginar.chave, Math.min(mostrar, linhas.length), linhas.length) : ""}`;
+  if (!paginar) return `<section class="card"><h2>Comparar candidatos</h2>${interior}</section>`;
+  return `<section class="card">${painelLista("pres-comparar", "Comparar candidatos", `${curto(cA)} × ${curto(cB)} · Brasil e as ${paginar.base} maiores diferenças`, interior)}</section>`;
 }
 
 // ---------- Governadores: cada estado tem os seus candidatos ----------
