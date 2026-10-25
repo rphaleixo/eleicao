@@ -1,4 +1,5 @@
-import { blocoDisputas } from "./segundoTurno.js";
+import { blocoDisputas, duplo } from "./segundoTurno.js";
+import { DISPUTAS_SEGUNDO_TURNO } from "./segundo-turno.js";
 import { blocoComparar, blocoCompararGoverno } from "./comparar.js";
 import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartidos.js";
 import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
@@ -375,7 +376,13 @@ async function carregarView(rota) {
     const [f, e, h, eventos] = await Promise.all([obterAcompanhamento("presidente"), obterAcompanhamento("governador"), hist, obterEventos()]);
     // Resumo do estado aberto na lista: busca em segundo plano, sem travar o painel principal.
     const detalhe = uf === "BR" ? {} : emSegundoPlano("det-" + uf, 9000, () => detalhesEstado(uf)) ?? {};
-    return { tipo: "andamento", f, e, h, detalhe, eventos };
+    // 2º turno: os resultados das 7 disputas (Presidente e 6 governos), em segundo plano, para o número grande dos cartões ser o do 2º turno
+    const disp2 = TURNO2 ? emSegundoPlano("disputas2", 20_000, async () => {
+      const m = new Map();
+      await Promise.allSettled(DISPUTAS_SEGUNDO_TURNO.map(async (d) => m.set(`${d.cargo}/${d.uf}`, await obter(d.cargo, d.uf === "BR" ? "BR" : d.uf))));
+      return m;
+    }) : null;
+    return { tipo: "andamento", f, e, h, detalhe, eventos, disp2 };
   }
   if (aba === "estados") {
     const { cargo } = rota;
@@ -613,7 +620,7 @@ function resumoEstado(v) {
   const hero = heroApuracao({ ...p, titulo: UFS[uf], subtitulo: "Eleições estaduais", extra, hist: [], grafico: false });
   const dt = v.detalhe ?? {};
   const semGov2T = TURNO2 && !UFS_GOV.includes(uf); // governo decidido no 1º turno (ex.: RJ)
-  const cards = TURNO2 ? [semGov2T ? cardEleitoPrimeiroTurno(v.govT1, uf) : cardCargo({ titulo: "Governador", aba: "governador", uf, d: dt.gov }), cardCargo({ titulo: "Presidente no estado", aba: "presidente", uf, d: dt.pres })] : [
+  const cards = TURNO2 ? [semGov2T ? cardEleitoPrimeiroTurno(v.govT1, uf) : (DISPUTAS_SEGUNDO_TURNO.find((x) => x.cargo === "governador" && x.uf === uf) ? duplo(DISPUTAS_SEGUNDO_TURNO.find((x) => x.cargo === "governador" && x.uf === uf), dt.gov) : cardCargo({ titulo: "Governador", aba: "governador", uf, d: dt.gov })), cardCargo({ titulo: "Presidente no estado", aba: "presidente", uf, d: dt.pres })] : [
     cardCargo({ titulo: "Governador", aba: "governador", uf, d: dt.gov }), cardCargo({ titulo: "Senador", aba: "senador", uf, d: dt.sen }),
     cardBancada({ titulo: "Deputados Federais", cargo: "dep-federal", d: dt.depf === undefined ? undefined : dt.depf?.d, dist: dt.depf?.dist }),
     cardBancada({ titulo: "Deputados Estaduais", cargo: "dep-estadual", d: dt.depe === undefined ? undefined : dt.depe?.d, dist: dt.depe?.dist }),
@@ -732,7 +739,7 @@ function telaCargoPorEstado(v) {
   const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
   const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra, painel: governador ? "gov-estados" : "sen-estados",
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
-  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${governador ? blocoCompararGovernadores(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}${governador && TURNO2 ? avisoDecididosPrimeiroTurno() : ""}`;
+  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador", new Map((v.lista ?? []).map((x) => [`governador/${x.uf}`, x.d]))) : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${governador ? blocoCompararGovernadores(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}${governador && TURNO2 ? avisoDecididosPrimeiroTurno() : ""}`;
 }
 
 /** Resumo nacional (senadores ou governadores): uma linha por estado com a situação no momento e o % de urnas apuradas. */
@@ -842,7 +849,7 @@ function telaPresidente(v) {
     ? `${faixaDefinicao(d)}${avisosApuracao(d)}${rankingMajoritario(d, { aba: "presidente", uf: "BR" })}`
     : `<p class="muted">${carregando ? "Carregando…" : "Resultado indisponível no momento."}</p>`;
   const grafico = mun ? "" : blocoResultadoEvolucao(v.rpLocais === locaisGrafico.join(",") ? v.rp : undefined, locaisGrafico, d?.totalizacaoFinal);
-  return `${hero}${TURNO2 && uf === "BR" && !regiao ? blocoDisputas("presidente") : ""}
+  return `${hero}${TURNO2 && uf === "BR" && !regiao ? blocoDisputas("presidente", new Map([["presidente/BR", v.d]])) : ""}
     <section class="card"><h2>Candidatos por votos</h2>${listaCand}</section>${uf === "BR" ? blocoCompararPresidente(v, v.d) : ""}${d ? cartoesVotacao(d) : ""}${grafico}${quadroPorRegiao(v, uf)}${tabelaPresidentePorEstado(v, uf, emRegiao ? ufsRegiao : null)}`;
 }
 

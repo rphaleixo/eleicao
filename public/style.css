@@ -938,7 +938,7 @@ body { padding-bottom: 72px; }
   body[data-aba="andamento"] .wrap, body[data-aba="presidente"] .wrap { max-width: 1092px; }
   body[data-aba="andamento"] #conteudo:has(> .hero), body[data-aba="presidente"] #conteudo:has(> .hero) { display: grid; grid-template-columns: minmax(0, 720px) 320px; column-gap: var(--esp-24); align-items: start; }
   body[data-aba="andamento"] #conteudo:has(> .hero) > *, body[data-aba="presidente"] #conteudo:has(> .hero) > * { grid-column: 1; }
-  body[data-aba="andamento"] #conteudo:has(> .hero) > .hero, body[data-aba="presidente"] #conteudo:has(> .hero) > .hero { grid-column: 2; grid-row: 1 / span 12; position: sticky; top: 108px; margin-top: var(--esp-14); }
+  body[data-aba="andamento"] #conteudo:has(> .hero) > .hero, body[data-aba="presidente"] #conteudo:has(> .hero) > .hero { grid-column: 2; grid-row: 1 / span 12; align-self: start; position: sticky; top: calc(var(--alt-fixa, 96px) + var(--esp-12)); max-height: calc(100vh - var(--alt-fixa, 96px) - var(--esp-24)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; margin-top: var(--esp-14); }
 }
 .busca-cidade { max-width: 320px; }
 .topo .status { max-width: 132px; } @media (min-width: 600px) { .topo .status { max-width: none; } }
@@ -993,3 +993,10 @@ dialog.el-gaveta::backdrop { background: rgba(0, 0, 0, .5); }
 .el-duelo__vantagem--inicial { --cor: var(--sem-cor); background: var(--trilho); }
 .hero .el-aviso--inicial { margin-top: var(--esp-12); }
 .el-duelo > .el-aviso--inicial { margin: var(--esp-8) var(--esp-12) 0; }
+
+/* disputas do 2º turno compactas (el-duplo): um link por cartão */
+.duplo-lista { display: grid; gap: var(--esp-8); }
+a.el-duplo { display: block; color: inherit; text-decoration: none; }
+a.el-duplo:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.el-duplo__pe u { color: var(--acento); }
+.el-duplo__pe, .el-duplo__corpo, .el-duplo__topo { display: block; } .el-duplo__corpo { display: grid; } .el-duplo__topo { display: flex; }

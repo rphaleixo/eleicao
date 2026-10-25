@@ -1,3 +1,5 @@
+import fs0 from "node:fs";
+const require_fs = () => fs0;
 globalThis.location = { search: "?turno=1" }; // fixa o 1º turno: sem isso o resultado dos testes mudaria com a data
 const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
@@ -40,7 +42,7 @@ test("tela do Brasil: painel único e lista de estados, sem seletor de eleição
   const h = telaMarcha(v, est({}));
   for (const t of ["Brasil", "Norte", "Acre", "Tocantins", "Exterior", 'data-uf="ZZ"', "anel", "Presentes", "Ausentes", "A apurar"]) assert.ok(h.includes(t), t);
   assert.ok(!h.includes("data-serie"));
-  assert.equal((h.match(/class="card/g) || []).length, 3); // painel, estados e definições
+  assert.equal((h.match(/class="card/g) || []).length, 4); // painel (Placar), apuração por região, estados e definições
   assert.ok(!h.includes("expandido"));
   const sul = telaMarcha(v, est({ regiao: "sul" }));
   assert.ok(sul.includes("Santa Catarina") && !sul.includes("Acre") && !sul.includes('data-uf="ZZ"'));
@@ -103,14 +105,24 @@ test("o painel acompanha a região escolhida", () => {
   assert.ok(ext.includes("<h2>Exterior</h2>") && ext.includes("<strong>1</strong> de 5 seções") && !ext.includes("data-nav-uf"));
 });
 
-test("painel da Marcha alterna entre o resumo geral e as barras por região", () => {
-  const geral = telaMarcha(v, est({ visaoUfs: "lista" }));
-  assert.ok(geral.includes('data-painel="geral" aria-pressed="true"') && geral.includes("anel") && !geral.includes("barras-regiao"));
-  const reg = telaMarcha(v, est({ painel: "regioes" }));
-  assert.ok(reg.includes('data-painel="regioes" aria-pressed="true"') && reg.includes("barras-regiao") && !reg.includes("anel-valor"));
-  for (const t of ["% da apuração por região", "Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul", "Exterior", "50,00%"]) assert.ok(reg.includes(t), t);
-  const sul = telaMarcha(v, est({ painel: "regioes", regiao: "sul" }));
-  assert.ok(sul.includes("% da apuração por estado") && sul.includes("Santa Catarina") && !sul.includes("Acre"));
+test("o Placar fica só com o resumo do Brasil; a lista por região vai para a coluna principal, recolhida", () => {
+  const h = telaMarcha(v, est({ visaoUfs: "lista" }));
+  const hero = h.slice(h.indexOf('class="card hero"'), h.indexOf("</section>", h.indexOf('class="card hero"')));
+  assert.ok(hero.includes("anel") && !hero.includes("barras-regiao") && !hero.includes('data-painel='));
+  assert.ok(h.includes('data-painel-lista="apuracao-regioes"') && !/data-painel-lista="apuracao-regioes"[^>]* open/.test(h) && h.includes("barras-regiao"));
+  for (const t of ["% da apuração por região", "Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul", "Exterior", "50,00%"]) assert.ok(h.includes(t), t);
+  const sul = telaMarcha(v, est({ regiao: "sul" }));
+  assert.ok(sul.includes("% da apuração por estado") && sul.includes("Santa Catarina"));
+});
+
+test("blocos de estados: percentual sempre com duas casas, sem arredondar para inteiro", () => {
+  const h = telaMarcha(v, est({}));
+  assert.ok(/<small>\d{1,3},\d{2}%<\/small>/.test(h) && !/<small>\d{1,3}%<\/small>/.test(h));
+  const fs = require_fs();
+  for (const f of ["marcha.js", "cardsEstados.js", "graficos.js", "comparacaoView.js", "geoView.js", "partidos.js", "proporcional.js"]) {
+    const src = fs.readFileSync(new URL(`../public/${f}`, import.meta.url), "utf8");
+    assert.ok(!/(Math\.(round|floor|trunc)\([^)]*\)|\.toFixed\(0\))\s*\}?%/.test(src), `${f} formata percentual sem casas`);
+  }
 });
 
 test("a Marcha mostra os eleitores aptos junto das seções (painel, barras por região e lista)", () => {

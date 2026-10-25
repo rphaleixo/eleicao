@@ -43,3 +43,15 @@ test("arquivo do 2º turno não marca '2º turno' de novo", () => {
   const d = normalizar(json);
   assert.equal(d.candidatos[0].sit, "eleito"); assert.equal(d.candidatos[1].sit, "");
 });
+
+test("disputa compacta (el-duplo): finalistas na mesma linha, sem votos absolutos; com 2º turno o número grande é o dele e o do 1º vai para o rodapé", async () => {
+  const { duplo } = await import("../public/segundoTurno.js");
+  const d = DISPUTAS_SEGUNDO_TURNO[0];
+  const h1 = duplo(d, null);
+  assert.ok(h1.includes("el-duplo__corpo") && h1.includes("47,03%") && h1.includes("Resultado do 1º turno") && h1.includes("Ver apuração"));
+  assert.ok(!/votos<\/small>|\d\.\d{3}\.\d{3} votos/.test(h1) && !h1.includes("el-duplo__votos"));
+  const d2 = { pctSecoes: 0.25, candidatos: [{ numero: "13", pct: 57.66 }, { numero: "22", pct: 42.34 }] };
+  const h2 = duplo(d, d2);
+  assert.ok(h2.includes("42,34%") && h2.includes("57,66%") && h2.includes("1º turno: 47,03% × 45,16%") && h2.includes("2º turno: 0,25% das seções"));
+  assert.ok(!h2.includes("Resultado do 1º turno ·"));
+});

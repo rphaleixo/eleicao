@@ -2,6 +2,7 @@
 // Os componentes (heroApuracao, linhaEstado, chipsRegiao...) são reaproveitados nas outras abas.
 import { UFS, INICIO_APURACAO, TURNO2 } from "./config.js";
 import { blocoDisputas } from "./segundoTurno.js";
+import { painelLista } from "./lista.js";
 import { areaPresenca } from "./graficos.js";
 import { urlFoto } from "./tse.js";
 import { seloSit, classeSit, seloEleicao } from "./situacao.js";
@@ -151,7 +152,7 @@ export function blocosEstados(v, estado) {
     const u = ac.ufs[uf.toLowerCase()], a = doEstado(u), nome = nomeEstado(uf);
     const aguardando = !a || !(a.st > 0 || u?.andamento === "p" || u?.andamento === "f");
     const cor = u?.andamento === "f" ? "var(--eleito)" : "var(--acento)";
-    return `<button type="button" class="el-bloco${aguardando ? " el-bloco--aguardando" : ""}" ${aguardando ? "" : `style="--cor:${cor}"`} data-uf="${uf}" aria-pressed="${estado.uf === uf}" aria-label="${esc(nome)}${aguardando ? ", aguardando" : `, ${pct(a.pct ?? 0)} apurado`}"><span>${uf === "ZZ" ? "EX" : uf}<small>${aguardando ? "—" : `${Math.floor(a.pct ?? 0)}%`}</small></span></button>`;
+    return `<button type="button" class="el-bloco${aguardando ? " el-bloco--aguardando" : ""}" ${aguardando ? "" : `style="--cor:${cor}"`} data-uf="${uf}" aria-pressed="${estado.uf === uf}" aria-label="${esc(nome)}${aguardando ? ", aguardando" : `, ${pct(a.pct ?? 0)} apurado`}"><span>${uf === "ZZ" ? "EX" : uf}<small>${aguardando ? "—" : pct(a.pct ?? 0)}</small></span></button>`;
   };
   const aberto = ufs.includes(estado.uf) ? `<div class="bloco-aberto">${painelEstado(v, estado.uf)}</div>` : "";
   return `<div class="el-blocos">${ufs.map(bloco).join("")}</div>${aberto}`;
@@ -246,24 +247,21 @@ function controlePainel(painel) {
   return `<div class="seg painel-seg" role="group" aria-label="Visão do painel"><button type="button" data-painel="geral" aria-pressed="${painel !== "regioes"}">Geral</button><button type="button" data-painel="regioes" aria-pressed="${painel === "regioes"}">Por região</button></div>`;
 }
 
-function heroRegioes(v, estado, topo, p) {
+/** Apuração por região: lista longa (regiões e exterior, ou os estados de uma região), na coluna principal e recolhida; o Placar da lateral fica só com o resumo do Brasil. */
+function listaRegioes(v, estado, p) {
   const ac = v.f, r = REGIOES[estado.regiao];
   const itens = r
     ? r.ufs.map((u) => ({ nome: UFS[u], a: doEstado(ac.ufs[u.toLowerCase()]) }))
     : [...Object.values(REGIOES).map((g) => ({ nome: g.nome, a: agregar(g.ufs.map((u) => ac.ufs[u.toLowerCase()])) })), ...(ac.ufs.zz ? [{ nome: "Exterior", a: doEstado(ac.ufs.zz) }] : [])];
   itens.sort((x, y) => (y.a?.pct ?? 0) - (x.a?.pct ?? 0));
   const barras = itens.map(({ nome, a }) => `<li><span class="br-nome">${esc(nome)}</span><span class="br-trilho"><i style="width:${Math.min(100, a?.pct ?? 0)}%"></i></span><b>${pct(a?.pct ?? 0)}</b><small>${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}` : "–"}</small></li>`).join("");
-  return `<section class="card hero">${topo}<h2>% da apuração por ${r ? "estado" : "região"}</h2>
-    <p class="hero-sub">${esc(p.titulo)}: <strong>${pct(p.a.pct)}</strong> · ${fmt(p.a.st)} de ${fmt(p.a.ts)} seções · ${textoAptos(p.a, { forte: false })}</p>
-    <ul class="barras-regiao">${barras}</ul></section>`;
+  return `<section class="card">${painelLista("apuracao-regioes", `% da apuração por ${r ? "estado" : "região"}`, `${itens.length} ${r ? "estados" : "locais"} · ${esc(p.titulo)} ${pct(p.a.pct)}`, `<ul class="barras-regiao">${barras}</ul>`)}</section>`;
 }
 
 export function telaMarcha(v, estado, comNav = true) {
   const p = escopoDoPainel(v, estado.regiao);
-  const topo = controlePainel(estado.painel);
-  const hero = estado.painel === "regioes" ? heroRegioes(v, estado, topo, p)
-    : heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave, topo });
-  return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas() : ""}${hero}
+  const hero = heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave });
+  return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas(null, v.disp2) : ""}${hero}${listaRegioes(v, estado, p)}
     <p class="muted nota-fonte">Acompanhamento do TSE, no horário de Brasília. Os resultados por cargo (aba Presidente) são publicados em arquivos separados e podem estar alguns minutos atrás deste acompanhamento.</p>
     <section class="card estados"><div class="estados-topo"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
       <div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div>
