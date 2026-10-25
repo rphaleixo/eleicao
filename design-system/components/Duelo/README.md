@@ -10,3 +10,6 @@ O consumidor fornece: nome do escopo, percentual apurado de cada turno, e para c
 - Sem dados no 2º turno: traço "—" no lugar de números e a faixa passa a descrever o 1º turno ("2º turno ainda sem dados apurados"). Não calcule vantagem com dado parcial como se fosse final.
 - Candidato sem disputa no 2º turno recebe "—", sem variação.
 - Todos os percentuais são sobre votos válidos: veja a regra no README geral.
+
+
+Correção da regra (rodada 10b): o "não voto" só existe na base Eleitores aptos. Na base Votos válidos, nenhum elemento da tela mostra não voto: nem barra de composição, nem legenda, nem a opção "Não voto" em "Mapa: quem", nem a linha do Duelo. A barra de composição na base Votos válidos soma 100% com os candidatos e "Outros"; na base Eleitores aptos soma 100% incluindo o não voto. Uma tela nunca mistura as duas bases (por exemplo, líder sobre válidos e barra com não voto sobre aptos).
