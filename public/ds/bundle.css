@@ -697,3 +697,7 @@ html[data-turno-oculto] .el-turnos-barra { transform: translateY(-100%); visibil
 @media (max-width: 1023px) { .el-gaveta--lado { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; box-shadow: 0 -12px 24px rgba(0,0,0,.25); } }
 .el-base-atual { display: inline-flex; align-items: center; gap: var(--esp-6); min-height: 32px; padding: 0 var(--esp-8); border: 1px solid var(--linha); background: none; color: var(--texto-suave); font: 600 12px/16px var(--font-text); cursor: pointer; }
 .el-base-atual b { color: var(--texto); }
+/* Gaveta como <dialog>: fechada, não ocupa espaço (o display:flex da gaveta vencia o display:none do navegador) */
+dialog.el-gaveta:not([open]) { display: none; }
+dialog.el-gaveta::backdrop { background: rgba(0, 0, 0, .45); }
+dialog.el-gaveta { margin: 0; padding: 0; border: 0; color: var(--texto); }

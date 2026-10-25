@@ -27,3 +27,10 @@ test("nenhuma tela tem mais o painel recolhido 'Como calcular' no fim", () => {
   assert.ok(!/<summary>Como calcular<\/summary>/.test(app));
   assert.ok(html.includes('id="gaveta"'));
 });
+
+test("gaveta fechada tem display none (não ocupa espaço nem cobre o conteúdo)", () => {
+  const css = fs.readFileSync(new URL("../public/ds/bundle.css", import.meta.url), "utf8") + fs.readFileSync(new URL("../public/style.css", import.meta.url), "utf8");
+  assert.match(css, /dialog\.el-gaveta:not\(\[open\]\)\s*\{[^}]*display:\s*none/);
+  const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+  assert.ok(/<dialog id="gaveta"[^>]*el-gaveta/.test(html) && !/<dialog id="gaveta"[^>]*\sopen/.test(html));
+});
