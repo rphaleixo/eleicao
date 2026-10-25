@@ -812,3 +812,28 @@ button.el-uf { border-style: solid; border-color: var(--linha); border-width: 1p
 .el-toast__fechar { min-width: 44px; min-height: 44px; margin: -10px -12px 0 0; border: 0; background: none; color: var(--texto-suave); font: 400 22px/1 var(--font-text); cursor: pointer; }
 .el-toast:focus-visible, .el-toast button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
 @media (prefers-reduced-motion: no-preference) { .el-toast { animation: el-toast-entra .18s ease-out; } @keyframes el-toast-entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } } }
+
+/* ===== Rodada 22: tela Evolução (gráfico minuto a minuto em tela própria e em tela cheia) ===== */
+.el-evolucao { display: grid; gap: var(--esp-12); }
+.el-evolucao__filtros { display: flex; flex-wrap: wrap; gap: var(--esp-8) var(--esp-12); align-items: end; }
+.el-evolucao__filtros .el-campo { min-width: 150px; }
+.el-evolucao__quadro { position: relative; background: var(--cartao); border: 1px solid var(--linha); border-top: 3px solid var(--texto); padding: var(--esp-12); }
+.el-evolucao__topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--esp-8); margin-bottom: var(--esp-8); }
+.el-evolucao__topo h2 { margin: 0; font: 700 18px/22px var(--font-text); }
+.el-evolucao__grafico { width: 100%; height: clamp(300px, 56vh, 620px); }
+.el-evolucao__grafico svg { max-height: 100%; }
+.el-evolucao__grafico svg { display: block; width: 100%; height: 100%; }
+.el-evolucao__leitura { margin-top: var(--esp-8); padding: var(--esp-10) var(--esp-12); background: var(--trilho); display: grid; gap: var(--esp-4); font: 600 14px/20px var(--font-text); }
+.el-evolucao__leitura time { font: 700 15px/20px var(--font-num); }
+.el-evolucao__tabela { width: 100%; border-collapse: collapse; font: 600 13px/18px var(--font-num); font-variant-numeric: tabular-nums; }
+.el-evolucao__tabela th, .el-evolucao__tabela td { padding: var(--esp-6) var(--esp-8); text-align: right; border-top: 1px solid var(--linha); }
+.el-evolucao__tabela th:first-child, .el-evolucao__tabela td:first-child { text-align: left; }
+.el-evolucao__tabela thead th { font: 700 11px/14px var(--font-text); letter-spacing: .06em; text-transform: uppercase; color: var(--texto-suave); border-top: 0; }
+dialog.el-cheia { inset: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--fundo); color: var(--texto); }
+dialog.el-cheia:not([open]) { display: none; }
+dialog.el-cheia[open] { display: grid; grid-template-rows: auto 1fr auto; }
+.el-cheia__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--esp-8); min-height: 52px; padding: 0 var(--esp-12); background: var(--cartao); border-bottom: 1px solid var(--linha); }
+.el-cheia__topo h2 { margin: 0; font: 700 16px/20px var(--font-text); }
+.el-cheia__corpo { padding: var(--esp-8) var(--esp-12); min-height: 0; }
+.el-cheia__corpo .el-evolucao__grafico { height: 100%; }
+.el-cheia__rodape { padding: var(--esp-8) var(--esp-12) calc(var(--esp-8) + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--linha); background: var(--cartao); }
