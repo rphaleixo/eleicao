@@ -130,8 +130,9 @@ test("a Marcha mostra os eleitores aptos junto das seções (painel, barras por 
   const geral = telaMarcha(v, est({ visaoUfs: "lista" }));
   assert.ok(geral.includes("eleitores aptos") && geral.includes("de 270 seções"));
   assert.match(geral, /de 10 seções · ([\d.]+ votos apurados \| )?([\d.]+ ausentes \| )?100 eleitores aptos/); // linha de um estado
-  const reg = telaMarcha(v, est({ agrupUfs: "regioes" }));
-  assert.ok(/\d de \d+ seções · /.test(reg) && reg.includes("eleitores aptos")); // a lista Regiões traz seções e aptos
+  const reg = telaMarcha(v, est({ agrupUfs: "regioes" })), lista = reg.slice(reg.indexOf("el-uf--regiao"), reg.indexOf("</ul>", reg.indexOf("el-uf--regiao")));
+  assert.ok(/\d de \d+ seções<\/span>/.test(reg) && !lista.includes("eleitores aptos") && !lista.includes("ausentes")); // a linha da região traz só "N estados · X de Y seções"; o resto está no painel da região filtrada
+  assert.ok(telaMarcha(v, est({ regiao: "sul" })).includes("eleitores aptos")); // ...e o detalhe aparece quando a região está filtrada
 });
 
 test("estados em blocos (visão padrão): sigla, % apurado e o estado aberto com o resumo abaixo da grade", () => {

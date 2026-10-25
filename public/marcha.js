@@ -266,7 +266,7 @@ export function linhasRegioes(v, estado) {
   return itens.map(({ k, sigla, nome, a }) => {
     const aguardando = !a || !(a.st > 0);
     return `<li><button type="button" class="el-uf el-uf--regiao${aguardando ? " el-uf--aguardando" : ""}" data-regiao="${k}" aria-label="${esc(nome)}: ${aguardando ? "aguardando" : `${pct(a.pct)} apurado`}, ver os estados"><span class="el-uf__sigla">${sigla}</span>
-      <span><span class="el-uf__nome">${esc(nome)}</span><span class="el-uf__det">${DETALHE_REGIAO[k]}${aguardando ? "" : ` · ${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}`}</span>${aguardando ? "" : `<span class="el-uf__barra"><i style="width:${Math.min(100, a.pct)}%"></i></span>`}</span>
+      <span><span class="el-uf__nome">${esc(nome)}</span><span class="el-uf__det">${DETALHE_REGIAO[k]}${aguardando ? "" : ` · ${fmt(a.st)} de ${fmt(a.ts)} seções`}</span>${aguardando ? "" : `<span class="el-uf__barra"><i style="width:${Math.min(100, a.pct)}%"></i></span>`}</span>
       <span class="el-uf__pct">${aguardando ? "Aguardando" : `${pct(a.pct)}<small>apurado</small>`}</span><span class="el-uf__seta" aria-hidden="true">›</span></button></li>`;
   }).join("");
 }
