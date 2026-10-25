@@ -638,7 +638,7 @@
 .el-blocos + .el-apoio { margin-top: var(--esp-12); }
 
 /* ===== Rodada 10: premissas fixas e duelo ===== */
-.el-premissas { position: sticky; top: var(--alt-fixa, 92px); z-index: 20; background: var(--fundo); border-bottom: 2px solid var(--texto); }
+.el-premissas { position: sticky; top: var(--alt-fixa, 96px); z-index: 20; background: var(--fundo); border-bottom: 2px solid var(--texto); }
 .el-premissas__barra { width: 100%; min-height: 44px; display: flex; align-items: stretch; border: 0; background: none; color: var(--texto); font: 600 13px/16px var(--font-text); text-align: left; cursor: pointer; padding: 0; }
 .el-premissas__lista { flex: 1; min-width: 0; display: flex; overflow-x: auto; scrollbar-width: none; }
 .el-premissas__lista > span { flex: none; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--esp-12); border-left: 1px solid var(--linha); }
@@ -671,7 +671,7 @@
 .el-duelo__sem { color: var(--texto-suave); font-weight: 600; }
 
 /* ===== Rodada 11: seletor de turno em três células (substitui a régua) ===== */
-.el-turnos-barra { position: sticky; top: 48px; z-index: 25; background: var(--fundo); padding: var(--esp-6) 0; transition: transform .2s ease; }
+.el-turnos-barra { position: sticky; top: 48px; z-index: 25; background: var(--fundo); padding: 0; transition: transform .2s ease; }
 html[data-turno-oculto] { --alt-fixa: 48px; }
 html[data-turno-oculto] .el-turnos-barra { transform: translateY(-100%); visibility: hidden; }
 .el-turnos { display: grid; grid-template-columns: 1fr 1fr 1.15fr; max-width: 480px; border: 2px solid var(--texto); }
