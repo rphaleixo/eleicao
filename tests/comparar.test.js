@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { setBase } from "../public/base.js";
+setBase("totais"); // estes testes tratam do não voto, que só existe na base Eleitores aptos
 import { linhaComparacao, ordenarComparacao, blocoComparar } from "../public/comparar.js";
 
 // Estado com 1000 aptos apurados: A 400, B 300, C 100 (demais), brancos 30, nulos 20, abstenção 150.

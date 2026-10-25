@@ -38,7 +38,8 @@ select, input { font: inherit; padding: 8px; min-height: 44px; border: 1px solid
 .estat div strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
 .selo { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .75rem; font-weight: 600; background: var(--trilho); }
 .selo.p { background: #cfe3ff; color: #14335f; } .selo.f { background: #cdeedb; color: #0e5a33; }
-@media (prefers-color-scheme: dark) { .selo.p { background: #1d3a63; color: #cfe3ff; } .selo.f { background: #12432b; color: #cdeedb; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="claro"]) .selo.p { background: #1d3a63; color: #cfe3ff; } :root:not([data-theme="claro"]) .selo.f { background: #12432b; color: #cdeedb; } }
+:root[data-theme="escuro"] .selo.p { background: #1d3a63; color: #cfe3ff; } :root[data-theme="escuro"] .selo.f { background: #12432b; color: #cdeedb; }
 
 /* ranking */
 .rank-item { display: grid; grid-template-columns: 26px 52px 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--linha); }
@@ -857,7 +858,7 @@ body { padding-bottom: 72px; }
 .folha-mais ul { list-style: none; margin: 0; padding: 0; }
 .folha-mais li a { display: flex; align-items: center; min-height: 48px; border-bottom: 1px solid var(--linha); color: var(--texto); text-decoration: none; font: 400 20px/24px var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
 .folha-mais li a[aria-current="true"] { box-shadow: inset 5px 0 0 var(--acento); padding-left: var(--esp-12); }
-.folha-mais button { margin-top: var(--esp-12); width: 100%; min-height: 44px; border: 2px solid var(--texto); background: var(--cartao); color: var(--texto); font: 700 14px/20px var(--font-text); cursor: pointer; }
+.folha-mais > button { margin-top: var(--esp-12); width: 100%; min-height: 44px; border: 2px solid var(--texto); background: var(--cartao); color: var(--texto); font: 700 14px/20px var(--font-text); cursor: pointer; }
 .el-menu li a:focus-visible, .el-nav-inf a:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
 
 /* selos: ícone de 18px centrado de verdade (✓ em SVG, "2º" na fonte numérica) */
@@ -887,6 +888,7 @@ body { padding-bottom: 72px; }
 
 /* tema escuro: filete superior dos cartões menos pesado */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="claro"]) .card, :root:not([data-theme="claro"]) .el-painel, :root:not([data-theme="claro"]) .el-ajuste { border-top-color: color-mix(in srgb, var(--texto) 45%, transparent); } }
+:root[data-theme="escuro"] .card, :root[data-theme="escuro"] .el-painel, :root[data-theme="escuro"] .el-ajuste { border-top-color: color-mix(in srgb, var(--texto) 45%, transparent); }
 
 /* topo e turno presos no alto (48 + 44 = 92px); a faixa de premissas fica logo abaixo */
 :root { --alt-fixa: 92px; }
@@ -899,3 +901,11 @@ body { padding-bottom: 72px; }
 .el-premissas__painel > * + * { margin-top: var(--esp-12); }
 .el-duelo__lidera { font: 700 11px/14px var(--font-text); letter-spacing: .06em; text-transform: uppercase; color: var(--texto-suave); }
 .el-duelo__nome { display: block; min-width: 0; } .el-duelo__lidera { display: block; }
+
+/* seletor de tema: no pé do menu lateral, no alto da folha Mais e no rodapé (nunca no topo) */
+.el-menu__tema { margin-top: auto; padding: var(--esp-16) var(--esp-16) 0; display: grid; gap: var(--esp-6); }
+.el-menu__tema + .el-menu__rodape { margin-top: 0; }
+.el-folha__tema, .rodape-tema { display: grid; gap: var(--esp-6); margin-bottom: var(--esp-12); }
+.rodape-tema { margin-top: var(--esp-16); margin-bottom: 0; }
+.el-tema button { min-height: 44px; }
+.el-menu__tema .el-tema, .el-folha__tema .el-tema, .rodape-tema .el-tema { justify-self: start; }

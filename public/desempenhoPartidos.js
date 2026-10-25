@@ -2,7 +2,7 @@
 // os 3 mais votados de cada um e, como se fosse mais um partido, o "não voto" (brancos, nulos e abstenções).
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
-import { naoVoto } from "./base.js";
+import { naoVoto, getBase } from "./base.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -41,7 +41,8 @@ export function desempenhoPartidos(estados, { semSubJudice = false } = {}) {
     sigla: m.sigla, federacao: m.federacao, nominais: m.nominais, legenda: m.legenda, total: m.nominais + m.legenda,
     top: m.candidatos.sort((a, b) => b.votos - a.votos || a.nome.localeCompare(b.nome, "pt-BR")).slice(0, 3),
   })).filter((p) => p.total > 0).sort((a, b) => b.total - a.total || a.sigla.localeCompare(b.sigla, "pt-BR"));
-  return { partidos, validos, naoVoto: somarNaoVoto(estados.map((e) => e.d)), estados: estados.length };
+  const nvTotal = getBase() === "totais" ? somarNaoVoto(estados.map((e) => e.d)) : null; // o não voto só existe na base Eleitores aptos
+  return { partidos, validos, naoVoto: nvTotal, denom: nvTotal ? nvTotal.base : validos, rotuloBase: nvTotal ? "dos aptos" : "dos válidos", estados: estados.length };
 }
 
 const linhaTop = (c, comUf) => `<li data-sq="${esc(c.id)}" role="button" tabindex="0"><span class="dp-nome">${esc(c.nome)}${comUf ? ` <small class="muted">${esc(c.uf)}</small>` : ""}</span><span class="dp-v">${fmt(c.votos)} · ${pct(c.pct)}</span></li>`;
@@ -50,8 +51,8 @@ const linhaTop = (c, comUf) => `<li data-sq="${esc(c.id)}" role="button" tabinde
 export function blocoDesempenhoPartidos(r, { titulo = "Desempenho dos partidos", nota = "", comUf = false } = {}) {
   if (!r.partidos.length) return "";
   const itens = r.partidos.map((p) => `<li class="dp-item" style="--cor:${corPartido(p.sigla)}">
-    <div class="dp-topo"><span class="chip" style="--cor:${corPartido(p.sigla)}">${esc(p.sigla)}</span><span class="dp-total"><strong>${fmt(p.total)}</strong><small>${pct(pctDe(p.total, r.validos))} dos válidos</small></span></div>
-    <div class="dp-duas"><span>Em candidatos <b>${fmt(p.nominais)}</b> <small>${pct(pctDe(p.nominais, r.validos))}</small></span><span>Na legenda <b>${fmt(p.legenda)}</b> <small>${pct(pctDe(p.legenda, r.validos))}</small></span></div>
+    <div class="dp-topo"><span class="chip" style="--cor:${corPartido(p.sigla)}">${esc(p.sigla)}</span><span class="dp-total"><strong>${fmt(p.total)}</strong><small>${pct(pctDe(p.total, r.denom ?? r.validos))} ${r.rotuloBase ?? "dos válidos"}</small></span></div>
+    <div class="dp-duas"><span>Em candidatos <b>${fmt(p.nominais)}</b> <small>${pct(pctDe(p.nominais, r.denom ?? r.validos))}</small></span><span>Na legenda <b>${fmt(p.legenda)}</b> <small>${pct(pctDe(p.legenda, r.denom ?? r.validos))}</small></span></div>
     <ol class="dp-top">${p.top.map((c) => linhaTop(c, comUf)).join("")}</ol></li>`).join("");
   const n = r.naoVoto;
   const nv = n ? `<li class="dp-item dp-nv"><div class="dp-topo"><span class="chip chip-nv">Não voto</span><span class="dp-total"><strong>${fmt(n.soma)}</strong><small>${pct(n.pct)} dos aptos</small></span></div>

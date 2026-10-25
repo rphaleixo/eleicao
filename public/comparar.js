@@ -3,7 +3,7 @@
 import { UFS } from "./config.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
-import { naoVoto } from "./base.js";
+import { naoVoto, getBase } from "./base.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const ORDENS = {
@@ -17,13 +17,14 @@ export const ORDENS = {
 
 /** Números de um local para o par escolhido; null se não houver apuração com eleitorado. */
 export function linhaComparacao(uf, d, idA, idB) {
-  const nv = naoVoto(d);
-  if (!d || !nv) return null;
+  const totais = getBase() === "totais", nv = totais ? naoVoto(d) : null; // o não voto só existe na base Eleitores aptos
+  if (!d || (totais && !nv)) return null;
   const votos = (id) => d.candidatos.find((c) => c.id === id)?.votos ?? 0;
   const a = votos(idA), b = votos(idB);
-  const total = d.candidatos.reduce((t, c) => t + c.votos, 0), outros = Math.max(0, total - a - b), base = nv.base;
+  const total = d.candidatos.reduce((t, c) => t + c.votos, 0), outros = Math.max(0, total - a - b), base = totais ? nv.base : total;
+  if (!(base > 0)) return null;
   const p = (n) => (n / base) * 100;
-  return { uf, base, a, b, outros, naoVoto: nv.soma, pctA: p(a), pctB: p(b), pctOutros: p(outros), pctNaoVoto: p(nv.soma), difPP: p(a) - p(b), difVotos: a - b, apurado: d.pctSecoes };
+  return { uf, base, a, b, outros, naoVoto: nv ? nv.soma : null, pctA: p(a), pctB: p(b), pctOutros: p(outros), pctNaoVoto: nv ? p(nv.soma) : null, difPP: p(a) - p(b), difVotos: a - b, apurado: d.pctSecoes };
 }
 
 export function ordenarComparacao(linhas, ordem = "vantagemA") {
@@ -44,7 +45,7 @@ const ppTxt = (n) => `${sinal(n)}${pct(Math.abs(n)).replace("%", " p.p.")}`;
 
 function barra(l, corA, corB) {
   const seg = (v, estilo, rot) => (v > 0 ? `<i style="width:${v}%;${estilo}" title="${rot}: ${pct(v)}"></i>` : "");
-  return `<span class="cp-barra" role="img" aria-label="Distribuição dos aptos apurados">${seg(l.pctA, `background:${corA}`, "1º candidato")}${seg(l.pctB, `background:${corB}`, "2º candidato")}${seg(l.pctOutros, "background:var(--muted);opacity:.55", "Demais candidatos")}${seg(l.pctNaoVoto, "background:repeating-linear-gradient(45deg,var(--barra) 0 3px,var(--muted) 3px 4.5px)", "Não voto")}</span>`;
+  return `<span class="cp-barra" role="img" aria-label="${l.pctNaoVoto == null ? "Distribuição dos votos válidos" : "Distribuição dos aptos apurados"}">${seg(l.pctA, `background:${corA}`, "1º candidato")}${seg(l.pctB, `background:${corB}`, "2º candidato")}${seg(l.pctOutros, "background:var(--muted);opacity:.55", "Demais candidatos")}${seg(l.pctNaoVoto, "background:repeating-linear-gradient(45deg,var(--barra) 0 3px,var(--muted) 3px 4.5px)", "Não voto")}</span>`;
 }
 
 function linhaHtml(l, rotulo, destaque, nomeA, nomeB, corA, corB, extra = "") {
@@ -57,7 +58,7 @@ function linhaHtml(l, rotulo, destaque, nomeA, nomeB, corA, corB, extra = "") {
       <span class="cp-b${lider === "b" ? " lidera" : ""}" style="--cor:${corB}"><small>${esc(nomeB)}</small><strong>${pct(l.pctB)}</strong></span>
       <span class="cp-dif ${lider}"><small>Diferença</small><strong>${ppTxt(l.difPP)}</strong><em>${sinal(l.difVotos)}${fmt(Math.abs(l.difVotos))} votos</em></span>
       <span class="cp-outros"><small>Demais candidatos</small><strong>${pct(l.pctOutros)}</strong></span>
-      <span class="cp-nv"><small>Não voto</small><strong>${pct(l.pctNaoVoto)}</strong></span></span></li>`;
+      ${l.pctNaoVoto == null ? "" : `<span class="cp-nv"><small>Não voto</small><strong>${pct(l.pctNaoVoto)}</strong></span>`}</span></li>`;
 }
 
 /**

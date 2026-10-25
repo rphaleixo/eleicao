@@ -173,7 +173,7 @@ export function cardCargo({ titulo, aba, uf, d }) {
         <span class="cc-votos"><strong>${pct(c.pct)}</strong><small>${fmt(c.votos)}</small></span></li>`).join("")
     : `<li class="vazio muted">Sem candidatos no arquivo do TSE.</li>`;
   return `<article class="card-cargo"><div class="cc-topo"><h3>${esc(titulo)}</h3>${seloEleicao(d) || `<span class="muted">${pct(d.pctSecoes)} apurado</span>`}</div>
-    <ol class="cc-lista">${itens}</ol>${blocoVotos(d)}<button type="button" class="link" data-ir="${aba}">Ver completo ›</button></article>`;
+    <ol class="cc-lista">${itens}</ol>${getBase() === "totais" ? blocoVotos(d) : ""}<button type="button" class="link" data-ir="${aba}">Ver completo ›</button></article>`;
 }
 
 /** Cartão da bancada de deputados de um estado: partidos/federações com mais cadeiras. */

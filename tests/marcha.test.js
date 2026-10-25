@@ -3,6 +3,8 @@ const test = (await import("node:test")).default;
 const assert = (await import("node:assert/strict")).default;
 const { agregar, REGIOES, telaMarcha, ufsVisiveis } = await import("../public/marcha.js");
 const { UFS } = await import("../public/config.js");
+const { setBase } = await import("../public/base.js");
+setBase("totais"); // estes testes olham brancos e nulos, que só existem na base Eleitores aptos
 
 const ufs = Object.fromEntries(Object.keys(UFS).map((u) => [u.toLowerCase(), { pct: 50, ts: 10, st: 5, andamento: "p", eleitores: 100, comparecimento: 40, abstencao: 10, dt: "", ht: "" }]));
 ufs.br = { ...ufs.ac, ts: 270, st: 135 };

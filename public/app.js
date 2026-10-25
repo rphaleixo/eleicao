@@ -37,6 +37,7 @@ import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO, INICIO_APURACAO_T2 } from "./config.js";
 import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
 import { menuLateral, barraInferior } from "./navegacao.js";
+import { lerTema, aplicarTema, escolherTema, controleTema } from "./tema.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlAndamentoUf, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
@@ -54,7 +55,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, visaoUfs: "blocos", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, visaoUfs: "blocos", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { premissas: false, cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { premissas: false, metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -949,6 +950,8 @@ function listaDeputadosEleitos(estados, ufs, f) {
 /** Aba Comparar turnos: Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno, por país, estado ou município, em quadro e mapa. */
 function telaTurnos(v) {
   const ct0 = estado.ct, { uf, mun } = estado;
+  if (ct0.base !== "aptos" && ct0.linha === "naovoto") ct0.linha = "lula"; // o não voto só existe na base Eleitores aptos
+  if (ct0.base !== "aptos" && ct0.ordemPais.endsWith(":naovoto")) ct0.ordemPais = "aptos";
   const l1 = linhaDeResultado(v.d1);
   let l2 = linhaDeResultado(v.d2);
   const bol = uf === "ZZ" && (!l2 || !(l2.pct > 0)) ? v.ext?.bol : null; // exterior antes da totalização oficial: soma dos boletins das urnas
@@ -989,7 +992,7 @@ function telaTurnos(v) {
   }
   const abrirExt = uf === "BR" ? `<button type="button" class="btn-mais" data-ct-abrir="ZZ/">Ver o exterior por país</button>` : "";
   return `${controlesComparacao({ ...ct0, uf, mun }, { municipios })}
-    <section class="card">${quadro}${barrasComposicao(l1, l2)}${abrirExt}</section>${mapa}`;
+    <section class="card">${quadro}${barrasComposicao(l1, l2, c.base)}${abrirExt}</section>${mapa}`;
 }
 const seg2 = (attr, atual, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === atual}">${n}</button>`).join("")}</div>`;
 
@@ -1295,6 +1298,12 @@ document.addEventListener("scroll", (e) => {
   const filhos = [...c.children], i = filhos.reduce((m, f, k) => (Math.abs(f.offsetLeft - c.offsetLeft - c.scrollLeft) < Math.abs(filhos[m].offsetLeft - c.offsetLeft - c.scrollLeft) ? k : m), 0);
   pos.textContent = `${i + 1} de ${filhos.length}`;
 }, true);
+aplicarTema(lerTema());
+$("tema-rodape").innerHTML = controleTema();
+document.addEventListener("click", (e) => {
+  const tb = e.target.closest("[data-tema]");
+  if (tb) { const t = escolherTema(tb.dataset.tema); document.querySelectorAll(".el-tema button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tema === t))); }
+});
 document.addEventListener("click", (e) => { if (e.target.closest("[data-escopo]")) { estado.escopoAberto = !estado.escopoAberto; navAnterior = ""; renderNavegacao(estado.view); return; } const m = e.target.closest("[data-mais]"); if (m) { e.preventDefault(); $("folha-mais").showModal(); return; } if (e.target.closest("[data-fechar-mais]")) { $("folha-mais").close(); return; } const b = e.target.closest("[data-area]"); if (b) { e.preventDefault(); if ($("folha-mais").open) $("folha-mais").close(); estado.regiao = ""; estado.filtros = filtrosVazios(); navegar({ aba: b.dataset.area, uf: "BR", cargo: "resumo", mun: "" }); window.scrollTo({ top: 0 }); } }); // trocar de aba recomeça do Brasil, sem carregar o estado da aba anterior
 $("mun").addEventListener("change", () => navegar({ mun: $("mun").value }));
 $("nav").addEventListener("click", (e) => {
@@ -1432,6 +1441,8 @@ $("conteudo").addEventListener("click", (e) => {
     if (d.ctPais) { if (!c.paisesAbertos.delete(d.ctPais)) c.paisesAbertos.add(d.ctPais); } else if (d.ctOrdemPais) { c.ordemPais = d.ctOrdemPais; c.maisPaises = 30; } else c.maisPaises += 30;
     render(true); return;
   }
+  if (e.target.closest("[data-geo-premissas]")) { estado.geo.premissas = !estado.geo.premissas; render(true); return; }
+  if (e.target.closest("[data-nl-premissas]")) { estado.nl.premissas = !estado.nl.premissas; render(true); return; }
   if (e.target.closest("[data-ct-premissas]")) { estado.ct.premissas = !estado.ct.premissas; render(true); return; }
   const ct = e.target.closest("[data-ct-linha], [data-ct-medida], [data-ct-base], [data-ct-ibge], [data-ct-dir], [data-ct-abrir]");
   if (ct) {

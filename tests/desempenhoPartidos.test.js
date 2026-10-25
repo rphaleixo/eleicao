@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { setBase } from "../public/base.js";
+setBase("totais"); // estes testes tratam do não voto, que só existe na base Eleitores aptos
 import { desempenhoPartidos, blocoDesempenhoPartidos } from "../public/desempenhoPartidos.js";
 
 const cand = (id, nome, votos, extra = {}) => ({ id, nome, votos, ...extra });

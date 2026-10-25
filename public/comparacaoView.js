@@ -4,7 +4,8 @@ import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { viewBoxDoEstado } from "./geo.js";
 import { caixaZoom } from "./zoomMapa.js";
-import { LINHAS, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas, percentual, valorDeOrdem } from "./comparacao.js";
+import { faixaPremissas } from "./ajuste.js";
+import { LINHAS, linhasDaBase, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas, percentual, valorDeOrdem } from "./comparacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const sinal = (n, f = fmt) => (n > 0 ? "+" : n < 0 ? "−" : "") + f(Math.abs(n));
@@ -23,14 +24,12 @@ export function controlesComparacao(c, { municipios }) {
   const muns = semMun ? "" : `<label class="el-campo">Município<select data-ct-mun aria-label="Município"><option value="">Todo o estado</option>${municipios.map((m) => `<option value="${m.cod}"${m.cod === c.mun ? " selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
   const onde = c.uf === "BR" ? "Brasil" : c.uf === "ZZ" ? "Exterior" : `${c.uf} · ${c.mun ? (municipios.find((m) => m.cod === c.mun)?.nome ?? "Município") : "Todo o estado"}`;
   const baseNome = c.base === "validos" ? "Votos válidos" : "Eleitores aptos";
-  const mapaNome = `${LINHAS.find(([k]) => k === c.linha)?.[1] ?? ""} · ${MEDIDAS.find(([k]) => k === c.medida)?.[1] ?? ""}`;
-  const aberto = !!c.premissas;
-  return `<div class="el-premissas"><button type="button" class="el-premissas__barra" data-ct-premissas aria-expanded="${aberto}"><span class="el-premissas__lista"><span><small>Onde</small>${esc(onde)}</span><span><small>Base</small>${baseNome}</span><span><small>Mapa</small>${esc(mapaNome)}</span></span><span class="el-premissas__ajustar">${aberto ? "Fechar ▴" : "Ajustar ▾"}</span></button>
-    <div class="el-premissas__painel"${aberto ? "" : " hidden"}><div class="el-campos"><label class="el-campo">Onde<select data-ct-uf aria-label="Estado">${ufs}</select></label>${muns}</div>
+  const mapaNome = `${linhasDaBase(c.base).find(([k]) => k === c.linha)?.[1] ?? ""} · ${MEDIDAS.find(([k]) => k === c.medida)?.[1] ?? ""}`;
+  const corpo = `<div class="el-campos"><label class="el-campo">Onde<select data-ct-uf aria-label="Estado">${ufs}</select></label>${muns}</div>
       <div><span class="el-apoio">Percentuais sobre</span>${abas("data-ct-base", c.base, [["validos", "Votos válidos"], ["aptos", "Eleitores aptos"]])}</div>
-      <div><span class="el-apoio">Mapa: quem</span>${abas("data-ct-linha", c.linha, LINHAS)}</div>
-      <div><span class="el-apoio">Mapa: o que mostrar</span>${abas("data-ct-medida", c.medida, MEDIDAS)}</div>
-      <div class="el-premissas__fim"><button type="button" class="el-botao el-botao--cheio" data-ct-premissas>Aplicar</button></div></div></div>`;
+      <div><span class="el-apoio">Mapa: quem</span>${abas("data-ct-linha", c.linha, linhasDaBase(c.base))}</div>
+      <div><span class="el-apoio">Mapa: o que mostrar</span>${abas("data-ct-medida", c.medida, MEDIDAS)}</div>`;
+  return faixaPremissas("data-ct-premissas", [["Onde", onde], ["Base", baseNome], ["Mapa", mapaNome]], corpo, c.premissas);
 }
 
 const ptBr = (n) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -73,14 +72,18 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
     <p class="muted nota">${status2 ?? ""} ${baseTxt} Variação em pontos percentuais: 2º turno menos 1º turno.</p>`;
 }
 
-/** Duas barras empilhadas (1º e 2º turno) com a composição de cada turno sobre os eleitores aptos. */
-export function barrasComposicao(l1, l2) {
+/**
+ * Duas barras empilhadas (1º e 2º turno). Base "aptos": candidatos e não voto sobre os eleitores aptos (soma 100% com o não voto).
+ * Base "validos": só Lula, Flávio e outros sobre os votos válidos (soma 100%); nenhum elemento mostra não voto.
+ */
+export function barrasComposicao(l1, l2, base = "aptos") {
+  const linhas = linhasDaBase(base), den = (l) => (base === "aptos" ? l.aptos : l.lula + l.flavio + l.outros);
   const barra = (l, nome) => {
-    if (!l || !l.aptos) return `<div class="cmp-linha"><span class="cmp-turno">${nome}</span><div class="cmp-barra vazia"><span class="muted">sem dados ainda</span></div></div>`;
-    const seg = LINHAS.map(([k]) => ({ k, v: votosDe(l, k) })).filter((s) => s.v > 0);
-    return `<div class="cmp-linha"><span class="cmp-turno">${nome}</span><div class="cmp-barra" role="img" aria-label="${esc(nome)}: ${seg.map((s) => `${LINHAS.find(([k]) => k === s.k)[1]} ${pct((s.v / l.aptos) * 100)}`).join(", ")}">${seg.map((s) => `<i style="width:${(s.v / l.aptos) * 100}%;background:${corLinha(s.k)}" title="${esc(LINHAS.find(([k]) => k === s.k)[1])}: ${fmt(s.v)} · ${pct((s.v / l.aptos) * 100)}"></i>`).join("")}</div></div>`;
+    if (!l || !den(l)) return `<div class="cmp-linha"><span class="cmp-turno">${nome}</span><div class="cmp-barra vazia"><span class="muted">sem dados ainda</span></div></div>`;
+    const seg = linhas.map(([k]) => ({ k, v: votosDe(l, k) })).filter((s) => s.v > 0), total = den(l);
+    return `<div class="cmp-linha"><span class="cmp-turno">${nome}</span><div class="cmp-barra" role="img" aria-label="${esc(nome)}: ${seg.map((s) => `${linhas.find(([k]) => k === s.k)[1]} ${pct((s.v / total) * 100)}`).join(", ")}">${seg.map((s) => `<i style="width:${(s.v / total) * 100}%;background:${corLinha(s.k)}" title="${esc(linhas.find(([k]) => k === s.k)[1])}: ${pct((s.v / total) * 100)}"></i>`).join("")}</div></div>`;
   };
-  return `<div class="cmp-barras">${barra(l1, "1º turno")}${barra(l2, "2º turno")}<ul class="geo-legenda">${LINHAS.map(([k, n]) => `<li><i class="gm-leg" style="background:${corLinha(k)}"></i>${esc(n)}</li>`).join("")}</ul></div>`;
+  return `<div class="cmp-barras">${barra(l1, "1º turno")}${barra(l2, "2º turno")}<ul class="geo-legenda">${linhas.map(([k, n]) => `<li><i class="gm-leg" style="background:${corLinha(k)}"></i>${esc(n)}</li>`).join("")}</ul></div>`;
 }
 
 /** O mapa dos municípios, pintado pela linha e pela medida escolhidas. */
@@ -131,7 +134,7 @@ function faixaPais(nome, l1, l2, base, { abrir, id, parcial, sub }) {
     return `<div class="cmp-col"><small class="muted">${rotulo}</small><b>1º ${pc(a)}</b><b>2º ${pc(b)}</b><span class="${d == null ? "" : classeDelta(d)}">${d == null ? "" : pp(d)}</span></div>`;
   };
   const cab = `<div class="cmp-nome">${abrir != null ? `<button type="button" class="cmp-pais" data-ct-pais="${esc(id)}" aria-expanded="${abrir}">${abrir ? "▾" : "▸"} ${esc(nome)}</button>` : esc(nome)} <small class="muted">${fmt(l1?.aptos ?? 0)} aptos${sub ? ` · ${esc(sub)}` : ""}${parcial ? " · 2º turno parcial" : ""}</small></div>`;
-  return `${cab}<div class="cmp-cols">${col("lula", "Lula")}${col("flavio", "Flávio")}${col("naovoto", "Não voto")}</div>`;
+  return `${cab}<div class="cmp-cols">${col("lula", "Lula")}${col("flavio", "Flávio")}${base === "aptos" ? col("naovoto", "Não voto") : col("outros", "Outros")}</div>`;
 }
 
 /** Exterior por país: lista ordenável; tocar em um país mostra as cidades dele. */
@@ -142,5 +145,5 @@ export function exteriorPorPais(paises, { base, ordem, abertos, limite }) {
     const cidades = aberto ? `<div class="cmp-cidades">${g.cidades.filter((c) => c.l1).sort((a, b) => b.l1.aptos - a.l1.aptos).map((c) => `<div class="cmp-cidade">${faixaPais(c.nome, c.l1, c.l2, base, {})}</div>`).join("")}</div>` : "";
     return `<div class="cmp-item">${faixaPais(g.pais, g.l1, g.l2, base, { abrir: aberto, id: g.pais, parcial: g.parcial2, sub: g.cidades.length > 1 ? `${g.cidades.length} cidades` : g.cidades[0].nome })}${cidades}</div>`;
   }).join("");
-  return `<div class="geo-linha"><span class="gp-leg">Ordenar por</span>${seg("data-ct-ordem-pais", ordem, ORDENS_PAIS)}</div><div class="cmp-lista">${itens}</div>${ord.length > limite ? `<button type="button" class="btn-mais" data-ct-mais-paises>Mostrar mais países (${ord.length - limite})</button>` : ""}`;
+  return `<div class="geo-linha"><span class="gp-leg">Ordenar por</span>${seg("data-ct-ordem-pais", ordem, base === "aptos" ? ORDENS_PAIS : ORDENS_PAIS.filter(([k]) => !k.endsWith(":naovoto")))}</div><div class="cmp-lista">${itens}</div>${ord.length > limite ? `<button type="button" class="btn-mais" data-ct-mais-paises>Mostrar mais países (${ord.length - limite})</button>` : ""}`;
 }

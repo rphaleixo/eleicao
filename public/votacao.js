@@ -1,6 +1,7 @@
 // Cartões "Votação" e "Eleitorado": a composição dos votos e do comparecimento, para qualquer eleição.
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 import { fmt, pct } from "./formato.js";
+import { getBase } from "./base.js";
 
 const linha = (rotulo, n, total, { cor = "", nivel = 0, forte = false } = {}) =>
   `<div class="vt-linha n${nivel}${forte ? " forte" : ""}"><span class="vt-rot">${cor ? `<i class="vt-cor ${cor}"></i>` : ""}${esc(rotulo)}</span><span class="vt-n">${fmt(n)}</span><span class="vt-p">${pct(total ? (n / total) * 100 : 0)}</span></div>`;
@@ -33,4 +34,5 @@ export function cardEleitorado(d) {
     ${linha("Comparecimento", e.comparecimento, base, { cor: "validos", nivel: 1 })}${linha("Abstenção", e.abstencao, base, { cor: "abstencao", nivel: 1 })}</section>`;
 }
 
-export const cartoesVotacao = (d, opcoes) => `<div class="grade2">${cardVotacao(d, opcoes)}${cardEleitorado(d)}</div>`;
+/** Na base Votos válidos só o eleitorado (comparecimento e abstenção); a composição com brancos e nulos é da base Eleitores aptos. */
+export const cartoesVotacao = (d, opcoes) => `<div class="grade2">${getBase() === "totais" ? cardVotacao(d, opcoes) : ""}${cardEleitorado(d)}</div>`;

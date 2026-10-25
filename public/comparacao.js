@@ -3,6 +3,8 @@ import { classesDeCor } from "./geo.js";
 
 export const LULA = "13", FLAVIO = "22";
 export const LINHAS = [["lula", "Lula"], ["flavio", "Flávio Bolsonaro"], ["outros", "Outros candidatos"], ["naovoto", "Não voto"]];
+/** As linhas que existem em cada base: o não voto só existe em "Eleitores aptos"; em votos válidos só os candidatos. */
+export const linhasDaBase = (base) => (base === "aptos" ? LINHAS : LINHAS.filter(([k]) => k !== "naovoto"));
 export const MEDIDAS = [["pp", "Variação em pontos %"], ["votos", "Variação em votos"], ["p1", "% no 1º turno"], ["p2", "% no 2º turno"], ["lider", "Quem liderou"]];
 
 /** Uma "linha" é a votação de um lugar em um turno: números absolutos. */

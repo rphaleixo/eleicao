@@ -1,3 +1,4 @@
+import { controleTema } from "./tema.js";
 // Navegação do design system: barra inferior (celular) e menu lateral (desktop), com as mesmas áreas na mesma ordem.
 // As áreas que não existem no turno (Senado e deputados no 2º turno) simplesmente não aparecem.
 const ICONES = {
@@ -29,7 +30,7 @@ export function menuLateral(abas, atual, turnoTxt) {
   const grupos = GRUPOS.map(([nome, ids]) => [nome, ids.filter(tem)]).filter(([, ids]) => ids.length);
   return `<div class="el-menu__marca">Apuração 2026<small>${turnoTxt}</small></div>${grupos.map(([nome, ids]) =>
     `<p class="el-menu__grupo">${nome}</p><ol>${ids.map((id) => `<li><a href="${href(id)}" data-area="${id}"${id === atual ? ' aria-current="true"' : ""}>${nomeDe(abas, id)}</a></li>`).join("")}</ol>`).join("")}
-    <div class="el-menu__rodape">Fonte: arquivos de divulgação do TSE. Site independente, sem vínculo com o TSE.</div>`;
+    <div class="el-menu__tema"><span class="el-apoio">Tema</span>${controleTema()}</div><div class="el-menu__rodape">Fonte: arquivos de divulgação do TSE. Site independente, sem vínculo com o TSE.</div>`;
 }
 
 /** As quatro áreas principais da barra: no 1º turno, Deputados no lugar de Governadores (que vai para o "Mais"). */
@@ -46,6 +47,6 @@ export function barraInferior(abas, atual, turno2) {
   const emMais = resto.includes(atual);
   const link = (id) => `<a href="${href(id)}" data-area="${id}"${id === atual ? ' aria-current="true"' : ""}>${svg(id)}${nomeDe(abas, id)}</a>`;
   const barra = `${principais.map(link).join("")}<a href="#" data-mais aria-haspopup="dialog"${emMais ? ' aria-current="true"' : ""}>${svg("mais")}Mais</a>`;
-  const folha = `<h2>Mais áreas</h2><ul>${resto.map((id) => `<li><a href="${href(id)}" data-area="${id}"${id === atual ? ' aria-current="true"' : ""}>${nomeDe(abas, id)}</a></li>`).join("")}</ul><button type="button" data-fechar-mais>Fechar</button>`;
+  const folha = `<div class="el-folha__tema"><span class="el-apoio">Tema</span>${controleTema()}</div><h2>Mais áreas</h2><ul>${resto.map((id) => `<li><a href="${href(id)}" data-area="${id}"${id === atual ? ' aria-current="true"' : ""}>${nomeDe(abas, id)}</a></li>`).join("")}</ul><button type="button" data-fechar-mais>Fechar</button>`;
   return { barra, folha };
 }

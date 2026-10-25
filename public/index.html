@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Apuração Eleições 2026</title>
   <link rel="icon" href="data:,">
+  <script>try { var t = localStorage.getItem("tema"); if (t === "claro" || t === "escuro") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
   <link rel="stylesheet" href="ds/tokens.css">
   <link rel="stylesheet" href="ds/bundle.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <nav id="menu" class="el-menu" aria-label="Áreas da apuração"></nav>
-  <header class="topo" data-theme="escuro">
+  <header class="topo">
     <div class="wrap topo-in">
       <h1 class="el-topo__titulo el-topo__titulo--mobile"><span class="el-vivo" aria-hidden="true"></span>Apuração Eleições 2026</h1>
       <div id="status" class="status el-carimbo" role="status" aria-live="polite">Carregando…</div>
@@ -38,6 +39,7 @@
 
   <footer class="wrap rodape">
     <p>Fonte: arquivos de divulgação de resultados do TSE (resultados.tse.jus.br), conforme a Resolução TSE nº 23.751/2026. Site independente, sem vínculo com o TSE. Os números só são oficiais no site do TSE. As vagas de deputados enquanto a apuração não termina são uma projeção calculada a partir dos votos e podem diferir do resultado oficial.</p>
+    <div class="rodape-tema"><span class="el-apoio">Tema</span><div id="tema-rodape"></div></div>
   </footer>
 
   <nav id="barra-inf" class="el-nav-inf el-nav-inf--fixa" aria-label="Navegação principal"></nav>
