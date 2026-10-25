@@ -41,16 +41,16 @@ export const CARGOS = {
 };
 
 const TODAS_ABAS = [
-  { id: "andamento", nome: "Marcha da apuração" },
+  { id: "andamento", nome: "Apuração" },
   { id: "presidente", nome: "Presidente" },
   { id: "governadores", nome: "Governadores" },
   { id: "senadores", nome: "Senadores" },
   { id: "camara", nome: "Deputados" },
   { id: "partidos", nome: "Partidos" },
-  { id: "cenarios", nome: "E se…" },
+  { id: "cenarios", nome: "Cenários" },
   { id: "geo", nome: "Geografia" },
   { id: "nulos", nome: "Nulos" },
-  { id: "estados", nome: "Estados" },
+  { id: "estados", nome: "Meu estado" },
   { id: "turnos", nome: "Comparar turnos" },
 ];
 

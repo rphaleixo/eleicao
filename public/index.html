@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <nav id="menu" class="el-menu" aria-label="Áreas da apuração"></nav>
   <header class="topo" data-theme="escuro">
     <div class="wrap topo-in">
       <h1 class="el-topo__titulo"><span class="el-vivo" aria-hidden="true"></span>Apuração Eleições 2026</h1>
@@ -19,7 +20,7 @@
 
   <a class="faixa-eventos" id="faixa" href="#/andamento" hidden aria-live="polite"></a>
   <nav class="wrap modos" id="modos" aria-label="Turno da eleição"></nav>
-  <nav class="wrap abas el-abas" id="abas" aria-label="Cargos e andamento"></nav>
+  <nav class="wrap abas el-abas" id="abas" aria-label="Cargos e andamento" hidden></nav>
 
   <div id="nav" class="wrap"></div>
 
@@ -38,6 +39,9 @@
   <footer class="wrap rodape">
     <p>Fonte: arquivos de divulgação de resultados do TSE (resultados.tse.jus.br), conforme a Resolução TSE nº 23.751/2026. Site independente, sem vínculo com o TSE. Os números só são oficiais no site do TSE. As vagas de deputados enquanto a apuração não termina são uma projeção calculada a partir dos votos e podem diferir do resultado oficial.</p>
   </footer>
+
+  <nav id="barra-inf" class="el-nav-inf el-nav-inf--fixa" aria-label="Navegação principal"></nav>
+  <dialog id="folha-mais" class="folha-mais" aria-label="Mais áreas"></dialog>
 
   <dialog id="ficha" aria-labelledby="ficha-titulo">
     <button id="ficha-fechar" class="ficha-fechar" aria-label="Fechar">×</button>

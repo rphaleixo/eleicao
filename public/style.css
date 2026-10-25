@@ -836,3 +836,26 @@ span.cmp-sobe { color: var(--segundo-turno); } span.cmp-desce { color: #0f766e; 
 #calculo { margin-top: var(--esp-14); }
 #calculo .el-painel__corpo > .el-seg { margin-top: 0; }
 .hero.hero .el-seg button, .hero .seg button { min-height: 40px; }
+
+/* navegação: barra inferior no celular, menu lateral de 240px a partir de 1024px, escopo recolhido */
+body { padding-bottom: 72px; }
+.el-menu { display: none; }
+.el-escopo-painel { display: none; margin-top: var(--esp-6); }
+.el-escopo-painel.aberto { display: block; }
+#nav .el-escopo-barra { margin-top: var(--esp-6); }
+@media (min-width: 1024px) {
+  body { padding-left: 240px; padding-bottom: 0; }
+  .el-menu { display: flex; position: fixed; inset: 0 auto 0 0; overflow-y: auto; z-index: 5; }
+  .el-nav-inf--fixa { display: none; }
+  .el-escopo-barra { display: none; }
+  .el-escopo-painel { display: block; margin-top: 0; padding: 0; border: 0; background: none; }
+}
+.ese .el-menu, .ese .el-nav-inf { display: none; } .ese { padding: 0; }
+.folha-mais { margin: auto 0 0; width: 100%; max-width: none; border: 0; border-top: 3px solid var(--texto); padding: var(--esp-16); background: var(--cartao); color: var(--texto); }
+.folha-mais::backdrop { background: rgba(0, 0, 0, .5); }
+.folha-mais h2 { font: 400 22px/26px var(--font-display); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 var(--esp-8); }
+.folha-mais ul { list-style: none; margin: 0; padding: 0; }
+.folha-mais li a { display: flex; align-items: center; min-height: 48px; border-bottom: 1px solid var(--linha); color: var(--texto); text-decoration: none; font: 400 20px/24px var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
+.folha-mais li a[aria-current="true"] { box-shadow: inset 5px 0 0 var(--acento); padding-left: var(--esp-12); }
+.folha-mais button { margin-top: var(--esp-12); width: 100%; min-height: 44px; border: 2px solid var(--texto); background: var(--cartao); color: var(--texto); font: 700 14px/20px var(--font-text); cursor: pointer; }
+.el-menu li a:focus-visible, .el-nav-inf a:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }

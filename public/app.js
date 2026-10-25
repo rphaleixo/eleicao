@@ -36,6 +36,7 @@ import { cargosBarra, barraEstado, folhaEstados, filtrarEstados, vizinho } from 
 import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO, INICIO_APURACAO_T2 } from "./config.js";
 import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
+import { menuLateral, barraInferior } from "./navegacao.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlAndamentoUf, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
   buscarJson, buscarPrimeiro, normalizar, lerMunicipios, lerAcompanhamento,
@@ -53,7 +54,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "aptos", sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "aptos", sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -95,11 +96,13 @@ $("modos").addEventListener("click", (e) => {
 
 function montarControles() {
   const tira = $("abas");
-  tira.innerHTML = ABAS.filter((a) => a.id !== "turnos").map((a) => `<button class="el-aba" data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
-  tira.hidden = estado.aba === "turnos"; // no modo "Comparar" a navegação é a da própria tela
+  tira.hidden = true; // as áreas ficam no menu lateral (desktop) e na barra inferior (celular); a aba "Comparar" é o terceiro botão do turno
   montarModos();
-  const ativa = tira.querySelector('[aria-current="true"]'); // a aba escolhida fica no centro da tira, que não volta ao começo a cada toque
-  if (ativa) tira.scrollLeft = Math.max(0, ativa.offsetLeft - (tira.clientWidth - ativa.offsetWidth) / 2);
+  const atual = estado.aba === "turnos" ? "" : estado.aba, area = ABAS.filter((x) => x.id !== "turnos");
+  $("menu").innerHTML = menuLateral(area, atual, TURNO2 ? "2º turno · 25/10" : "1º turno · 04/10");
+  const { barra, folha } = barraInferior(area, atual, TURNO2);
+  $("barra-inf").innerHTML = barra;
+  $("folha-mais").innerHTML = folha;
   document.querySelector(".filtros").hidden = !permiteMun(); // estado e região são escolhidos na navegação do topo; sobra só o município
   $("lbl-mun").hidden = !permiteMun();
   const lista = estado.municipios[estado.uf] || [];
@@ -1144,6 +1147,12 @@ function usaRegiao() {
 }
 let navAnterior = "", subAnterior = "";
 let ultimoAc = null; // andamento por estado mais recente, para a navegação aparecer enquanto a tela carrega
+/** Escopo recolhido (celular): uma linha com o caminho Brasil › Região › Estado; tocar abre a navegação por região e estado. No desktop o painel fica sempre à vista. */
+function escopoRecolhido(nav) {
+  const reg = estado.regiao && REGIOES[estado.regiao] ? REGIOES[estado.regiao].nome : estado.regiao === "exterior" ? "Exterior" : "";
+  const caminho = ["Brasil", reg, estado.uf !== "BR" ? (UFS[estado.uf] ?? (estado.uf === "ZZ" ? "Exterior" : estado.uf)) : ""].filter(Boolean).join(" › ");
+  return `<button type="button" class="el-escopo-barra" data-escopo aria-expanded="${estado.escopoAberto}"><small>Escopo</small>${esc(caminho)}</button><div class="el-escopo-painel${estado.escopoAberto ? " aberto" : ""}">${nav}</div>`;
+}
 function renderNavegacao(v) {
   ultimoAc = v?.f ?? v?.ac ?? v?.e ?? ultimoAc;
   const nav = usaRegiao() && ultimoAc
@@ -1156,7 +1165,7 @@ function renderNavegacao(v) {
     el.querySelectorAll(".tira, .be-cargos, .chips").forEach((c) => { c.scrollLeft = rolagem; });
     return html;
   };
-  navAnterior = preserva($("nav"), nav, navAnterior);
+  navAnterior = preserva($("nav"), nav ? escopoRecolhido(nav) : "", navAnterior);
   subAnterior = preserva($("sub"), sub, subAnterior);
   $("sub").hidden = !sub;
   // mantém o estado e o cargo escolhidos à vista nas faixas roláveis
@@ -1269,7 +1278,7 @@ $("calculo").addEventListener("click", (e) => {
 montarBase();
 
 // ---------- eventos ----------
-$("abas").addEventListener("click", (e) => { const b = e.target.closest("[data-aba]"); if (b) { estado.regiao = ""; estado.filtros = filtrosVazios(); navegar({ aba: b.dataset.aba, uf: "BR", cargo: "resumo", mun: "" }); window.scrollTo({ top: 0 }); } }); // trocar de aba recomeça do Brasil, sem carregar o estado da aba anterior
+document.addEventListener("click", (e) => { if (e.target.closest("[data-escopo]")) { estado.escopoAberto = !estado.escopoAberto; navAnterior = ""; renderNavegacao(estado.view); return; } const m = e.target.closest("[data-mais]"); if (m) { e.preventDefault(); $("folha-mais").showModal(); return; } if (e.target.closest("[data-fechar-mais]")) { $("folha-mais").close(); return; } const b = e.target.closest("[data-area]"); if (b) { e.preventDefault(); if ($("folha-mais").open) $("folha-mais").close(); estado.regiao = ""; estado.filtros = filtrosVazios(); navegar({ aba: b.dataset.area, uf: "BR", cargo: "resumo", mun: "" }); window.scrollTo({ top: 0 }); } }); // trocar de aba recomeça do Brasil, sem carregar o estado da aba anterior
 $("mun").addEventListener("change", () => navegar({ mun: $("mun").value }));
 $("nav").addEventListener("click", (e) => {
   if (e.target.closest("[data-escopo-toggle]")) { estado.navAberta = !estado.navAberta; renderNavegacao(estado.view); return; }
