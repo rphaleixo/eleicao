@@ -19,3 +19,7 @@ Rodada 10: o bloco por escopo agora é o `Duelo`, e as premissas ficam na faixa 
 
 
 Correção da regra (rodada 10b): o "não voto" só existe na base Eleitores aptos. Na base Votos válidos, nenhum elemento da tela mostra não voto: nem barra de composição, nem legenda, nem a opção "Não voto" em "Mapa: quem", nem a linha do Duelo. A barra de composição na base Votos válidos soma 100% com os candidatos e "Outros"; na base Eleitores aptos soma 100% incluindo o não voto. Uma tela nunca mistura as duas bases (por exemplo, líder sobre válidos e barra com não voto sobre aptos).
+
+- Marca de 50 0.000000e+00m toda barra de dois lados (rodada 15b): barras que mostram os dois candidatos lado a lado, como a do resumo do estado (Rondônia: Lula × Flávio), levam a linha tracejada no meio da barra para o leitor ver de relance quem passou da metade. Use a classe `el-composicao--meta` na barra de 14px; a linha tem 2px, passa 4px acima e abaixo e usa a cor do texto, nunca a de um partido. Escreva "50
+
+- Marca de 50% em toda barra de dois lados (rodada 15b): barras que mostram os dois candidatos lado a lado, como a do resumo do estado (Rondônia: Lula × Flávio), levam uma linha tracejada no meio, para o leitor ver de relance quem passou da metade. Use a classe `el-composicao--meta` na barra de 14px; a linha tem 2px, passa 4px acima e abaixo e usa a cor do texto, nunca a de um partido. Escreva "50%" uma vez, em `el-composicao__rotulo50`, logo abaixo da barra. Vale para a base Votos válidos. Na barra do `Placar` a marca já existe (`el-barra-meta`).

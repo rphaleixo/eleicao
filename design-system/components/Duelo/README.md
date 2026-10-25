@@ -13,3 +13,5 @@ O consumidor fornece: nome do escopo, percentual apurado de cada turno, e para c
 
 
 Correção da regra (rodada 10b): o "não voto" só existe na base Eleitores aptos. Na base Votos válidos, nenhum elemento da tela mostra não voto: nem barra de composição, nem legenda, nem a opção "Não voto" em "Mapa: quem", nem a linha do Duelo. A barra de composição na base Votos válidos soma 100% com os candidatos e "Outros"; na base Eleitores aptos soma 100% incluindo o não voto. Uma tela nunca mistura as duas bases (por exemplo, líder sobre válidos e barra com não voto sobre aptos).
+
+- Ordem fixa dos finalistas do 2º turno de presidente: Lula sempre à esquerda e Flávio Bolsonaro sempre à direita, qualquer que seja o resultado, o turno ou a base. Quem está à frente é dito por texto ou ícone, nunca pela posição.

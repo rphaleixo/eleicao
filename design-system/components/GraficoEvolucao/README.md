@@ -9,3 +9,4 @@ O consumidor fornece: a série de cada lado (percentual sobre votos válidos por
 - Eixo vertical com 5 linhas de grade em `linha`; rótulos em `num-sm` e `texto-suave`.
 - O painel do cursor (`el-info`) abre ao tocar ou arrastar; mostre sempre o % apurado, o valor de cada lado e a diferença em pontos.
 - Deixe a leitura "quem está na frente" no Placar; o gráfico só mostra como chegou lá.
+- Gráfico do 2º turno: o intervalo sem apuração (17h15 às 19h, com a votação prorrogada) sai do eixo; o ponto das 17h15 liga ao das 19h, com um pequeno corte no eixo e a legenda "sem apuração até as 19h".
