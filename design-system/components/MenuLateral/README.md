@@ -10,3 +10,6 @@ O consumidor fornece: a lista de áreas, a área atual, e uma contagem opcional 
 - Dez áreas em quatro grupos, numeradas em sequência (01 a 10): Acompanhar (Apuração, a Marcha da apuração); Cargos (Presidente, Governadores, Senadores, Deputados); Estado (Meu estado, a antiga aba Estados); Análises (Partidos, Cenários, Geografia, Nulos). "E se…" passa a se chamar Cenários.
 - No 2º turno só aparecem as áreas que existem: Apuração, Presidente, Governadores (seis estados), Meu estado, Partidos, Cenários, Geografia e Nulos; Senadores e Deputados somem.
 - Comparar turnos não fica no menu: é o terceiro botão do seletor de turno (1º turno, 2º turno, Comparar) no alto da página, em todas as telas.
+
+
+Rodada 12: abaixo dos quatro grupos fica o item "Como calcular" (`el-menu__sobre`), que abre a `Gaveta`. O tema e a fonte dos dados ficam no rodapé do menu.
