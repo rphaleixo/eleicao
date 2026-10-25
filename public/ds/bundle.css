@@ -789,3 +789,26 @@ button.el-uf { border-style: solid; border-color: var(--linha); border-width: 1p
 .el-cargo--vazio { border-top-color: var(--linha); }
 .el-cargo--vazio .el-cargo__topo { align-items: center; min-height: 32px; }
 .el-cargo--vazio p { margin: 0; font: 400 14px/20px var(--font-text); color: var(--texto-suave); }
+
+/* ===== Rodada 20: não voto detalhado ===== */
+.el-detalhe-btn { display: inline-flex; align-items: center; gap: var(--esp-6); min-height: 44px; padding: 0 var(--esp-8); margin-left: calc(-1 * var(--esp-8)); border: 0; background: none; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+.el-detalhe-btn::after { content: "▾"; font-size: 12px; color: var(--texto-suave); transition: transform .15s; }
+.el-detalhe-btn[aria-expanded="true"]::after { transform: rotate(180deg); }
+.el-detalhe-btn:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.el-subtotal { background: var(--trilho); }
+.el-subtotal[hidden] { display: none; }
+.el-subtotal > :first-child { padding-left: var(--esp-24); font-weight: 600; color: var(--texto-suave); }
+.el-subtotal__marca { display: inline-block; width: 10px; height: 10px; margin-right: var(--esp-8); background: var(--cor, var(--ausencia)); }
+
+/* ===== Rodada 21: toast (avisos que não mexem na altura da página) ===== */
+.el-toasts { position: fixed; z-index: 40; right: var(--esp-16); bottom: var(--esp-16); display: grid; gap: var(--esp-8); width: min(360px, calc(100vw - 2 * var(--esp-16))); pointer-events: none; }
+@media (max-width: 1023px) { .el-toasts { left: var(--esp-16); right: var(--esp-16); width: auto; bottom: calc(57px + var(--esp-12) + env(safe-area-inset-bottom, 0px)); } }
+.el-toast { pointer-events: auto; display: grid; grid-template-columns: auto 1fr auto; gap: var(--esp-4) var(--esp-10); align-items: start; padding: var(--esp-10) var(--esp-12); background: var(--cartao); color: var(--texto); border: 1px solid var(--linha); border-left: 4px solid var(--aviso, #b26a00); box-shadow: 0 6px 20px rgba(0, 0, 0, .22); }
+.el-toast__icone { font: 700 16px/20px var(--font-num); color: var(--aviso, #b26a00); }
+.el-toast__texto { font: 400 14px/20px var(--font-text); }
+.el-toast__texto b { display: block; font-weight: 700; }
+.el-toast__acoes { grid-column: 2 / -1; display: flex; gap: var(--esp-12); }
+.el-toast__acoes button { min-height: 44px; padding: 0; border: 0; background: none; color: var(--acento); font: 700 14px/20px var(--font-text); cursor: pointer; }
+.el-toast__fechar { min-width: 44px; min-height: 44px; margin: -10px -12px 0 0; border: 0; background: none; color: var(--texto-suave); font: 400 22px/1 var(--font-text); cursor: pointer; }
+.el-toast:focus-visible, .el-toast button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) { .el-toast { animation: el-toast-entra .18s ease-out; } @keyframes el-toast-entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } } }

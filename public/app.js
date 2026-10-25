@@ -50,6 +50,7 @@ import {
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
 import { corPartido, ajustarContrasteChips } from "./cores.js";
 import { ladoFixo } from "./finalistas.js";
+import { mostrarToast, resolverToast, dispensarToast } from "./toast.js";
 import { linhaEvolucao, linhasResultado, temTotais, zerarZoom, alternarZoom } from "./graficos.js";
 import { atualizarFaixa } from "./eventos.js";
 import { iniciarGraficos, reaplicarGraficos } from "./graficoInterativo.js";
@@ -1237,13 +1238,13 @@ function vazioDaTela() {
   return `<section class="el-vazio"><h3>${esc(nome)}: ainda sem dados</h3><p>Os números aparecem aqui assim que o TSE publicar os primeiros resultados. A página atualiza sozinha a cada poucos segundos. <button type="button" class="link" data-tentar>Tentar agora</button></p></section>`;
 }
 
-/** Carregando por mais de 20 segundos: avisa que está demorando e oferece tentar de novo (nada de "Carregando…" sem fim). */
+/** Carregando por mais de 20 segundos: um toast (fora do fluxo) avisa que está demorando e oferece tentar de novo. Some quando a tela chega. */
 let carregandoDesde = 0;
 setInterval(() => {
   const el = $("conteudo");
-  if (!el || !/Carregando/.test(el.textContent)) { carregandoDesde = 0; return; }
+  if (!el || !el.querySelector(".carregando")) { carregandoDesde = 0; resolverToast("demora"); return; }
   carregandoDesde ||= Date.now();
-  if (Date.now() - carregandoDesde > 20_000 && !el.querySelector(".aviso-demora")) el.insertAdjacentHTML("afterbegin", `<div class="el-aviso aviso-demora" role="status" style="margin-top:var(--esp-14)"><span class="el-aviso__icone" aria-hidden="true">!</span><p><b>Está demorando mais que o normal.</b> O TSE pode estar lento ou a conexão falhou. <button type="button" class="link" data-tentar>Tentar agora</button></p></div>`);
+  if (Date.now() - carregandoDesde > 20_000) mostrarToast({ assunto: "demora", estado: String(carregandoDesde), titulo: "Está demorando mais que o normal.", apoio: "O TSE pode estar lento ou a conexão falhou.", acao: { rotulo: "Tentar agora", atributo: "data-tentar" } });
 }, 4000);
 
 function renderNavegacao(v) {
@@ -1294,6 +1295,9 @@ function telaAguardandoSegundoTurno() {
 const encerradas = new Set(); // telas cujos dados já são os finais
 const spCompletos = (chaves) => chaves.every((k) => segundoPlano[k]?.dados != null);
 
+// os botões do toast ficam fora de #conteudo: o clique é tratado aqui
+$("toasts")?.addEventListener("click", (e) => { if (e.target.closest("[data-toast-fechar]")) dispensarToast(); else if (e.target.closest("[data-tentar]")) atualizar(); });
+let teveFalha = false;
 async function atualizar() {
   const chave0 = chaveRota();
   if (encerradas.has(chave0)) return; // apuração encerrada: nada novo a buscar; recarregue ou use "atualizar agora" na barra de status
@@ -1306,10 +1310,15 @@ async function atualizar() {
     const v = await carregarView(rota);
     cacheViews.set(chave, v);
     if (telaCompletaPura(v, rota, spCompletos)) encerradas.add(chave);
-    if (chave === chaveRota()) { estado.view = v; render(); memo.ultima = new Date(); memo.erro = ""; }
+    if (chave === chaveRota()) {
+      estado.view = v; render(); memo.ultima = new Date(); memo.erro = "";
+      resolverToast("falha");
+      if (teveFalha) { teveFalha = false; mostrarToast({ assunto: "conexao", titulo: "Voltou a conectar.", apoio: "Os números estão atualizados.", sucesso: true }); }
+    }
   } catch (e) {
     if (chave === chaveRota()) {
       memo.erro = e.message;
+      if (cacheViews.has(chave)) { teveFalha = true; mostrarToast({ assunto: "falha", estado: e.message, titulo: "Não foi possível atualizar.", apoio: "Mostrando os últimos dados; tentamos de novo sozinhos.", acao: { rotulo: "Tentar agora", atributo: "data-tentar" } }); }
       if (!cacheViews.has(chave)) $("conteudo").innerHTML = TURNO2 && /404|não publicado/i.test(e.message) ? telaAguardandoSegundoTurno()
         : `<section class="card">${aviso(`${e.message} Tentaremos de novo automaticamente.`)}<button type="button" class="link" data-tentar>Tentar agora</button></section>`;
     }
