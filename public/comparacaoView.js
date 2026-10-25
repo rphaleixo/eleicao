@@ -5,6 +5,7 @@ import { fmt, pct } from "./formato.js";
 import { viewBoxDoEstado } from "./geo.js";
 import { caixaZoom } from "./zoomMapa.js";
 import { faixaPremissas } from "./ajuste.js";
+import { avisoDadosIniciais } from "./marcha.js";
 import { LINHAS, linhasDaBase, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas, percentual, valorDeOrdem } from "./comparacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -49,6 +50,7 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
   const m1 = dif(l1), m2 = tem2 ? dif(l2) : null;
   const refe = tem2 ? m2 : m1;
   const lider = refe == null ? null : refe >= 0 ? "lula" : "flavio", outro = lider === "lula" ? "flavio" : "lula";
+  const inicial = tem2 && l2.pct < 5; // poucas urnas: nada de "lidera" nem de faixa em destaque
   let vantagem = "";
   if (lider) {
     const sinalL = lider === "lula" ? 1 : -1, ant = m1 == null ? null : sinalL * m1, agora = Math.abs(refe);
@@ -56,19 +58,21 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
     const detalhe = tem2
       ? `No 1º turno: ${ant >= 0 ? "+" : "−"}${ptBr(Math.abs(ant))} p.p. · ${agora - ant >= 0 ? "▲ ampliou" : "▼ reduziu"} ${ptBr(Math.abs(agora - ant))} p.p.${parcial}`
       : "2º turno ainda sem dados apurados";
-    vantagem = `<div class="el-duelo__vantagem" style="--cor:${COR_LADO[lider]}"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> lidera${tem2 ? "" : " no 1º turno"} sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`;
+    vantagem = inicial
+      ? `${avisoDadosIniciais(l2.pct)}<div class="el-duelo__vantagem el-duelo__vantagem--inicial"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> na frente por enquanto sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`
+      : `<div class="el-duelo__vantagem" style="--cor:${COR_LADO[lider]}"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> lidera${tem2 ? "" : " no 1º turno"} sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`;
   }
   const votos = (v) => `<span class="el-duelo__votos"><br>${v == null ? "" : fmt(v)}</span>`;
   const celula = (pc, v) => (pc == null ? `<span class="el-duelo__sem">—</span>${votos(null)}` : `${pct(pc)}${votos(v)}`);
   const corpo = linhas.map((r) => {
-    const eLider = r.chave === lider;
+    const eLider = r.chave === lider && !inicial;
     const delta = r.dp == null ? "—" : `<span class="${r.dp > 0 ? "el-delta--mais" : r.dp < 0 ? "el-delta--menos" : ""}">${r.dp > 0 ? "▲" : r.dp < 0 ? "▼" : "•"} ${sinal(r.dp, ptBr)}</span>`;
     const c2 = r.semNoTurno2 ? `<span class="el-duelo__sem">—</span>${votos(null)}` : celula(tem2 ? r.p2 : null, tem2 ? r.v2 : null);
     return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span></span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>`;
   }).join("");
   const baseTxt = base === "validos" ? "Percentuais dos candidatos sobre os votos válidos (só candidatos)." : "Percentuais sobre os eleitores aptos das seções apuradas; o não voto soma abstenções, brancos e nulos.";
   return `<section class="el-duelo"><header class="el-duelo__topo"><h3>${esc(ondeNome)}</h3><span>1º turno ${l1 ? pct(l1.pct) : "—"} · 2º turno ${tem2 ? `${pct(l2.pct)} apurado` : "ainda sem dados"}</span></header>${vantagem}
-    <div class="el-duelo__tabela"><div class="el-duelo__linha el-duelo__linha--cab"><span>Candidato</span><span>1º turno</span><span>2º turno</span><span>Variação</span></div>${corpo}</div></section>
+    <div class="el-duelo__tabela"><div class="el-duelo__linha el-duelo__linha--cab"><span>Candidato</span><span>1º turno</span><span>2º turno</span><span>${tem2 && l2.pct < 100 ? "Variação parcial" : "Variação"}</span></div>${corpo}</div></section>
     <p class="muted nota">${status2 ?? ""} ${baseTxt} Variação em pontos percentuais: 2º turno menos 1º turno.</p>`;
 }
 

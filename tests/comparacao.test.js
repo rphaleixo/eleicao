@@ -94,3 +94,14 @@ test("Duelo: sem dados no 2º turno a faixa descreve o 1º turno e as colunas mo
   assert.ok(!com.includes(">Não voto<")); // na base de votos válidos o não voto não é linha
   assert.ok(quadroComparacao(l1, l2, { base: "aptos", ondeNome: "Acre", status2: "" }).includes("Não voto"));
 });
+
+test("poucas urnas (menos de 5%): aviso, 'na frente por enquanto', sem 'lidera' e variação parcial", () => {
+  const l1 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 20, nulos: 30, lula: 400, flavio: 300, outros: 50, validos: 750, pct: 100 };
+  const l2 = { aptos: 10, comparecimento: 9, abstencao: 1, brancos: 0, nulos: 0, lula: 6, flavio: 3, outros: 0, validos: 9, pct: 0.25 };
+  const h = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "" });
+  assert.ok(h.includes("Apenas 0,25% das urnas apuradas. Os números iniciais mudam bastante."));
+  assert.ok(h.includes("na frente por enquanto") && !h.includes("lidera") && !h.includes("el-duelo__linha--lider"));
+  assert.ok(h.includes("Variação parcial") && h.includes("el-duelo__vantagem--inicial"));
+  const depois = quadroComparacao(l1, { ...l2, pct: 40 }, { base: "validos", ondeNome: "Brasil", status2: "" });
+  assert.ok(depois.includes("lidera") && !depois.includes("Apenas") && depois.includes("Variação parcial")); // com 5% ou mais volta ao normal, ainda parcial
+});

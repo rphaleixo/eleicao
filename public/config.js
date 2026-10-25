@@ -22,11 +22,11 @@ export const CONFIG = {
   atualizarHistoricoACadaSegundos: 30,
 };
 
-// Os gráficos de evolução começam às 17h (Brasília) do dia da eleição, quando o TSE inicia a divulgação.
-export const INICIO_APURACAO = Date.parse(turno === 2 ? "2026-10-25T17:00:00-03:00" : "2026-10-04T17:00:00-03:00");
+// Os gráficos de evolução valem a partir do início do dia da eleição. Nenhum horário de divulgação fica escrito no código: os pontos sem votos são descartados pelos próprios gráficos, e o início real vem dos dados do TSE.
+export const INICIO_APURACAO = Date.parse(turno === 2 ? "2026-10-25T00:00:00-03:00" : "2026-10-04T00:00:00-03:00");
 export const TURNO2 = turno === 2;
-/** Hora em que o TSE começa a divulgar o 2º turno (25/10, 17h de Brasília): antes disso não se pedem os arquivos dele. */
-export const INICIO_APURACAO_T2 = Date.parse("2026-10-25T17:00:00-03:00");
+/** Dia a partir do qual se pedem os arquivos do 2º turno (só a data; não há promessa de horário). Quando a divulgação começou de fato se sabe pelos dados: ao menos uma seção apurada. */
+export const INICIO_APURACAO_T2 = INICIO_DIA_SEGUNDO_TURNO;
 /** Página dos cenários "e se...": no subdomínio ese.* ou em /ese. Só tem a aba de cenários. */
 export const MODO_ESE = typeof location !== "undefined" && (/^ese\./.test(location.hostname) || /^\/ese(\/|\/index\.html)?$/.test(location.pathname));
 /** O 2º turno já começou (a partir de 25/10): só então vale buscar os arquivos dele para consolidar o resultado geral. */

@@ -16,8 +16,8 @@ const ANO = "2026";
 // Códigos da eleição no TSE por turno: um para Presidente (federal) e outro para Governador, Senador e Deputados (estadual).
 const INICIO_DIA_SEGUNDO_TURNO = Date.parse("2026-10-25T00:00:00-03:00");
 const TURNOS = {
-  1: { turno: 1, federal: "6257", estadual: "6259", inicio: Date.parse("2026-10-04T17:00:00-03:00") / 1000, sufixo: "" },
-  2: { turno: 2, federal: "6258", estadual: "6260", inicio: Date.parse("2026-10-25T17:00:00-03:00") / 1000, sufixo: "-t2" }, // histórico do 2º turno em chaves próprias
+  1: { turno: 1, federal: "6257", estadual: "6259", inicio: Date.parse("2026-10-04T00:00:00-03:00") / 1000, sufixo: "" },
+  2: { turno: 2, federal: "6258", estadual: "6260", inicio: Date.parse("2026-10-25T00:00:00-03:00") / 1000, sufixo: "-t2" }, // histórico do 2º turno em chaves próprias; "inicio" é só o começo do dia: os pontos reais (com votos) é que mandam
 };
 /** Turno em curso (a partir de 25/10 é o 2º) ou o pedido em ?turno= (para ver o outro). */
 export const contextoDoTurno = (pedido = null, agora = Date.now()) => TURNOS[pedido === "1" ? 1 : pedido === "2" ? 2 : agora >= INICIO_DIA_SEGUNDO_TURNO ? 2 : 1];

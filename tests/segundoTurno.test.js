@@ -29,7 +29,7 @@ test("turno: 2º a partir de 25/10 (ou pedido), arquivos, chaves e alvos própri
   const t2 = contextoDoTurno(null, Date.parse("2026-10-25T00:01:00-03:00"));
   assert.equal(t2.turno, 2); assert.equal(t2.federal, "6258"); assert.equal(t2.estadual, "6260"); assert.equal(t2.sufixo, "-t2");
   assert.equal(contextoDoTurno("2", 0).turno, 2); assert.equal(contextoDoTurno("1", Date.parse("2026-11-01T00:00:00-03:00")).turno, 1);
-  assert.equal(t2.inicio, Date.parse("2026-10-25T17:00:00-03:00") / 1000);
+  assert.equal(t2.inicio, Date.parse("2026-10-25T00:00:00-03:00") / 1000); // só o começo do dia: nenhum horário de divulgação no código
   const alvos = alvosDoTurno(2);
   assert.equal(alvos.length, 7); assert.ok(alvos.every((a) => a.cargo === "presidente" || a.cargo === "governador")); assert.equal(alvosDoTurno(1).length, 55);
 });

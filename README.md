@@ -39,7 +39,7 @@ Arquivos guardados no repositório (`public/dados/`): `presidente-t1-municipios.
 
 ## Cuidados com o TSE
 
-O TSE bloqueia por 10 minutos IPs com mais de 100 pedidos por segundo ou com muitos erros 404. Por isso o proxy valida os caminhos e o 2º turno só é pedido a partir das 17h (Brasília) de 25/10. Trabalho pesado fica em `tools/`, não no Worker.
+O TSE bloqueia por 10 minutos IPs com mais de 100 pedidos por segundo ou com muitos erros 404. Por isso o proxy valida os caminhos e o 2º turno só é pedido a partir do dia 25/10 (sem horário fixo: o início da divulgação se sabe pelos dados do TSE). Trabalho pesado fica em `tools/`, não no Worker.
 
 ## Scripts
 

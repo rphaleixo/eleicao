@@ -79,11 +79,14 @@ export function barraPresenca(a) {
 }
 
 /** Painel de destaque: anel de progresso, situação e gráfico de presença, tudo num cartão só. */
+export const LIMITE_DADOS_INICIAIS = 5; // abaixo disso (% das seções), os percentuais ainda oscilam muito
+/** Aviso dos primeiros minutos da apuração: poucas seções, números que mudam bastante. */
+export const avisoDadosIniciais = (pctSecoes) => (pctSecoes > 0 && pctSecoes < LIMITE_DADOS_INICIAIS ? `<div class="el-aviso el-aviso--inicial" role="status"><span class="el-aviso__icone" aria-hidden="true">!</span><p>Apenas ${pct(pctSecoes)} das urnas apuradas. Os números iniciais mudam bastante.</p></div>` : "");
 export function heroApuracao({ titulo, subtitulo = "", a, andamento, quando, extra = "", hist, chave, grafico = true, topo = "", origem = "Acompanhamento TSE" }) {
   return `<section class="card hero">${topo}
     <div class="hero-topo">${anel(a.pct)}<div class="hero-info"><h2>${esc(titulo)}</h2>${subtitulo ? `<p class="hero-sub">${esc(subtitulo)}</p>` : ""}${selo(andamento)}
       <p class="hero-sec"><strong>${fmt(a.st)}</strong> de ${fmt(a.ts)} seções</p>${a.eleitores ? `<p class="hero-sec2">${textoAptos(a)}</p>` : ""}${extra}${quando ? `<p class="hero-sub">${esc(origem)}: ${esc(quando)}</p>` : ""}</div></div>
-    ${grafico === null ? "" : `<div class="hero-grafico">${grafico ? graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` }) : barraPresenca(a)}</div>`}</section>`;
+    ${avisoDadosIniciais(a.pct)}${grafico === null ? "" : `<div class="hero-grafico">${grafico ? graficoPresenca({ hist, chave, a, titulo: `Comparecimento e abstenção: ${titulo}` }) : barraPresenca(a)}</div>`}</section>`;
 }
 
 /** Regiões aceitas na navegação. O exterior só existe na eleição presidencial. */

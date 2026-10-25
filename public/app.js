@@ -58,7 +58,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, visaoUfs: "blocos", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "maiorMargem" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { premissas: false, cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { premissas: false, metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, escopoAberto: false, t2Iniciou: false, visaoUfs: "blocos", busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "maiorMargem" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "validos", premissas: false, sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { premissas: false, cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { premissas: false, metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -85,10 +85,18 @@ const gravarHash = () => history.replaceState(null, "", montarRota(estado));
 const permiteMun = () => (estado.aba === "presidente" || (estado.aba === "estados" && ["governador", "senador", "presidente"].includes(estado.cargo))) && estado.uf !== "BR" && estado.uf !== "ZZ";
 
 /** Navegação principal, separada por turno: 1º turno, 2º turno e a comparação entre os dois. */
+/** O 2º turno começou quando o TSE publicar ao menos uma seção apurada dele (nenhum horário fixo). Pergunta uma vez por minuto, só a partir do dia 25/10. */
+async function sondarSegundoTurno() {
+  if (estado.t2Iniciou || Date.now() < INICIO_APURACAO_T2) return;
+  try {
+    const ac = await obterAcompanhamento("presidente", 2);
+    if ((ac?.ufs?.br?.pct ?? 0) > 0 || (ac?.ufs?.br?.st ?? 0) > 0) { estado.t2Iniciou = true; montarModos(); }
+  } catch { /* ainda não publicado: tenta de novo no próximo minuto */ }
+}
 function montarModos() {
   if (MODO_ESE) { $("modos").hidden = true; return; }
   const cmp = estado.aba === "turnos";
-  const comComparar = Date.now() >= INICIO_APURACAO_T2; // Comparar só existe quando os dois turnos têm dados
+  const comComparar = estado.t2Iniciou; // Comparar só existe quando o 2º turno já tem ao menos uma seção apurada (vem dos dados do TSE)
   const b = (modo, nome, data, ativo) => `<button type="button" data-modo="${modo}" aria-pressed="${ativo}">${nome}<small>${data}</small></button>`;
   $("modos").innerHTML = `<div class="el-turnos" role="group" aria-label="Turno da eleição"${comComparar ? "" : ' style="grid-template-columns:1fr 1fr"'}>${b("1", "1º turno", "04/10", !cmp && !TURNO2)}${b("2", "2º turno", "25/10", !cmp && TURNO2)}${comComparar ? b("cmp", "⇄ Comparar", "1º × 2º", cmp) : ""}</div>`;
 }
@@ -994,7 +1002,7 @@ function telaTurnos(v) {
   const nomes = new Map(Object.values(estado.municipios).flat().map((m) => [m.cod, m.nome]));
   const ondeNome = mun ? `${nomes.get(mun) ?? mun}, ${UFS[uf]}` : uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf];
   const t1 = v.a1?.mapa, t2 = v.a2?.final ? v.a2.mapa : vivoT2.size ? vivoT2 : v.a2?.mapa;
-  const status2 = !v.t2aberto ? "O 2º turno começa às 17h (Brasília) e os números dele aparecem aqui sozinhos." : l2 && l2.pct < 100 ? `2º turno em apuração (${pct(l2.pct)} das seções): os números mudam a cada minuto.` : "";
+  const status2 = !(l2 && l2.pct > 0) ? "Aguardando o início da divulgação do TSE: os números do 2º turno aparecem aqui sozinhos." : l2 && l2.pct < 100 ? `2º turno em apuração (${pct(l2.pct)} das seções): os números mudam a cada minuto.` : "";
   const semT2 = !t2 || !t2.size; // enquanto o 2º turno não tem dados por município, o mapa mostra o 1º turno
   const c = semT2 && ct0.medida !== "p1" ? { ...ct0, medida: "p1" } : ct0;
   const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2 });
@@ -1002,7 +1010,7 @@ function telaTurnos(v) {
   if (uf === "ZZ") { // exterior: sem mapa de municípios; lista por país
     const e = v.ext, oficial = e?.e2f ?? (vivoExtT2.size ? vivoExtT2 : null);
     const t2e = oficial ?? e?.bol?.mapa ?? null; // totalização oficial se existir; senão, a soma dos boletins das urnas
-    const aviso = !oficial && e?.bol ? `<p class="muted nota">2º turno parcial, somando os boletins das urnas já recebidas: ${fmt(e.bol.urnasRecebidas)} de ${fmt(e.bol.urnasTotais)} urnas (${pct((e.bol.urnasRecebidas / e.bol.urnasTotais) * 100)}), atualizado às ${new Date(e.bol.geradoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. A totalização oficial do TSE começa às 17h de Brasília.</p>` : "";
+    const aviso = !oficial && e?.bol ? `<p class="muted nota">2º turno parcial, somando os boletins das urnas já recebidas: ${fmt(e.bol.urnasRecebidas)} de ${fmt(e.bol.urnasTotais)} urnas (${pct((e.bol.urnasRecebidas / e.bol.urnasTotais) * 100)}), atualizado às ${new Date(e.bol.geradoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. A totalização oficial do TSE substitui esta soma assim que for publicada.</p>` : "";
     mapa = !e?.e1 || !e.paises ? `<section class="card"><h2>Exterior por país</h2><p class="muted">Os dados do exterior ainda não foram carregados.</p></section>`
       : `<section class="card"><div class="titulo-cadeiras"><h2>Exterior por país</h2><span class="muted">${fmt(new Set(Object.values(e.paises).map((p) => p[1])).size)} países</span></div>
         <p class="muted">O TSE organiza o exterior por cidade (consulados e embaixadas). Aqui as cidades foram agrupadas por país por nós: não é uma classificação oficial. Em cada faixa: % no 1º e no 2º turno e a variação em pontos. Toque no país para ver as cidades.</p>
@@ -1254,9 +1262,9 @@ function render(forcar = false) {
 // ---------- atualização automática (a cada 10 segundos) ----------
 // Cada tela carrega por conta própria: trocar de visão nunca espera uma carga anterior terminar.
 const emVoo = new Set();
-/** 2º turno ainda sem arquivos do TSE (antes das 17h de 25/10): mostra as disputas definidas e avisa quando começa. */
+/** 2º turno ainda sem arquivos do TSE: mostra as disputas definidas e avisa que a tela se atualiza sozinha quando a divulgação começar (sem prometer horário). */
 function telaAguardandoSegundoTurno() {
-  return `<section class="card"><h2>Apuração do 2º turno</h2><p class="muted">O TSE ainda não publicou os resultados do 2º turno. A apuração começa em 25/10/2026, às 17h (Brasília), e esta página passa a mostrar tudo sozinha, atualizando a cada poucos segundos.</p></section>${blocoDisputas()}`;
+  return `<section class="card"><h2>Apuração do 2º turno</h2><p class="muted">Aguardando o início da divulgação do TSE. Assim que o primeiro resultado do 2º turno for publicado, esta página passa a mostrar tudo sozinha, atualizando a cada poucos segundos.</p></section>${blocoDisputas()}`;
 }
 
 // ---------- fim da apuração: sem mais requisições ----------
@@ -1656,4 +1664,6 @@ if (!ufGuardada()) {
 atualizar();
 setInterval(atualizar, CONFIG.atualizarACadaSegundos * 1000);
 setInterval(mostrarStatus, 1000);
+setInterval(sondarSegundoTurno, 60_000);
+sondarSegundoTurno();
 $("status").addEventListener("click", (e) => { if (e.target.closest("[data-reabrir]")) { encerradas.delete(chaveRota()); atualizar(); } }); // busca de novo, uma vez, se a pessoa quiser conferir

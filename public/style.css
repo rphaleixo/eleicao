@@ -988,3 +988,8 @@ dialog.el-gaveta::backdrop { background: rgba(0, 0, 0, .5); }
 .dp-cand strong { white-space: nowrap; } .no-primeiro { display: block; font: 700 11px/14px var(--font-text); letter-spacing: .04em; text-transform: uppercase; color: var(--texto-suave); margin: 0; }
 
 #nav { padding-top: 0; padding-bottom: 0; } #nav .el-escopo-barra { margin-top: 0; }
+
+/* primeiros minutos da apuração: aviso e vantagem sem destaque */
+.el-duelo__vantagem--inicial { --cor: var(--sem-cor); background: var(--trilho); }
+.hero .el-aviso--inicial { margin-top: var(--esp-12); }
+.el-duelo > .el-aviso--inicial { margin: var(--esp-8) var(--esp-12) 0; }

@@ -34,3 +34,12 @@ test("gaveta fechada tem display none (não ocupa espaço nem cobre o conteúdo)
   const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
   assert.ok(/<dialog id="gaveta"[^>]*el-gaveta/.test(html) && !/<dialog id="gaveta"[^>]*\sopen/.test(html));
 });
+
+test("nenhum horário de divulgação fixo no código nem nos textos", () => {
+  for (const f of ["../public/app.js", "../public/config.js", "../worker/index.js", "../public/segundoTurno.js", "../public/comparacaoView.js"]) {
+    const t = fs.readFileSync(new URL(f, import.meta.url), "utf8");
+    assert.ok(!/\b17h\b|T17:00|às 17|17:00:00/.test(t), `${f} cita um horário fixo`);
+  }
+  const hero = fs.readFileSync(new URL("../public/marcha.js", import.meta.url), "utf8");
+  assert.ok(hero.includes("avisoDadosIniciais") && hero.includes("Os números iniciais mudam bastante"));
+});
