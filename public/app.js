@@ -37,6 +37,7 @@ import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO, INICIO_APURACAO_T2 } from "./config.js";
 import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
 import { menuLateral, barraInferior } from "./navegacao.js";
+import { regrasDaTela, TEXTO_BASE, baseAtual } from "./regras.js";
 import { htmlBusca, buscarCidades, buscarCandidatos, maisProxima, acharCidade } from "./busca.js";
 import { lerTema, aplicarTema, escolherTema, controleTema } from "./tema.js";
 import {
@@ -976,6 +977,7 @@ function listaDeputadosEleitos(estados, ufs, f) {
 /** Aba Comparar turnos: Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno, por país, estado ou município, em quadro e mapa. */
 function telaTurnos(v) {
   const ct0 = estado.ct, { uf, mun } = estado;
+  ct0.base = estado.base === "totais" ? "aptos" : "validos"; // a base vale para o app inteiro (gaveta Como calcular)
   if (ct0.base !== "aptos" && ct0.linha === "naovoto") ct0.linha = "lula"; // o não voto só existe na base Eleitores aptos
   if (ct0.base !== "aptos" && ct0.ordemPais.endsWith(":naovoto")) ct0.ordemPais = "aptos";
   const l1 = linhaDeResultado(v.d1);
@@ -1235,7 +1237,8 @@ function render(forcar = false) {
   const tela = { andamento: (v) => telaMarcha(v, estado, false), estados: telaEstados, presidente: telaPresidente, "cargo-por-estado": telaCargoPorEstado, "nacional-prop": telaNacionalProp, partidos: telaPartidos, cenarios: telaCenarios, geo: telaGeo, nulos: telaNulos, turnos: telaTurnos }[v.tipo];
   renderNavegacao(v);
   const html = estado.avisoRota ? avisoRotaSemTurno() : tela(v);
-  $("conteudo").innerHTML = String(html ?? "").replace(/<[^>]*>|\s/g, "") ? html : vazioDaTela();
+  const corpoTela = String(html ?? "").replace(/<[^>]*>|\s/g, "") ? html : vazioDaTela();
+  $("conteudo").innerHTML = (estado.avisoRota ? "" : botaoBase()) + corpoTela;
   reaplicarGraficos($("conteudo"));
   reaplicarZoom($("conteudo"));
   ajustarContrasteChips($("conteudo"));
@@ -1301,36 +1304,51 @@ async function carregarMunicipios() {
 
 // ---------- base dos percentuais (votos válidos x votos totais) ----------
 /** Turno, base dos percentuais e "sem sub judice" só aparecem nas abas em que mudam alguma coisa. */
-function montarBase() {
-  const b = estado.base, aba = estado.aba;
-  const semTudo = aba === "geo" || aba === "nulos" || aba === "turnos"; // mapas de abstenção e nulos não dependem de turno, base nem sub judice
-  const semBase = semTudo || aba === "cenarios";
-  const sj = aba === "cenarios" || b === "validos";
-  const caixa = $("calculo"), aberto = caixa.querySelector("details")?.open ?? false; // o painel não fecha sozinho quando a tela se refaz
-  caixa.hidden = semTudo || (semBase && !sj);
-  if (caixa.hidden) { caixa.innerHTML = ""; return; }
-  const chave = `<button type="button" class="el-chave" role="switch" data-sj aria-checked="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><span class="el-chave__trilho"></span>Sem sub judice<span class="el-chave__estado">${estado.semSJ ? "Ligado" : "Desligado"}</span></button>`;
-  caixa.innerHTML = `<details class="el-painel"${aberto ? " open" : ""}><summary>Como calcular</summary><div class="el-painel__corpo">
-    ${semBase ? "" : `<div class="el-visao" role="group" aria-label="Base dos percentuais"><button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Eleitores aptos</button></div>`}
-    ${!semBase && b === "totais" ? `<p class="el-apoio">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}
-    ${sj ? chave : ""}
-    ${sj && estado.semSJ ? `<p class="el-apoio">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
-  </div></details>`;
+/** O botão da base ativa, logo abaixo do título de cada tela: a premissa nunca fica escondida e abre a gaveta. */
+function botaoBase() {
+  const [rotulo, valor] = baseAtual(estado.aba, estado.base);
+  return `<button type="button" class="el-base-atual" data-gaveta aria-haspopup="dialog">${rotulo}${valor ? ` <b>${valor}</b>` : ""} · ${estado.aba === "geo" || estado.aba === "nulos" ? "como calcular" : "alterar"}</button>`;
 }
-$("calculo").addEventListener("click", (e) => {
-  const tn = e.target.closest("[data-turno]");
-  if (tn) { // o turno muda os arquivos do TSE: recarrega a página com ?turno=, mantendo o endereço atual
-    if (Number(tn.dataset.turno) === (TURNO2 ? 2 : 1)) return;
-    const u = new URL(location.href); u.searchParams.set("turno", tn.dataset.turno); location.href = u.toString(); return;
-  }
-  if (e.target.closest("[data-sj]")) { estado.semSJ = !estado.semSJ; montarBase(); render(true); return; }
+
+/** Gaveta "Como calcular": base dos percentuais, opções, regras da tela de onde foi aberta e a fonte. Abre pela direita (desktop) ou pela base (celular). */
+let gavetaOrigem = null;
+function montarBase() { if ($("gaveta").open) desenharGaveta(); }
+function desenharGaveta() {
+  const b = estado.base, aba = estado.aba, { titulo, texto } = regrasDaTela(aba, estado.cargo);
+  const semBase = aba === "geo" || aba === "nulos" || aba === "cenarios"; // nestas telas a base não muda a conta
+  const sj = aba !== "geo" && aba !== "nulos" && (aba === "cenarios" || b === "validos");
+  const chave = `<button type="button" class="el-chave" role="switch" data-sj aria-checked="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><span class="el-chave__trilho"></span>Sem votos sub judice<span class="el-chave__estado">${estado.semSJ ? "Ligado" : "Desligado"}</span></button>`;
+  $("gaveta").innerHTML = `<div class="el-gaveta__cab"><h2 id="gaveta-titulo">Como calcular</h2><button type="button" class="el-gaveta__fechar" data-gaveta-fechar aria-label="Fechar">×</button></div>
+    <div class="el-gaveta__corpo">
+      <div><h3>Base dos percentuais</h3>${semBase ? "" : `<div class="el-visao" role="group" aria-label="Base dos percentuais" style="margin-top:8px"><button type="button" data-base="validos" aria-pressed="${b === "validos"}">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}">Eleitores aptos</button></div>`}<p class="el-apoio">${semBase ? (aba === "cenarios" ? "Os cenários usam os votos válidos de cada estado para as cadeiras; a base dos percentuais não muda a conta." : "Esta tela mede sempre sobre os eleitores aptos.") : TEXTO_BASE[b]}</p></div>
+      ${sj ? `<div><h3>Opções</h3>${chave}${estado.semSJ ? `<p class="el-apoio">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados; não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}</div>` : ""}
+      <div><h3>Nesta tela · ${esc(titulo)}</h3><p class="el-apoio" style="margin:0" data-gaveta-regras>${esc(texto)}</p></div>
+      <div><h3>Fonte</h3><p class="el-apoio" style="margin:0">Arquivos de divulgação de resultados do TSE (resultados.tse.jus.br). Site independente, sem vínculo com o TSE: os números só são oficiais no site do TSE.</p></div>
+    </div>`;
+}
+function abrirGaveta(origem) {
+  gavetaOrigem = origem ?? null;
+  if ($("folha-mais").open) $("folha-mais").close();
+  desenharGaveta();
+  if (!$("gaveta").open) $("gaveta").showModal();
+  $("gaveta").querySelector("[data-gaveta-fechar]").focus();
+  document.querySelectorAll("[data-gaveta]").forEach((x) => x.setAttribute("aria-expanded", String(x.closest("#menu, #folha-mais") !== null)));
+}
+$("gaveta").addEventListener("close", () => {
+  document.querySelectorAll("[data-gaveta]").forEach((x) => x.setAttribute("aria-expanded", "false"));
+  const volta = gavetaOrigem?.isConnected ? gavetaOrigem : document.querySelector("#menu [data-gaveta]") ?? document.querySelector(".el-base-atual");
+  volta?.focus();
+});
+$("gaveta").addEventListener("click", (e) => {
+  if (e.target === $("gaveta") || e.target.closest("[data-gaveta-fechar]")) { $("gaveta").close(); return; } // toque no fundo ou no ×
+  if (e.target.closest("[data-sj]")) { estado.semSJ = !estado.semSJ; desenharGaveta(); render(true); return; }
   const bt = e.target.closest("[data-base]");
   if (!bt || bt.dataset.base === estado.base) return;
-  estado.base = bt.dataset.base;
+  estado.base = bt.dataset.base; // os ids internos (validos e totais) continuam os mesmos: links e valores guardados seguem valendo
   try { localStorage.setItem("base", estado.base); } catch { /* sem armazenamento: vale só nesta visita */ }
-  montarBase(); render(true);
+  desenharGaveta(); render(true);
 });
-montarBase();
+document.addEventListener("click", (e) => { const g = e.target.closest("[data-gaveta]"); if (g) { e.preventDefault(); abrirGaveta(g); } });
 
 // ---------- eventos ----------
 /** Carrossel: o indicador "n de N" acompanha o cartão que está encostado à esquerda. */
@@ -1547,7 +1565,7 @@ $("conteudo").addEventListener("click", (e) => {
   if (ct) {
     const c = estado.ct, d = ct.dataset;
     if (d.ctAbrir) { const [u, cod] = d.ctAbrir.split("/"); c.sel = ""; navegar({ uf: u, mun: cod || "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
-    if (d.ctLinha) c.linha = d.ctLinha; else if (d.ctMedida) c.medida = d.ctMedida; else if (d.ctBase) c.base = d.ctBase; else if (d.ctDir) c.dir = d.ctDir;
+    if (d.ctLinha) c.linha = d.ctLinha; else if (d.ctMedida) c.medida = d.ctMedida; else if (d.ctBase) { estado.base = d.ctBase === "aptos" ? "totais" : "validos"; try { localStorage.setItem("base", estado.base); } catch { /* sem armazenamento */ } } else if (d.ctDir) c.dir = d.ctDir;
     else if (d.ctIbge) { c.sel = c.sel === d.ctIbge ? "" : d.ctIbge; if (ct.matches("tr")) document.querySelector(".mapa-area-geo")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
     render(true); return;
   }

@@ -955,3 +955,13 @@ body { padding-bottom: 72px; }
 .el-carrossel__pos { margin-top: 2px; line-height: 14px; } .nota-estado { margin-top: 2px; }
 /* Comparar turnos: a tabela "Maiores e menores" cabe no celular (a coluna Eleitores sai abaixo de 480px) */
 @media (max-width: 480px) { .geo-rank th:nth-child(3), .geo-rank td:nth-child(3) { display: none; } }
+
+/* gaveta "Como calcular": pela direita no desktop (420px), pela base no celular (até 85% da altura) */
+dialog.el-gaveta { margin: 0; padding: 0; border: 0; color: var(--texto); }
+dialog.el-gaveta::backdrop { background: rgba(0, 0, 0, .5); }
+@media (max-width: 1023px) { dialog.el-gaveta { width: 100%; max-width: none; inset: auto 0 0 0; max-height: 85vh; } }
+@media (min-width: 1024px) { dialog.el-gaveta { inset: 0 0 0 auto; height: 100%; max-height: none; } }
+.el-gaveta__corpo h3 { margin: 0; }
+.el-base-atual { margin: var(--esp-14) 0 0; min-height: 44px; } /* alvo de toque de 44px, ainda que o desenho seja discreto */
+.folha-sobre { margin-top: var(--esp-12); width: 100%; min-height: 44px; border: 2px solid var(--texto); background: var(--cartao); color: var(--texto); font: 700 14px/20px var(--font-text); cursor: pointer; }
+.el-menu__sobre button:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
