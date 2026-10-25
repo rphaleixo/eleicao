@@ -54,7 +54,7 @@ const TODAS_ABAS = [
   { id: "turnos", nome: "Comparar turnos" },
 ];
 
-// No 2º turno só há Presidente e o governo de sete estados: sem Senado nem deputados.
+// No 2º turno só há Presidente e o governo de seis estados: sem Senado nem deputados.
 export const ABAS = MODO_ESE ? TODAS_ABAS.filter((a) => a.id === "cenarios") : TURNO2 ? TODAS_ABAS.filter((a) => ["andamento", "presidente", "governadores", "partidos", "cenarios", "estados", "turnos"].includes(a.id)) : TODAS_ABAS;
 
 export const UFS = {
@@ -74,5 +74,5 @@ export const VAGAS_FEDERAIS = {
   RS: 31, RO: 8, RR: 8, SC: 16, SP: 70, SE: 8, TO: 8,
 };
 
-// Estados que elegem governador neste turno (no 2º turno, só os sete com disputa definida em 04/10/2026).
+// Estados que elegem governador neste turno (no 2º turno, só os seis com disputa definida em 04/10/2026).
 export const UFS_GOV = TURNO2 ? UFS_GOVERNO_SEGUNDO_TURNO : Object.keys(UFS);

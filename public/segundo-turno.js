@@ -1,5 +1,5 @@
 // Disputas definidas para o 2º turno (25/10/2026), conforme o resultado do 1º turno em 04/10/2026.
-// Só estas eleições têm 2º turno: Presidente e o governo de sete estados. Não há 2º turno para Senado nem deputados.
+// Só estas eleições têm 2º turno: Presidente e o governo de seis estados. Não há 2º turno para Senado nem deputados.
 // Percentuais do 1º turno: votos no candidato ÷ votos válidos mais anulados sub judice (base do TSE).
 export const DATA_SEGUNDO_TURNO = "2026-10-25";
 export const DISPUTAS_SEGUNDO_TURNO = [
@@ -115,29 +115,6 @@ export const DISPUTAS_SEGUNDO_TURNO = [
         "partido": "MDB",
         "votos": 719397,
         "pct": 34.06
-      }
-    ]
-  },
-  {
-    "cargo": "governador",
-    "uf": "RJ",
-    "pctApurado": 100,
-    "candidatos": [
-      {
-        "id": "190002542887",
-        "numero": "22",
-        "nome": "DOUGLAS RUAS",
-        "partido": "PL",
-        "votos": 4271199,
-        "pct": 49.27
-      },
-      {
-        "id": "190002543380",
-        "numero": "55",
-        "nome": "EDUARDO PAES",
-        "partido": "PSD",
-        "votos": 3706984,
-        "pct": 42.76
       }
     ]
   },
