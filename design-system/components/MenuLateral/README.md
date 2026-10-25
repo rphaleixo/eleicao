@@ -7,4 +7,6 @@ O consumidor fornece: a lista de áreas, a área atual, e uma contagem opcional 
 - A área atual leva uma barra de 5px em `acento` à esquerda, fundo `trilho` e texto em `texto`; não depende só da cor.
 - Numeração (01, 02…) por contador CSS, em `num`; nome em Bebas Neue; linhas de 48px com filete.
 - Rola sozinho se a lista passar da altura da janela; o rodapé mostra a fonte dos dados.
-- Ordem sugerida: Presidente, Governadores, Senadores, Deputados, Partidos, Cenários, Geografia, Nulos.
+- Dez áreas em quatro grupos, numeradas em sequência (01 a 10): Acompanhar (Apuração, a Marcha da apuração); Cargos (Presidente, Governadores, Senadores, Deputados); Estado (Meu estado, a antiga aba Estados); Análises (Partidos, Cenários, Geografia, Nulos). "E se…" passa a se chamar Cenários.
+- No 2º turno só aparecem as áreas que existem: Apuração, Presidente, Governadores (seis estados), Meu estado, Partidos, Cenários, Geografia e Nulos; Senadores e Deputados somem.
+- Comparar turnos não fica no menu: é o terceiro botão do seletor de turno (1º turno, 2º turno, Comparar) no alto da página, em todas as telas.

@@ -10,3 +10,5 @@ O consumidor fornece: a medida de cada município, o modo (taxa, pessoas, acima 
 - Zoom por botões de 44px (+, −, ajustar) e arrasto; o mapa não reage a rolagem da página no celular.
 - O contorno de 6 unidades em `texto-suave` marca o estado; o município selecionado ganha contorno em `texto`.
 - A prévia usa municípios ilustrativos (diagrama de Voronoi) sobre o contorno real do estado.
+
+Receita das telas Geografia e Nulos (rodada 8). Geografia (mapa nacional de abstenção, brancos, nulos e o não voto, com métricas combináveis e ponderação): as métricas são filtros em caixa marcada (`Abas` com `el-abas--filtro`), a ponderação por eleitores é uma `Chave`, e tudo isso fica num `Painel` "Ajustar mapa" fechado por padrão, acima do mapa. O mapa ocupa a largura toda, com zoom e a dica ao tocar. Nulos (números digitados, hoje só no RJ): o ranking dos números em `Nulos` e o mapa navegável de locais de votação, com zoom, abaixo do ranking; o estado sem coleta mostra "Ainda não coletado" com o selo Aguardando.

@@ -54,13 +54,23 @@ Etapa 7, só se o Aleixo pedir: dividir o `app.js` em módulos e atualizar só o
 - O HTML das telas é trocado inteiro a cada atualização. Qualquer componente com estado (painel aberto, chave, campo digitado, rolagem de lista) precisa sobreviver a isso: o código já preserva a rolagem das faixas e não redesenha com um campo em foco; mantenha e estenda esse cuidado.
 - Cores de partido muito escuras (PL, UP) têm pouco contraste como preenchimento de barra no tema escuro; o design system usa contorno branco e marcador em ladrilho. Siga os componentes e não troque por cor lisa.
 - O lado A e o lado B de uma disputa usam azul e laranja (seguros para daltonismo) por padrão, ou as cores dos partidos com marcadores ▲ e ●. Não use vermelho contra verde.
-- No 2º turno só há Presidente e sete governos; Senado e deputados não aparecem. A navegação nova deve esconder, não deixar item morto.
+- No 2º turno só há Presidente e seis governos (AC, AM, DF, ES, RN e TO; o RJ elegeu governador no 1º turno); Senado e deputados não aparecem. A navegação nova deve esconder, não deixar item morto.
 - Mapas: o desenho dos estados vem de `mapa-brasil.js` (já usado no `MapaBrasil`). Os municípios do `MapaMunicipio` vêm do `/api/malha`; as prévias usam municípios ilustrativos, não dados reais.
 - Texto: títulos em maiúsculas só nos rótulos de seção (Bebas Neue); corpo sem negrito corrido, negrito só em títulos e destaques curtos. Português do Brasil, números com ponto de milhar e vírgula decimal.
 
+## 4b. Decisões de navegação (rodada 8)
+
+As dez áreas do app, na ordem do menu lateral, em quatro grupos: Acompanhar (Apuração, a Marcha); Cargos (Presidente, Governadores, Senadores, Deputados); Estado (Meu estado, a antiga aba Estados); Análises (Partidos, Cenários, Geografia, Nulos). "E se…" passa a se chamar Cenários; "Dep. Federal" passa a Deputado Federal. Comparar turnos não é uma área: é o terceiro botão do seletor de turno (1º turno, 2º turno, Comparar), no alto de todas as telas.
+
+Barra inferior do celular, cinco destinos: Apuração, Presidente, Governadores, Meu estado e Mais (Senadores, Deputados, Partidos, Cenários, Geografia, Nulos). No 1º turno, troque Governadores por Deputados na barra. Áreas que não existem no turno não aparecem.
+
+O orçamento de altura de 140px inclui a linha de escopo recolhida de 46px: topo 48 + turno e escopo 44 + escopo 46 = 138px. O seletor de estado e região é o `FiltroRegiao` em escopo recolhido, que abre o `SeletorEstado` e as setas de vizinhos.
+
+As telas Geografia, Nulos e Comparar turnos são montadas com as peças existentes, conforme as receitas nos README de `MapaMunicipio` e `Comparacao`; os controles do mapa vão num `Painel` "Ajustar mapa", fechado por padrão.
+
 ## 5. Conferência ao fim de cada etapa
 
-1. `npm test` passa.
+1. `npm test` passa (o `package.json` do repositório define `node --test`).
 2. Abrir nas larguras 360, 390, 768 e 1280px, nos temas claro e escuro, sem rolagem horizontal da página.
 3. Percorrer a tela só com teclado: foco visível, ordem lógica.
 4. Conferir em cada tela o 1º e o 2º turno e uma apuração em andamento e uma encerrada.

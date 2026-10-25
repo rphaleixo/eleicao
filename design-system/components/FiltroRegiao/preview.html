@@ -1,7 +1,9 @@
-<!-- @dsCard group="Navegação" height=420 subtitle="Escopo, região, estado e situação" -->
+<!-- @dsCard group="Navegação" height=640 subtitle="Escopo, região, estado e situação" -->
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0"><div class="el-palco">
-<nav class="el-escopo" aria-label="Escopo"><a href="#">Brasil</a><i>›</i><a href="#">Sudeste</a><i>›</i><b>Rio de Janeiro</b></nav>
+<button class="el-escopo-barra" aria-expanded="false"><small>Escopo</small>Brasil › Sudeste › Rio de Janeiro</button>
+<div><button class="el-escopo-barra" aria-expanded="true"><small>Escopo</small>Brasil › Sudeste</button><div class="el-escopo-painel">
+<div class="el-vizinhos" role="group" aria-label="Trocar de estado"><button aria-label="Estado anterior: Minas Gerais">‹</button><span class="el-vizinhos__atual">RJ · Rio de Janeiro</span><button aria-label="Próximo estado: São Paulo">›</button></div>
 <div class="el-abas el-abas--placar" role="group" aria-label="Região"><button class="el-aba" aria-pressed="true"><small>27</small>Todas</button><button class="el-aba" aria-pressed="false"><small>7</small>Norte</button><button class="el-aba" aria-pressed="false"><small>9</small>Nordeste</button><button class="el-aba" aria-pressed="false"><small>4</small>Centro-Oeste</button><button class="el-aba" aria-pressed="false"><small>4</small>Sudeste</button><button class="el-aba" aria-pressed="false"><small>3</small>Sul</button></div>
 <div class="el-campos"><label class="el-campo">Estado<select><option>Todos</option><option>Rio de Janeiro</option></select></label><label class="el-campo">Situação<select><option>Todas</option><option>Em apuração</option><option>Definidos</option></select></label></div>
 <div class="el-abas el-abas--filtro" role="group" aria-label="Ordem"><button class="el-aba" aria-pressed="true">Mais apurados</button><button class="el-aba" aria-pressed="false">Ordem alfabética</button></div>
-</div></body></html>
+</div></div></body></html>
