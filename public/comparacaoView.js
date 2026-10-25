@@ -50,7 +50,7 @@ export function parteNaoVoto(l, chave) {
   if (!separado) return null;
   return { v: l[chave] || 0, p: ((l[chave] || 0) / l.aptos) * 100 };
 }
-const botaoDetalheNaoVoto = (aberto) => `<button type="button" class="el-detalhe-btn" data-ct-nv aria-expanded="${aberto}" aria-controls="ct-nv-detalhe" aria-label="Detalhar o não voto em abstenções, brancos e nulos">detalhar</button>`;
+const botaoDetalheNaoVoto = (aberto) => `<button type="button" class="el-detalhe-btn" data-ct-nv aria-expanded="${aberto}" aria-controls="ct-nv-detalhe" aria-label="Detalhar o não voto em abstenções, brancos e nulos"></button>`;
 function sublinhasNaoVoto(l1, l2, aberto) {
   const votos = (v) => `<span class="el-duelo__votos"><br>${v == null ? "" : fmt(v)}</span>`;
   const celula = (x) => (x == null ? `<span class="el-duelo__sem">—</span>${votos(null)}` : `${pct(x.p)}${votos(x.v)}`);
