@@ -116,7 +116,7 @@ export function agruparPorPais(t1, t2, paises) {
   }
   return [...mapa.values()].map((g) => ({
     ...g, l1: somarLinhas(g.cidades.map((c) => c.l1)), l2: somarLinhas(g.cidades.map((c) => c.l2)),
-    parcial2: g.cidades.some((c) => c.l1 && !c.l2) && g.cidades.some((c) => c.l2), // só parte das cidades do país já tem o 2º turno
+    parcial2: (g.cidades.some((c) => c.l1 && !c.l2) && g.cidades.some((c) => c.l2)) || g.cidades.some((c) => c.l2 && c.l2.pct < 100), // só parte das cidades (ou das urnas de uma cidade) já tem o 2º turno
   })).filter((g) => g.l1);
 }
 

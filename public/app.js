@@ -4,7 +4,7 @@ import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartido
 import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
 import { lerAbUf, montarLinhas, calcular, classesDeCor, CARGOS_GEO } from "./geo.js";
 import { ligarZoom, reaplicarZoom } from "./zoomMapa.js";
-import { linhaDeResultado, linhaDeArquivo, linhaDeExterior, agruparPorPais, valorDoMapa, classesDoMapa, extremos, LINHAS, MEDIDAS } from "./comparacao.js";
+import { linhaDeResultado, linhaDeArquivo, linhaDeExterior, agruparPorPais, somarLinhas, valorDoMapa, classesDoMapa, extremos, LINHAS, MEDIDAS } from "./comparacao.js";
 import { exteriorPorPais, controlesComparacao, quadroComparacao, barrasComposicao, mapaComparacao, legendaComparacao, fichaComparacao, tabelaExtremos } from "./comparacaoView.js";
 import { rankingNumeros, pontosDoMapa, zonasEmDestaque, CARGOS_NULOS } from "./nulos.js";
 import { controlesNulos, resumoNulos, rankingNulos, mapaNulos, legendaNulos, fichaNulos, tabelaZonas } from "./nulosView.js";
@@ -217,6 +217,15 @@ function tabelaDePaises() {
   paisesDoExterior ??= fetch("/dados/exterior-paises.json").then(async (r) => (r.ok ? (await r.json()).localidades : null)).catch(() => null);
   return paisesDoExterior;
 }
+/** Exterior no 2º turno antes da totalização oficial: soma dos boletins das urnas, gerada por tools/coletar-exterior-boletins.mjs (atualizada a cada poucos minutos). */
+async function boletinsExteriorT2() {
+  try {
+    const r = await fetch(`/dados/presidente-t2-exterior-boletins.json?v=${Math.floor(Date.now() / 120_000)}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return { geradoEm: j.geradoEm, urnasRecebidas: j.urnasRecebidas, urnasTotais: j.urnasTotais, mapa: new Map(Object.entries(j.localidades).map(([cod, a]) => [cod, { ...linhaDeExterior(a), nome: a[0] }])) };
+  } catch { return null; }
+}
 let emVooExt = false;
 /** 2º turno no exterior ao vivo: um arquivo por cidade (186). Só começa quando o exterior já tem seções apuradas e para se várias seguidas ainda não tiverem arquivo. */
 async function atualizarExteriorT2(pctExterior) {
@@ -366,7 +375,7 @@ async function carregarView(rota) {
     const buscar = async (t) => { if (t === 2 && !t2aberto) return null; try { return await obter("presidente", uf, uf === "BR" || uf === "ZZ" ? undefined : mun || undefined, t); } catch { return null; } };
     const [d1, d2, malha, a1, a2, ac2] = await Promise.all([buscar(1), buscar(2), obterMalha("BR"), arquivoMunicipios(1), arquivoMunicipios(2), t2aberto ? obterAcompanhamento("presidente", 2).catch(() => null) : null]);
     if (t2aberto && !a2?.final) emSegundoPlano("t2-municipios", 60_000, () => atualizarMunicipiosT2(ac2?.ufs?.br?.pct ?? 0)); // enquanto o arquivo final não existe, os municípios do 2º turno vêm um a um
-    const ext = uf === "ZZ" ? { e1: await arquivoExterior(1), e2f: t2aberto ? await arquivoExterior(2) : null, paises: await tabelaDePaises() } : null;
+    const ext = uf === "ZZ" ? { e1: await arquivoExterior(1), e2f: t2aberto ? await arquivoExterior(2) : null, paises: await tabelaDePaises(), bol: await boletinsExteriorT2() } : null;
     if (uf === "ZZ" && t2aberto && !ext.e2f) emSegundoPlano("t2-exterior", 60_000, () => atualizarExteriorT2(ac2?.ufs?.zz?.pct ?? 0));
     return { tipo: "turnos", uf, mun, d1, d2, malha, a1, a2, t2aberto, ext };
   }
@@ -935,7 +944,10 @@ function listaDeputadosEleitos(estados, ufs, f) {
 /** Aba Comparar turnos: Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno, por país, estado ou município, em quadro e mapa. */
 function telaTurnos(v) {
   const ct0 = estado.ct, { uf, mun } = estado;
-  const l1 = linhaDeResultado(v.d1), l2 = linhaDeResultado(v.d2);
+  const l1 = linhaDeResultado(v.d1);
+  let l2 = linhaDeResultado(v.d2);
+  const bol = uf === "ZZ" && (!l2 || !(l2.pct > 0)) ? v.ext?.bol : null; // exterior antes da totalização oficial: soma dos boletins das urnas
+  if (bol?.mapa.size) l2 = { ...somarLinhas([...bol.mapa.values()]), pct: +((bol.urnasRecebidas / bol.urnasTotais) * 100).toFixed(2) };
   const municipios = estado.municipios[uf] ?? [];
   const nomes = new Map(Object.values(estado.municipios).flat().map((m) => [m.cod, m.nome]));
   const ondeNome = mun ? `${nomes.get(mun) ?? mun}, ${UFS[uf]}` : uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[uf];
@@ -946,11 +958,13 @@ function telaTurnos(v) {
   const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2 });
   let mapa = "";
   if (uf === "ZZ") { // exterior: sem mapa de municípios; lista por país
-    const e = v.ext, t2e = e?.e2f ?? (vivoExtT2.size ? vivoExtT2 : null);
+    const e = v.ext, oficial = e?.e2f ?? (vivoExtT2.size ? vivoExtT2 : null);
+    const t2e = oficial ?? e?.bol?.mapa ?? null; // totalização oficial se existir; senão, a soma dos boletins das urnas
+    const aviso = !oficial && e?.bol ? `<p class="muted nota">2º turno parcial, somando os boletins das urnas já recebidas: ${fmt(e.bol.urnasRecebidas)} de ${fmt(e.bol.urnasTotais)} urnas (${pct((e.bol.urnasRecebidas / e.bol.urnasTotais) * 100)}), atualizado às ${new Date(e.bol.geradoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. A totalização oficial do TSE começa às 17h de Brasília.</p>` : "";
     mapa = !e?.e1 || !e.paises ? `<section class="card"><h2>Exterior por país</h2><p class="muted">Os dados do exterior ainda não foram carregados.</p></section>`
       : `<section class="card"><div class="titulo-cadeiras"><h2>Exterior por país</h2><span class="muted">${fmt(new Set(Object.values(e.paises).map((p) => p[1])).size)} países</span></div>
         <p class="muted">O TSE organiza o exterior por cidade (consulados e embaixadas). Aqui as cidades foram agrupadas por país por nós: não é uma classificação oficial. Em cada faixa: % no 1º e no 2º turno e a variação em pontos. Toque no país para ver as cidades.</p>
-        ${exteriorPorPais(agruparPorPais(e.e1, t2e, e.paises), { base: ct0.base, ordem: ct0.ordemPais, abertos: ct0.paisesAbertos, limite: ct0.maisPaises })}</section>`;
+        ${aviso}${exteriorPorPais(agruparPorPais(e.e1, t2e, e.paises), { base: ct0.base, ordem: ct0.ordemPais, abertos: ct0.paisesAbertos, limite: ct0.maisPaises })}</section>`;
   } else if (!t1) mapa = `<section class="card"><h2>Mapa por município</h2><p class="muted">O arquivo do 1º turno por município ainda não foi gerado.</p></section>`;
   else {
     const itens = [...t1.values()].filter((r1) => uf === "BR" || uf === "ZZ" || r1.uf === uf).map((r1) => {
