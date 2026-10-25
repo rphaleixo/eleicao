@@ -8,7 +8,7 @@ import { urlFoto } from "./tse.js";
 import { seloSit, classeSit, seloEleicao, situacaoEleicao } from "./situacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const TEXTO = { n: "Não iniciada", p: "Em andamento", f: "Finalizada" };
+const TEXTO = { n: "Aguardando dados", p: "Em apuração", f: "Finalizada" };
 export const nomeLocal = (uf) => (uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 
 /** Abstenção (%) das seções já apuradas, a partir do arquivo de acompanhamento do estado. */

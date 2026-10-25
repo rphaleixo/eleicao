@@ -21,7 +21,7 @@ export const REGIOES = {
   sul: { sigla: "S", nome: "Sul", ufs: ["PR", "RS", "SC"] },
 };
 export const nomeEstado = (uf) => (uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
-const TEXTO_SITUACAO = { n: "Não iniciada", p: "Em andamento", f: "Finalizada" };
+const TEXTO_SITUACAO = { n: "Aguardando dados", p: "Em apuração", f: "Finalizada" };
 
 /** Soma as seções e o eleitorado de vários estados (ou usa o próprio estado). */
 export function agregar(itens) {
