@@ -16,3 +16,5 @@ Rodada 9: o Placar agora é chapado (cor sólida de `destaque-a`, sem gradiente 
 
 
 Regra de base dos percentuais (vale para todo o sistema): votos válidos são os votos dados a candidatos e legendas. Brancos, nulos e abstenções ficam de fora do denominador. Os percentuais por candidato sobre votos válidos somam 100%. "Não voto" é a soma de abstenções, brancos e nulos; aparece só como barra à parte ou na base "Eleitores aptos" (comparecimento), nunca dentro do cálculo de votos válidos. O seletor de base tem dois valores: Votos válidos e Eleitores aptos. Se a fonte do TSE trouxer um campo de votos válidos que já inclua brancos, não use: recalcule somando candidatos e legendas.
+
+- A marca de 50% também vale para qualquer outra barra de dois lados do sistema (classe `el-composicao--meta`, ver `Comparacao`).
