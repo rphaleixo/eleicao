@@ -37,6 +37,7 @@ import { abrirFicha, iniciarFicha } from "./candidato.js";
 import { CONFIG, CARGOS, ABAS, UFS, UFS_GOV, TURNO2, MODO_ESE, SEGUNDO_TURNO_ABERTO, INICIO_APURACAO, INICIO_APURACAO_T2 } from "./config.js";
 import { UFS_GOVERNO_SEGUNDO_TURNO } from "./segundo-turno.js";
 import { menuLateral, barraInferior } from "./navegacao.js";
+import { htmlBusca, buscarCidades, buscarCandidatos, maisProxima, acharCidade } from "./busca.js";
 import { lerTema, aplicarTema, escolherTema, controleTema } from "./tema.js";
 import {
   urlsResultado, urlMunicipios, urlAcompanhamento, urlAndamentoUf, urlHistorico, urlEventos, urlResultadosGovernador, urlResultadosPresidente, urlFoto,
@@ -98,6 +99,7 @@ $("modos").addEventListener("click", (e) => {
 });
 
 function montarControles() {
+  document.body.dataset.aba = estado.aba;
   const tira = $("abas");
   tira.hidden = true; // as áreas ficam no menu lateral (desktop) e na barra inferior (celular); a aba "Comparar" é o terceiro botão do turno
   montarModos();
@@ -106,8 +108,8 @@ function montarControles() {
   const { barra, folha } = barraInferior(area, atual, TURNO2);
   $("barra-inf").innerHTML = barra;
   $("folha-mais").innerHTML = folha;
-  document.querySelector(".filtros").hidden = !permiteMun(); // estado e região são escolhidos na navegação do topo; sobra só o município
-  $("lbl-mun").hidden = !permiteMun();
+  document.querySelector(".filtros").hidden = true; // a cidade se escolhe na busca única (lupa no topo), não numa lista de 5.570 nomes
+  $("lbl-mun").hidden = true;
   const lista = estado.municipios[estado.uf] || [];
   $("mun").innerHTML = `<option value="">Todo o estado</option>` + lista.map((m) => `<option value="${m.cod}">${esc(m.nome)}</option>`).join("");
   $("mun").value = estado.mun;
@@ -365,7 +367,7 @@ async function carregarView(rota) {
       carregarVotosMunicipais({ cargo: cargoMapa, uf, municipios, buscar: (c, u, cod) => obter(c, u, cod), aoProgresso: () => { if (chave === chaveRota()) render(); } });
       return { ...base, malha: await obterMalha(uf).catch((err) => ({ erro: err.message })), cargoMapa };
     }
-    if (cargo === "resumo") return { ...base, detalhe: emSegundoPlano("detx-" + uf, 9000, () => detalhesEstado(uf, true)) ?? {} };
+    if (cargo === "resumo") return { ...base, detalhe: emSegundoPlano("detx-" + uf, 9000, () => detalhesEstado(uf, true)) ?? {}, govT1: TURNO2 && !UFS_GOV.includes(uf) ? await obter("governador", uf, undefined, 1).catch(() => null) : undefined };
     if (CARGOS[cargo].proporcional) { const d = await obter(cargo, uf); return { ...base, d, dist: distribuirEstado(d) }; }
     const [d, rp] = await Promise.all([obter(cargo, uf, mun), cargo === "presidente" ? obterResultadosPresidente(locaisResultado(uf, "")) : cargo === "governador" && !mun ? obterResultadosPresidente([uf.toLowerCase()], "governador") : null]);
     return { ...base, d, rp };
@@ -576,6 +578,13 @@ function telaMajoritaria(v) {
   return `${blocoProgresso(titulo, d, null)}<section class="card"><h2>Candidatos por votos</h2>${rankingMajoritario(d, { aba, uf })}</section>${aba === "governador" && !mun ? blocoCompararEstado(d, uf) : ""}${cartoesVotacao(d)}${evolucao}`;
 }
 
+/** Cartão "Governador" de um estado cujo governo foi decidido no 1º turno (não há governador no 2º turno nesse estado). */
+function cardEleitoPrimeiroTurno(d, uf) {
+  const c = d?.candidatos?.find((x) => x.sit === "eleito" || x.eleito) ?? d?.candidatos?.[0];
+  const corpo = c ? `<p class="cc-eleito"><span class="chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span> <b>${esc(c.nome)}</b> <span class="muted">${pct(c.pct)}</span></p>` : `<p class="muted">Resultado do 1º turno indisponível agora.</p>`;
+  return `<article class="card-cargo"><h3>Governador</h3>${seloSit({ sit: "eleito" })} <span class="muted">Eleito no 1º turno</span>${corpo}<a class="link" href="?turno=1#/estados/${uf}/governador">Ver no 1º turno ›</a></article>`;
+}
+
 function resumoEstado(v) {
   const { uf } = estado, k = uf.toLowerCase();
   const p = escopoDoPainel({ f: v.e, e: { ufs: {} } }, "", uf);
@@ -583,7 +592,8 @@ function resumoEstado(v) {
   const extra = fed ? `<p class="hero-sub">Presidente: ${pct(fed.pct)} das seções</p>` : "";
   const hero = heroApuracao({ ...p, titulo: UFS[uf], subtitulo: "Eleições estaduais", extra, hist: [], grafico: false });
   const dt = v.detalhe ?? {};
-  const cards = [
+  const semGov2T = TURNO2 && !UFS_GOV.includes(uf); // governo decidido no 1º turno (ex.: RJ)
+  const cards = TURNO2 ? [semGov2T ? cardEleitoPrimeiroTurno(v.govT1, uf) : cardCargo({ titulo: "Governador", aba: "governador", uf, d: dt.gov }), cardCargo({ titulo: "Presidente no estado", aba: "presidente", uf, d: dt.pres })] : [
     cardCargo({ titulo: "Governador", aba: "governador", uf, d: dt.gov }), cardCargo({ titulo: "Senador", aba: "senador", uf, d: dt.sen }),
     cardBancada({ titulo: "Deputados Federais", cargo: "dep-federal", d: dt.depf === undefined ? undefined : dt.depf?.d, dist: dt.depf?.dist }),
     cardBancada({ titulo: "Deputados Estaduais", cargo: "dep-estadual", d: dt.depe === undefined ? undefined : dt.depe?.d, dist: dt.depe?.dist }),
@@ -679,6 +689,12 @@ function blocoPartidosGoverno(lista) {
     <ul class="gp-lista">${itens}</ul></section>`;
 }
 
+/** Lista de governadores do 2º turno: uma linha só para os governos que já acabaram no 1º turno (nada de 21 linhas). */
+function avisoDecididosPrimeiroTurno() {
+  const n = Object.keys(UFS).length - UFS_GOV.length;
+  return `<div class="el-aviso" role="status" style="margin-top:var(--esp-14)"><span class="el-aviso__icone" aria-hidden="true">i</span><p><b>${n} governos foram decididos no 1º turno.</b> Eles não têm disputa em 25/10. <a class="link" href="?turno=1#/governadores">Ver no 1º turno</a></p></div>`;
+}
+
 function telaCargoPorEstado(v) {
   if (v.cargo === "senador" && estado.visaoSenado === "bancada") return telaBancadaSenado(v);
   if (v.cargo === "senador" && estado.visaoSenado === "eleitos") return `${seletorSenado("eleitos")}${telaEleitos(v, "senador")}`;
@@ -696,7 +712,7 @@ function telaCargoPorEstado(v) {
   const extra = (u) => (governador ? "" : linha2022(de2022.get(u)));
   const secao = blocoPorEstado({ titulo: `${governador ? "Governador" : "Senador"} por estado`, cargo, lista: v.lista, ac: v.e, ufs, regiao, porPartido: true, maioria: governador, extra,
     nota: `Toque em um estado para ver a disputa completa de ${singular}.${governador ? "" : " Cada estado elege 2 senadores hoje; o terceiro foi eleito em 2022."} Abstenção sobre as seções já apuradas.` });
-  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${governador ? blocoCompararGovernadores(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}`;
+  return `${governador ? seletorGovernador("estados") : seletorSenado("estados")}${governador && TURNO2 ? blocoDisputas("governador") : ""}${governador ? blocoPartidosGoverno(v.lista) : ""}${governador ? blocoCompararGovernadores(v.lista) : ""}${hero}<section class="card sem-borda">${governador ? `<p class="muted">${v.lista ? resumo : ""}</p>` : ""}${legendaSituacao(governador)}</section>${secao}${governador && TURNO2 ? avisoDecididosPrimeiroTurno() : ""}`;
 }
 
 /** Resumo nacional (senadores ou governadores): uma linha por estado com a situação no momento e o % de urnas apuradas. */
@@ -1155,8 +1171,9 @@ let ultimoAc = null; // andamento por estado mais recente, para a navegação ap
 /** Escopo recolhido (celular): uma linha com o caminho Brasil › Região › Estado; tocar abre a navegação por região e estado. No desktop o painel fica sempre à vista. */
 function escopoRecolhido(nav) {
   const reg = estado.regiao && REGIOES[estado.regiao] ? REGIOES[estado.regiao].nome : estado.regiao === "exterior" ? "Exterior" : "";
-  const caminho = ["Brasil", reg, estado.uf !== "BR" ? (UFS[estado.uf] ?? (estado.uf === "ZZ" ? "Exterior" : estado.uf)) : ""].filter(Boolean).join(" › ");
-  return `<button type="button" class="el-escopo-barra" data-escopo aria-expanded="${estado.escopoAberto}"><small>Escopo</small>${esc(caminho)}</button><div class="el-escopo-painel${estado.escopoAberto ? " aberto" : ""}">${nav}</div>`;
+  const cidade = estado.mun ? (estado.municipios[estado.uf] ?? []).find((m) => m.cod === estado.mun)?.nome ?? "" : "";
+  const caminho = ["Brasil", reg, estado.uf !== "BR" ? (UFS[estado.uf] ?? (estado.uf === "ZZ" ? "Exterior" : estado.uf)) : "", cidade].filter(Boolean).join(" › ");
+  return `<button type="button" class="el-escopo-barra" data-escopo aria-expanded="${estado.escopoAberto}"><small>Escopo</small>${esc(caminho)}</button><div class="el-escopo-painel${estado.escopoAberto ? " aberto" : ""}">${nav}<button type="button" class="el-botao busca-cidade" data-busca-abrir>${cidade ? `Cidade: ${esc(cidade)} · trocar` : "Buscar uma cidade"}</button></div>`;
 }
 /** Endereço de uma área que não existe neste turno (Senado, deputados…): explica e oferece o caminho para o 1º turno, em vez de uma tela vazia. */
 function avisoRotaSemTurno() {
@@ -1298,6 +1315,62 @@ document.addEventListener("scroll", (e) => {
   const filhos = [...c.children], i = filhos.reduce((m, f, k) => (Math.abs(f.offsetLeft - c.offsetLeft - c.scrollLeft) < Math.abs(filhos[m].offsetLeft - c.offsetLeft - c.scrollLeft) ? k : m), 0);
   pos.textContent = `${i + 1} de ${filhos.length}`;
 }, true);
+
+// ---------- busca única (candidatos e cidades) ----------
+const busca = { texto: "", localizacao: "", indice: null, carregandoIndice: false };
+const NOME_CARGO_BUSCA = { presidente: "Presidente", governador: "Governador", senador: "Senador" };
+/** Os candidatos majoritários de todo o país, carregados na primeira vez que a busca abre (um arquivo por cargo e estado, em lotes). */
+async function carregarIndiceBusca() {
+  if (busca.indice || busca.carregandoIndice) return;
+  busca.carregandoIndice = true; busca.indice = [];
+  const pedidos = [["presidente", "BR"], ...UFS_GOV.map((u) => ["governador", u]), ...(TURNO2 ? [] : Object.keys(UFS).map((u) => ["senador", u]))];
+  const vistos = new Set();
+  for (let i = 0; i < pedidos.length; i += 6) {
+    await Promise.allSettled(pedidos.slice(i, i + 6).map(async ([cargo, uf]) => {
+      const d = await obter(cargo, uf);
+      for (const c of d.candidatos) if (!vistos.has(c.id)) { vistos.add(c.id); busca.indice.push({ id: c.id, nome: c.nome, numero: c.numero, partido: c.partido, cargo, uf }); }
+      if ($("busca").open) desenharBusca(false);
+    }));
+  }
+  busca.carregandoIndice = false;
+  if ($("busca").open) desenharBusca(false);
+}
+function desenharBusca(manterFoco = true) {
+  const d = $("busca"), antes = document.activeElement?.id === "busca-unica", pos = $("busca-unica")?.selectionStart;
+  d.innerHTML = htmlBusca({ texto: busca.texto, candidatos: buscarCandidatos(busca.indice, busca.texto), cidades: buscarCidades(estado.municipios, busca.texto), localizacao: busca.localizacao, carregandoIndice: busca.carregandoIndice }, { corPartido, nomeUf: (u) => UFS[u] ?? u });
+  const campo = $("busca-unica");
+  if (campo && (antes || manterFoco)) { campo.focus(); if (pos != null) campo.setSelectionRange(pos, pos); }
+}
+function abrirBusca() {
+  busca.texto = ""; busca.localizacao = "";
+  desenharBusca(); if (!$("busca").open) $("busca").showModal();
+  carregarIndiceBusca();
+  if (!Object.keys(estado.municipios).length) carregarMunicipios();
+}
+function irParaCidade(uf, cod) {
+  $("busca").close();
+  estado.regiao = regiaoDe(uf) || ""; estado.escopoAberto = false;
+  navegar({ aba: "presidente", uf, mun: cod, cargo: "resumo" }); window.scrollTo({ top: 0 });
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-busca-abrir]")) { abrirBusca(); return; }
+  if (e.target.closest("[data-busca-fechar]")) { $("busca").close(); return; }
+  const c = e.target.closest("[data-busca-cidade]");
+  if (c) { const [uf, cod] = c.dataset.buscaCidade.split("/"); irParaCidade(uf, cod); return; }
+  const cand = e.target.closest("[data-busca-cand]");
+  if (cand) { $("busca").close(); abrirFicha(cand.dataset.buscaCand, null); return; }
+  const pop = e.target.closest("[data-busca-popular]");
+  if (pop) { const [nome, uf] = pop.dataset.buscaPopular.split("|"); const m = acharCidade(estado.municipios, nome, uf); if (m) irParaCidade(uf, m.cod); return; }
+  if (e.target.closest("[data-busca-local]")) { // só pede a permissão ao toque
+    if (!navigator.geolocation) { busca.localizacao = "negada"; desenharBusca(false); return; }
+    busca.localizacao = "buscando"; desenharBusca(false);
+    navigator.geolocation.getCurrentPosition((p) => {
+      const c = maisProxima(p.coords.latitude, p.coords.longitude), m = c && acharCidade(estado.municipios, c.nome, c.uf);
+      if (m) irParaCidade(c.uf, m.cod); else { busca.localizacao = "negada"; desenharBusca(false); }
+    }, () => { busca.localizacao = "negada"; desenharBusca(false); }, { timeout: 10000, maximumAge: 600000 });
+  }
+});
+$("busca").addEventListener("input", (e) => { if (e.target.matches("[data-busca-unica]")) { busca.texto = e.target.value; desenharBusca(false); } });
 aplicarTema(lerTema());
 $("tema-rodape").innerHTML = controleTema();
 document.addEventListener("click", (e) => {

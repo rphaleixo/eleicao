@@ -122,17 +122,25 @@ dialog#ficha::backdrop { background: rgba(0, 0, 0, .55); }
 .ficha-painel section:first-child h3 { margin-top: 0; }
 
 /* Marcha da apuração (mobile first) */
-.seg { display: flex; background: var(--trilho); border-radius: 3px; padding: 3px; gap: 3px; }
-.seg button { flex: 1; border: 0; background: none; color: var(--texto-suave); font: inherit; font-weight: 600; padding: 9px 6px; border-radius: 3px; cursor: pointer; min-height: 40px; }
-.seg button[aria-pressed="true"] { background: var(--cartao); color: var(--texto); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
-.seg.mini { flex: none; } .seg.mini button { flex: none; padding: 5px 10px; min-height: 32px; font-size: .8rem; }
+/* controle segmentado em régua (componente Segmentado): marcador quadrado sobre um filete e trecho de 5px em acento sob a opção ativa */
+.seg { display: flex; position: relative; margin: var(--esp-12) 0; padding: 0; gap: 0; border-top: 2px solid var(--texto); border-radius: 0; background: none; }
+.seg button { flex: 1 1 0; position: relative; min-height: 44px; padding: 16px var(--esp-8) var(--esp-6) 0; border: 0; border-radius: 0; background: none; box-shadow: none; text-align: left; color: var(--texto-suave); font: 700 14px/18px var(--font-text); cursor: pointer; }
+.seg button::before { content: ""; position: absolute; top: -9px; left: 0; width: 16px; height: 16px; border: 2px solid var(--texto); background: var(--fundo); }
+.seg button[aria-pressed="true"] { color: var(--texto); background: none; box-shadow: none; }
+.seg button[aria-pressed="true"]::before { z-index: 1; background: var(--acento); box-shadow: inset 0 0 0 2px var(--fundo); }
+.seg button[aria-pressed="true"]::after { content: ""; position: absolute; top: -2px; left: 0; right: var(--esp-8); height: 5px; background: var(--acento); }
+.seg button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.seg.mini { flex: none; max-width: 100%; margin: var(--esp-8) 0; } .seg.mini button { flex: none; padding-right: var(--esp-16); white-space: nowrap; min-height: 44px; font-size: 13px; }
 
 /* painel de destaque */
 .hero { background: var(--destaque-a); border: 0; color: #fff; box-shadow: none; }
 .hero h2 { color: #fff; margin: 0; font: 400 28px/28px var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
-.hero .seg { background: rgba(255, 255, 255, .14); margin-bottom: 14px; }
+.hero .seg { border-top-color: rgba(255, 255, 255, .7); margin-bottom: 14px; }
 .hero .seg button { color: rgba(255, 255, 255, .78); }
-.hero .seg button[aria-pressed="true"] { background: #fff; color: #10294d; box-shadow: none; }
+.hero .seg button::before { border-color: #fff; background: var(--destaque-a); }
+.hero .seg button[aria-pressed="true"] { color: #fff; }
+.hero .seg button[aria-pressed="true"]::before { background: #fff; box-shadow: inset 0 0 0 2px var(--destaque-a); }
+.hero .seg button[aria-pressed="true"]::after { background: #fff; }
 .hero .voltar { margin: 0 0 12px; background: rgba(255, 255, 255, .14); color: #fff; border: 0; }
 .hero-topo { display: flex; align-items: center; gap: 16px; }
 .anel { width: 118px; height: 118px; flex: none; }
@@ -836,7 +844,6 @@ span.cmp-sobe { color: var(--segundo-turno); } span.cmp-desce { color: #0f766e; 
 /* painel "Como calcular" (base dos percentuais e sem sub judice), abaixo do resultado */
 #calculo { margin-top: var(--esp-14); }
 #calculo .el-painel__corpo > .el-seg { margin-top: 0; }
-.hero.hero .el-seg button, .hero .seg button { min-height: 40px; }
 
 /* navegação: barra inferior no celular, menu lateral de 240px a partir de 1024px, escopo recolhido */
 body { padding-bottom: 72px; }
@@ -909,3 +916,34 @@ body { padding-bottom: 72px; }
 .rodape-tema { margin-top: var(--esp-16); margin-bottom: 0; }
 .el-tema button { min-height: 44px; }
 .el-menu__tema .el-tema, .el-folha__tema .el-tema, .rodape-tema .el-tema { justify-self: start; }
+
+/* busca única: lupa no topo e janela com campo, resultados e atalhos */
+.topo-busca { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -4px 0 -4px auto; border: 0; background: none; color: var(--sobre-topo); cursor: pointer; }
+.topo-busca svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.topo-busca:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
+.topo-in { gap: var(--esp-4); } .topo .status { margin-left: var(--esp-8); }
+.busca-dialog { margin: 0 auto; width: min(560px, 100%); max-height: 86vh; top: 0; border: 0; border-top: 3px solid var(--texto); padding: var(--esp-16); background: var(--cartao); color: var(--texto); overflow: auto; }
+.busca-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+.busca-cab { display: flex; align-items: flex-end; gap: var(--esp-8); }
+.busca-cab .el-campo { flex: 1; min-width: 0; } .busca-cab input { width: 100%; min-width: 0; }
+.busca-fechar { flex: none; width: 44px; height: 44px; border: 2px solid var(--texto); background: var(--cartao); color: var(--texto); font: 700 22px/1 var(--font-text); cursor: pointer; }
+.busca-grupo, .busca-atalhos { margin-top: var(--esp-12); display: grid; gap: var(--esp-6); }
+.el-resultados { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
+.el-resultados li { border-bottom: 1px solid var(--linha); }
+.el-resultados button { width: 100%; min-height: 48px; display: flex; align-items: center; gap: var(--esp-8); padding: 0 var(--esp-4); border: 0; background: none; color: var(--texto); font: 600 15px/20px var(--font-text); text-align: left; cursor: pointer; }
+.el-resultados button small { margin-left: auto; color: var(--texto-suave); font: 600 12px/16px var(--font-text); }
+.el-resultados button:focus-visible, .el-resultados button:hover { background: var(--trilho); outline: 3px solid var(--acento); outline-offset: -3px; }
+.busca-cidade { margin-top: var(--esp-8); width: 100%; }
+
+/* desktop: leitura em 720px; onde há resumo (Placar) ele vai para a coluna lateral de 320px (el-pagina--duas) */
+@media (min-width: 1024px) {
+  body[data-aba="governadores"] #conteudo, body[data-aba="senadores"] #conteudo { max-width: 720px; margin-inline: 0; }
+  body[data-aba="andamento"] .wrap, body[data-aba="presidente"] .wrap { max-width: 1092px; }
+  body[data-aba="andamento"] #conteudo:has(> .hero), body[data-aba="presidente"] #conteudo:has(> .hero) { display: grid; grid-template-columns: minmax(0, 720px) 320px; column-gap: var(--esp-24); align-items: start; }
+  body[data-aba="andamento"] #conteudo:has(> .hero) > *, body[data-aba="presidente"] #conteudo:has(> .hero) > * { grid-column: 1; }
+  body[data-aba="andamento"] #conteudo:has(> .hero) > .hero, body[data-aba="presidente"] #conteudo:has(> .hero) > .hero { grid-column: 2; grid-row: 1 / span 12; position: sticky; top: 108px; margin-top: var(--esp-14); }
+}
+.busca-cidade { max-width: 320px; }
+.topo .status { max-width: 132px; } @media (min-width: 600px) { .topo .status { max-width: none; } }
+@media (max-width: 430px) { .topo .el-topo__titulo { font-size: 19px; line-height: 22px; } .topo .status { max-width: 112px; margin-left: 0; } .topo-busca { margin-right: -6px; } }
+.topo .status { white-space: normal; }
