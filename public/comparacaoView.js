@@ -4,7 +4,7 @@ import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
 import { viewBoxDoEstado } from "./geo.js";
 import { caixaZoom } from "./zoomMapa.js";
-import { LINHAS, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas } from "./comparacao.js";
+import { LINHAS, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas, percentual, valorDeOrdem } from "./comparacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const sinal = (n, f = fmt) => (n > 0 ? "+" : n < 0 ? "−" : "") + f(Math.abs(n));
@@ -86,4 +86,28 @@ export function tabelaExtremos(itens, { medida, dir, linhaNome }) {
   const fmtV = (v) => (medida === "pp" ? pp(v) : medida === "votos" ? sinal(Math.round(v)) : pct(v));
   const linhas = itens.map((i, k) => `<tr data-ct-ibge="${i.ibge}" role="button" tabindex="0"><td>${k + 1}</td><td><b>${esc(i.nome)}</b> <small class="muted">${esc(i.uf)}</small></td><td>${fmt(i.l1?.aptos ?? 0)}</td><td class="${medida === "pp" || medida === "votos" ? classeDelta(i.valor) : ""}"><b>${fmtV(i.valor)}</b></td></tr>`).join("");
   return `<div class="tab-scroll"><table class="geo-rank"><tr><th>#</th><th>Município</th><th>Eleitores</th><th>${esc(linhaNome)}</th></tr>${linhas}</table></div>`;
+}
+
+export const ORDENS_PAIS = [["aptos", "Eleitores aptos"], ["p1:lula", "% de Lula no 1º turno"], ["p2:lula", "% de Lula no 2º turno"], ["dp:lula", "Variação de Lula"], ["p2:flavio", "% de Flávio no 2º turno"], ["dp:flavio", "Variação de Flávio"], ["dp:naovoto", "Variação do não voto"]];
+const pc = (n) => (n == null ? "—" : Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%");
+
+/** Uma faixa de país (ou de cidade): eleitores, e Lula, Flávio e não voto no 1º e no 2º turno, com a variação em pontos. */
+function faixaPais(nome, l1, l2, base, { abrir, id, parcial, sub }) {
+  const col = (chave, rotulo) => {
+    const a = percentual(l1, chave, base), b = percentual(l2, chave, base), d = a != null && b != null ? b - a : null;
+    return `<div class="cmp-col"><small class="muted">${rotulo}</small><b>1º ${pc(a)}</b><b>2º ${pc(b)}</b><span class="${d == null ? "" : classeDelta(d)}">${d == null ? "" : pp(d)}</span></div>`;
+  };
+  const cab = `<div class="cmp-nome">${abrir != null ? `<button type="button" class="cmp-pais" data-ct-pais="${esc(id)}" aria-expanded="${abrir}">${abrir ? "▾" : "▸"} ${esc(nome)}</button>` : esc(nome)} <small class="muted">${fmt(l1?.aptos ?? 0)} aptos${sub ? ` · ${esc(sub)}` : ""}${parcial ? " · 2º turno parcial" : ""}</small></div>`;
+  return `${cab}<div class="cmp-cols">${col("lula", "Lula")}${col("flavio", "Flávio")}${col("naovoto", "Não voto")}</div>`;
+}
+
+/** Exterior por país: lista ordenável; tocar em um país mostra as cidades dele. */
+export function exteriorPorPais(paises, { base, ordem, abertos, limite }) {
+  const ord = paises.slice().sort((a, b) => valorDeOrdem(b, ordem, base) - valorDeOrdem(a, ordem, base) || a.pais.localeCompare(b.pais, "pt-BR"));
+  const itens = ord.slice(0, limite).map((g) => {
+    const aberto = abertos.has(g.pais);
+    const cidades = aberto ? `<div class="cmp-cidades">${g.cidades.filter((c) => c.l1).sort((a, b) => b.l1.aptos - a.l1.aptos).map((c) => `<div class="cmp-cidade">${faixaPais(c.nome, c.l1, c.l2, base, {})}</div>`).join("")}</div>` : "";
+    return `<div class="cmp-item">${faixaPais(g.pais, g.l1, g.l2, base, { abrir: aberto, id: g.pais, parcial: g.parcial2, sub: g.cidades.length > 1 ? `${g.cidades.length} cidades` : g.cidades[0].nome })}${cidades}</div>`;
+  }).join("");
+  return `<div class="geo-linha"><span class="gp-leg">Ordenar por</span>${seg("data-ct-ordem-pais", ordem, ORDENS_PAIS)}</div><div class="cmp-lista">${itens}</div>${ord.length > limite ? `<button type="button" class="btn-mais" data-ct-mais-paises>Mostrar mais países (${ord.length - limite})</button>` : ""}`;
 }

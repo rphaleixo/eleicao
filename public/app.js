@@ -4,8 +4,8 @@ import { desempenhoPartidos, blocoDesempenhoPartidos } from "./desempenhoPartido
 import { barrasPartidos, blocoGraficoPartidos } from "./graficoPartidos.js";
 import { lerAbUf, montarLinhas, calcular, classesDeCor, CARGOS_GEO } from "./geo.js";
 import { ligarZoom, reaplicarZoom } from "./zoomMapa.js";
-import { linhaDeResultado, linhaDeArquivo, valorDoMapa, classesDoMapa, extremos, LINHAS, MEDIDAS } from "./comparacao.js";
-import { controlesComparacao, quadroComparacao, barrasComposicao, mapaComparacao, legendaComparacao, fichaComparacao, tabelaExtremos } from "./comparacaoView.js";
+import { linhaDeResultado, linhaDeArquivo, linhaDeExterior, agruparPorPais, valorDoMapa, classesDoMapa, extremos, LINHAS, MEDIDAS } from "./comparacao.js";
+import { exteriorPorPais, controlesComparacao, quadroComparacao, barrasComposicao, mapaComparacao, legendaComparacao, fichaComparacao, tabelaExtremos } from "./comparacaoView.js";
 import { rankingNumeros, pontosDoMapa, zonasEmDestaque, CARGOS_NULOS } from "./nulos.js";
 import { controlesNulos, resumoNulos, rankingNulos, mapaNulos, legendaNulos, fichaNulos, tabelaZonas } from "./nulosView.js";
 import { controlesGeo, mapaGeo, legendaGeo, resumoGeo, fichaGeo, tabelaGeo, nomeDasMetricas } from "./geoView.js";
@@ -53,7 +53,7 @@ const nomeUF = (uf) => (uf === "BR" ? "Brasil" : uf === "ZZ" ? "Exterior" : UFS[
 
 /** Base escolhida (válidos ou totais), lembrada neste navegador. */
 function baseSalva() { try { return localStorage.getItem("base") === "totais" ? "totais" : "validos"; } catch { return "validos"; } }
-const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "aptos", sel: "", dir: "alta" }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
+const estado = { aba: "andamento", uf: "BR", cargo: "resumo", mun: "", municipios: {}, mostrar: 50, pag: { eleitos: 0, cand: 0, deps: 0, barr: 0 }, view: null, serie: "f", regiao: "", ordem: "az", painel: "geral", visaoSenado: "estados", agrupBancada: "partido", agrupCamara: "partido", visaoEstados: "cards", mapaUf: "", mapaCargo: "governador", munSel: "", filtros: filtrosVazios(), visaoGov: "estados", navAberta: false, busca: buscaVazia(), clausula: "todos", base: baseSalva(), semSJ: false, cmp: { a: "", b: "", ordem: "vantagemA" }, cmpGov: { modo: "top2", pa: "", pb: "", ordem: "margem" }, partido: "", partidoVisao: "maj", gp: { metrica: "total", ordem: "votos", ocultos: new Set() }, ct: { linha: "lula", medida: "pp", base: "aptos", sel: "", dir: "alta", ordemPais: "aptos", paisesAbertos: new Set(), maisPaises: 30 }, nl: { cargo: "3", visao: "locais", numero: "", mun: "", sel: "", zonas: 15 }, geo: { metricas: new Set(["abstencao"]), cargo: "presidente", visao: "taxa", uf: "", min: 0, sel: "", pag: 1 }, cenario: "psol-pt" };
 const memo = { historico: { t: 0, dados: [] }, ultima: null, proxima: 0, erro: "" };
 
 // ---------- navegação (guardada na URL: #/estados/SP/governador/71072) ----------
@@ -205,6 +205,37 @@ function arquivoMunicipios(turno) {
   }).catch(() => null);
   return arquivosMun[turno];
 }
+const arquivosExt = {}, vivoExtT2 = new Map();
+let paisesDoExterior = null;
+/** Exterior no 1º turno (e no 2º, quando existir o arquivo final): uma linha por cidade das representações brasileiras. */
+function arquivoExterior(turno) {
+  arquivosExt[turno] ??= fetch(`/dados/presidente-t${turno}-exterior.json`).then(async (r) => (r.ok ? new Map(Object.entries((await r.json()).localidades).map(([cod, a]) => [cod, { ...linhaDeExterior(a), nome: a[0] }])) : null)).catch(() => null);
+  return arquivosExt[turno];
+}
+/** Cidade -> país (agrupamento feito à mão, não oficial). */
+function tabelaDePaises() {
+  paisesDoExterior ??= fetch("/dados/exterior-paises.json").then(async (r) => (r.ok ? (await r.json()).localidades : null)).catch(() => null);
+  return paisesDoExterior;
+}
+let emVooExt = false;
+/** 2º turno no exterior ao vivo: um arquivo por cidade (186). Só começa quando o exterior já tem seções apuradas e para se várias seguidas ainda não tiverem arquivo. */
+async function atualizarExteriorT2(pctExterior) {
+  if (emVooExt || !(pctExterior > 0)) return;
+  emVooExt = true;
+  try {
+    const paises = await tabelaDePaises(); if (!paises) return;
+    const fila = Object.keys(paises).filter((c) => (vivoExtT2.get(c)?.pct ?? 0) < 100);
+    let seguidos = 0, ultimo = 0;
+    await Promise.all(Array.from({ length: 6 }, async () => {
+      while (fila.length && seguidos < 12) {
+        const cod = fila.shift();
+        try { const d = await obter("presidente", "ZZ", cod, 2); vivoExtT2.set(cod, { ...linhaDeResultado(d), nome: paises[cod][0] }); seguidos = 0; } catch { seguidos++; }
+        if (Date.now() - ultimo > 1500 && estado.aba === "turnos") { ultimo = Date.now(); render(); }
+      }
+    }));
+  } finally { emVooExt = false; }
+}
+
 const vivoT2 = new Map(), progT2 = { feitos: 0, total: 0, emVoo: false };
 /**
  * 2º turno ao vivo, desde a largada: o andamento de cada estado (27 arquivos pequenos) diz quais municípios já têm seções apuradas;
@@ -335,7 +366,9 @@ async function carregarView(rota) {
     const buscar = async (t) => { if (t === 2 && !t2aberto) return null; try { return await obter("presidente", uf, uf === "BR" || uf === "ZZ" ? undefined : mun || undefined, t); } catch { return null; } };
     const [d1, d2, malha, a1, a2, ac2] = await Promise.all([buscar(1), buscar(2), obterMalha("BR"), arquivoMunicipios(1), arquivoMunicipios(2), t2aberto ? obterAcompanhamento("presidente", 2).catch(() => null) : null]);
     if (t2aberto && !a2?.final) emSegundoPlano("t2-municipios", 60_000, () => atualizarMunicipiosT2(ac2?.ufs?.br?.pct ?? 0)); // enquanto o arquivo final não existe, os municípios do 2º turno vêm um a um
-    return { tipo: "turnos", uf, mun, d1, d2, malha, a1, a2, t2aberto };
+    const ext = uf === "ZZ" ? { e1: await arquivoExterior(1), e2f: t2aberto ? await arquivoExterior(2) : null, paises: await tabelaDePaises() } : null;
+    if (uf === "ZZ" && t2aberto && !ext.e2f) emSegundoPlano("t2-exterior", 60_000, () => atualizarExteriorT2(ac2?.ufs?.zz?.pct ?? 0));
+    return { tipo: "turnos", uf, mun, d1, d2, malha, a1, a2, t2aberto, ext };
   }
   if (aba === "nulos") { // números digitados nos votos nulos (RJ por enquanto): somas por zona e locais de votação com coordenadas
     const [dados, malha] = await Promise.all([carregarDadosNulos("rj"), obterMalha("RJ")]);
@@ -912,7 +945,13 @@ function telaTurnos(v) {
   const c = semT2 && ct0.medida !== "p1" ? { ...ct0, medida: "p1" } : ct0;
   const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2 });
   let mapa = "";
-  if (!t1) mapa = `<section class="card"><h2>Mapa por município</h2><p class="muted">O arquivo do 1º turno por município ainda não foi gerado.</p></section>`;
+  if (uf === "ZZ") { // exterior: sem mapa de municípios; lista por país
+    const e = v.ext, t2e = e?.e2f ?? (vivoExtT2.size ? vivoExtT2 : null);
+    mapa = !e?.e1 || !e.paises ? `<section class="card"><h2>Exterior por país</h2><p class="muted">Os dados do exterior ainda não foram carregados.</p></section>`
+      : `<section class="card"><div class="titulo-cadeiras"><h2>Exterior por país</h2><span class="muted">${fmt(new Set(Object.values(e.paises).map((p) => p[1])).size)} países</span></div>
+        <p class="muted">O TSE organiza o exterior por cidade (consulados e embaixadas). Aqui as cidades foram agrupadas por país por nós: não é uma classificação oficial. Em cada faixa: % no 1º e no 2º turno e a variação em pontos. Toque no país para ver as cidades.</p>
+        ${exteriorPorPais(agruparPorPais(e.e1, t2e, e.paises), { base: ct0.base, ordem: ct0.ordemPais, abertos: ct0.paisesAbertos, limite: ct0.maisPaises })}</section>`;
+  } else if (!t1) mapa = `<section class="card"><h2>Mapa por município</h2><p class="muted">O arquivo do 1º turno por município ainda não foi gerado.</p></section>`;
   else {
     const itens = [...t1.values()].filter((r1) => uf === "BR" || uf === "ZZ" || r1.uf === uf).map((r1) => {
       const r2 = t2?.get(r1.cod) ?? null;
@@ -929,8 +968,9 @@ function telaTurnos(v) {
       ${legendaComparacao(cls, c.medida, linhaNome, { semDado })}${v.t2aberto && !v.a2?.final && t2?.size ? `<p class="muted nota">Os municípios entram no mapa assim que têm seções apuradas no 2º turno. Enquanto um município não chega a 100%, os números dele são parciais: o % já é uma boa pista, mas a variação em votos só é comparável no fim.</p>` : ""}
       ${fichaComparacao(sel, c.base, { ufNome: sel ? sel.uf : "" })}${sel && sel.uf && sel.cod !== mun ? `<button type="button" class="btn-mais" data-ct-abrir="${sel.uf}/${sel.cod}">Abrir só ${esc(sel.nome)}</button>` : ""}</section>${ext}`;
   }
+  const abrirExt = uf === "BR" ? `<button type="button" class="btn-mais" data-ct-abrir="ZZ/">Ver o exterior por país</button>` : "";
   return `${controlesComparacao({ ...ct0, uf, mun }, { municipios })}
-    <section class="card"><h2>${esc(ondeNome)}</h2>${quadro}${barrasComposicao(l1, l2)}</section>${mapa}`;
+    <section class="card"><h2>${esc(ondeNome)}</h2>${quadro}${barrasComposicao(l1, l2)}${abrirExt}</section>${mapa}`;
 }
 const seg2 = (attr, atual, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === atual}">${n}</button>`).join("")}</div>`;
 
@@ -1339,10 +1379,16 @@ $("conteudo").addEventListener("click", (e) => {
   if (cz) { estado.cenario = cz.dataset.cenario; gravarHash(); render(); return; }
   const pv = e.target.closest("[data-pvisao]");
   if (pv) { estado.partidoVisao = pv.dataset.pvisao; render(); return; }
+  const cp = e.target.closest("[data-ct-pais], [data-ct-ordem-pais], [data-ct-mais-paises]");
+  if (cp) {
+    const c = estado.ct, d = cp.dataset;
+    if (d.ctPais) { if (!c.paisesAbertos.delete(d.ctPais)) c.paisesAbertos.add(d.ctPais); } else if (d.ctOrdemPais) { c.ordemPais = d.ctOrdemPais; c.maisPaises = 30; } else c.maisPaises += 30;
+    render(true); return;
+  }
   const ct = e.target.closest("[data-ct-linha], [data-ct-medida], [data-ct-base], [data-ct-ibge], [data-ct-dir], [data-ct-abrir]");
   if (ct) {
     const c = estado.ct, d = ct.dataset;
-    if (d.ctAbrir) { const [u, cod] = d.ctAbrir.split("/"); c.sel = ""; navegar({ uf: u, mun: cod }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (d.ctAbrir) { const [u, cod] = d.ctAbrir.split("/"); c.sel = ""; navegar({ uf: u, mun: cod || "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (d.ctLinha) c.linha = d.ctLinha; else if (d.ctMedida) c.medida = d.ctMedida; else if (d.ctBase) c.base = d.ctBase; else if (d.ctDir) c.dir = d.ctDir;
     else if (d.ctIbge) { c.sel = c.sel === d.ctIbge ? "" : d.ctIbge; if (ct.matches("tr")) document.querySelector(".mapa-area-geo")?.scrollIntoView({ behavior: "smooth", block: "center" }); }
     render(true); return;

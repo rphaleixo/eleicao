@@ -23,6 +23,12 @@ export function linhaDeArquivo(a) {
   return { aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos, pct };
 }
 
+/** A partir de uma linha de presidente-tN-exterior.json (nome, aptos, comparecimento, abstenção, brancos, nulos, Lula, Flávio, outros, válidos, %). */
+export function linhaDeExterior(a) {
+  const [, aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos, pct] = a;
+  return { aptos, comparecimento, abstencao, brancos, nulos, lula, flavio, outros, validos, pct };
+}
+
 /** Não voto = abstenções + brancos + nulos. */
 export const naoVoto = (l) => (l ? l.abstencao + l.brancos + l.nulos : 0);
 
@@ -84,4 +90,41 @@ export function classesDoMapa(valores, medida) {
 /** Maiores altas (dir "alta") ou quedas ("queda") entre os municípios, pelo valor do mapa. */
 export function extremos(itens, dir, limite = 15) {
   return itens.filter((i) => i.valor != null).slice().sort((a, b) => (dir === "alta" ? b.valor - a.valor : a.valor - b.valor) || a.nome.localeCompare(b.nome, "pt-BR")).slice(0, limite);
+}
+
+// ---------- exterior por país ----------
+/** Soma várias linhas (cidades) em uma só. */
+export function somarLinhas(linhas) {
+  const ls = linhas.filter(Boolean);
+  if (!ls.length) return null;
+  const z = { aptos: 0, comparecimento: 0, abstencao: 0, brancos: 0, nulos: 0, lula: 0, flavio: 0, outros: 0, validos: 0 };
+  for (const l of ls) for (const k of Object.keys(z)) z[k] += l[k] || 0;
+  return { ...z, pct: Math.min(...ls.map((l) => l.pct ?? 100)) };
+}
+
+/**
+ * Agrupa as localidades do exterior (cidades das representações brasileiras) por país.
+ * @param {Map<string,object>} t1 cód. da localidade -> linha do 1º turno  @param {Map<string,object>|null} t2 o mesmo no 2º turno
+ * @param {Object<string,[string,string]>} paises cód. da localidade -> [cidade, país]
+ */
+export function agruparPorPais(t1, t2, paises) {
+  const mapa = new Map();
+  for (const [cod, [cidade, pais]] of Object.entries(paises)) {
+    const g = mapa.get(pais) ?? { pais, cidades: [] };
+    g.cidades.push({ cod, nome: cidade, l1: t1?.get(cod) ?? null, l2: t2?.get(cod) ?? null });
+    mapa.set(pais, g);
+  }
+  return [...mapa.values()].map((g) => ({
+    ...g, l1: somarLinhas(g.cidades.map((c) => c.l1)), l2: somarLinhas(g.cidades.map((c) => c.l2)),
+    parcial2: g.cidades.some((c) => c.l1 && !c.l2) && g.cidades.some((c) => c.l2), // só parte das cidades do país já tem o 2º turno
+  })).filter((g) => g.l1);
+}
+
+/** Valor de ordenação de um país: eleitores, % de um candidato no 2º turno ou a variação dele. */
+export function valorDeOrdem(g, ordem, base) {
+  const [tipo, linha] = ordem.split(":");
+  if (tipo === "aptos") return g.l1?.aptos ?? 0;
+  if (tipo === "p2") return percentual(g.l2, linha, base) ?? -Infinity;
+  if (tipo === "dp") { const a = percentual(g.l1, linha, base), b = percentual(g.l2, linha, base); return a == null || b == null ? -Infinity : b - a; }
+  return percentual(g.l1, linha, base) ?? -Infinity;
 }

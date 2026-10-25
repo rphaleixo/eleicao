@@ -27,7 +27,7 @@ No topo: 1º turno, 2º turno e Comparar. Abas: Marcha da apuração, Presidente
 | Dados abertos do TSE (`cdn.tse.jus.br/estatistica/sead/odsele`) | Votação por município e zona, por seção, e coordenadas dos locais de votação; saem dias depois da eleição |
 | Registro digital do voto (`.../arquivo-urna/3220/...`) | Um arquivo por urna, com o número digitado em cada voto nulo |
 
-Arquivos guardados no repositório (`public/dados/`): `presidente-t1-municipios.json` (1º turno por município), `nulos-rj.json` e `nulos-rj-mapa.json` (números digitados nos nulos do RJ).
+Arquivos guardados no repositório (`public/dados/`): `presidente-t1-municipios.json` (1º turno por município), `presidente-t1-exterior.json` (1º turno nas 186 cidades do exterior) e `exterior-paises.json` (agrupamento das cidades por país, feito à mão, não oficial), `nulos-rj.json` e `nulos-rj-mapa.json` (números digitados nos nulos do RJ).
 
 ## Regras do projeto
 

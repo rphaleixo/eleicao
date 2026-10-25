@@ -63,3 +63,22 @@ test("quadro e barras mostram as quatro linhas, os dois turnos e a variação", 
   assert.equal((barrasComposicao(linhaDeResultado(d1), null).match(/sem dados ainda/g) || []).length, 1);
   assert.match(tabelaExtremos([{ ibge: "1", nome: "X", uf: "RJ", l1: { aptos: 10 }, valor: 1.234 }], { medida: "pp", dir: "alta", linhaNome: "Lula" }), /\+1,23 pp/);
 });
+
+import { agruparPorPais, somarLinhas, linhaDeExterior, valorDeOrdem } from "../public/comparacao.js";
+import { exteriorPorPais } from "../public/comparacaoView.js";
+test("exterior por país: soma as cidades do mesmo país e ordena", () => {
+  const l = (aptos, lula, flavio) => ({ aptos, comparecimento: 0, abstencao: aptos - lula - flavio, brancos: 0, nulos: 0, lula, flavio, outros: 0, validos: lula + flavio, pct: 100 });
+  const t1 = new Map([["1", l(100, 30, 20)], ["2", l(50, 10, 10)], ["3", l(10, 5, 1)]]);
+  const t2 = new Map([["1", l(100, 40, 20)], ["2", l(50, 15, 10)]]);
+  const paises = { 1: ["LISBOA", "Portugal"], 2: ["PORTO", "Portugal"], 3: ["ROMA", "Itália"] };
+  const g = agruparPorPais(t1, t2, paises);
+  const pt = g.find((x) => x.pais === "Portugal"), it = g.find((x) => x.pais === "Itália");
+  assert.equal(pt.l1.aptos, 150); assert.equal(pt.l2.lula, 55); assert.equal(pt.cidades.length, 2); assert.equal(pt.parcial2, false);
+  assert.equal(it.l2, null);
+  assert.ok(valorDeOrdem(pt, "aptos", "aptos") > valorDeOrdem(it, "aptos", "aptos"));
+  assert.ok(valorDeOrdem(pt, "dp:lula", "aptos") > 0);
+  const html = exteriorPorPais(g, { base: "aptos", ordem: "aptos", abertos: new Set(["Portugal"]), limite: 10 });
+  assert.ok(html.includes("Portugal") && html.includes("LISBOA") && html.includes("PORTO") && !html.includes("ROMA <"));
+  assert.equal(somarLinhas([null, null]), null);
+  assert.equal(linhaDeExterior(["X", 10, 7, 3, 1, 1, 4, 3, 0, 7, 100]).lula, 4);
+});
