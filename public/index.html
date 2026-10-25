@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Apuração Eleições 2026</title>
   <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="ds/tokens.css">
+  <link rel="stylesheet" href="ds/bundle.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="topo">
+  <header class="topo" data-theme="escuro">
     <div class="wrap topo-in">
-      <h1><span class="ao-vivo" aria-hidden="true"></span>Apuração Eleições 2026</h1>
-      <div id="status" class="status" role="status" aria-live="polite">Carregando…</div>
+      <h1 class="el-topo__titulo"><span class="el-vivo" aria-hidden="true"></span>Apuração Eleições 2026</h1>
+      <div id="status" class="status el-carimbo" role="status" aria-live="polite">Carregando…</div>
     </div>
   </header>
 
   <a class="faixa-eventos" id="faixa" href="#/andamento" hidden aria-live="polite"></a>
   <nav class="wrap modos" id="modos" aria-label="Turno da eleição"></nav>
-  <nav class="wrap abas" id="abas" aria-label="Cargos e andamento"></nav>
+  <nav class="wrap abas el-abas" id="abas" aria-label="Cargos e andamento"></nav>
 
-  <div id="basebar" class="wrap base-barra"></div>
   <div id="nav" class="wrap"></div>
 
   <div id="sub" class="wrap sub" hidden></div>
@@ -31,6 +32,8 @@
   </section>
 
   <main id="conteudo" class="wrap" aria-live="off"></main>
+
+  <div id="calculo" class="wrap"></div>
 
   <footer class="wrap rodape">
     <p>Fonte: arquivos de divulgação de resultados do TSE (resultados.tse.jus.br), conforme a Resolução TSE nº 23.751/2026. Site independente, sem vínculo com o TSE. Os números só são oficiais no site do TSE. As vagas de deputados enquanto a apuração não termina são uma projeção calculada a partir dos votos e podem diferir do resultado oficial.</p>

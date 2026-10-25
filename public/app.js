@@ -81,8 +81,8 @@ const permiteMun = () => (estado.aba === "presidente" || (estado.aba === "estado
 function montarModos() {
   if (MODO_ESE) { $("modos").hidden = true; return; }
   const cmp = estado.aba === "turnos";
-  const b = (modo, nome, data, ativo) => `<button type="button" data-modo="${modo}" aria-pressed="${ativo}"><b>${nome}</b><small>${data}</small></button>`;
-  $("modos").innerHTML = `<div class="seg modos-seg" role="group" aria-label="Turno da eleição">${b("1", "1º turno", "04/10", !cmp && !TURNO2)}${b("2", "2º turno", "25/10", !cmp && TURNO2)}${b("cmp", "Comparar", "1º × 2º", cmp)}</div>`;
+  const b = (modo, nome, data, ativo) => `<button type="button" data-modo="${modo}" aria-pressed="${ativo}">${nome}<small>${data}</small></button>`;
+  $("modos").innerHTML = `<div class="el-seg" role="group" aria-label="Turno da eleição">${b("1", "1º turno", "04/10", !cmp && !TURNO2)}${b("2", "2º turno", "25/10", !cmp && TURNO2)}${b("cmp", "Comparar", "1º × 2º", cmp)}</div>`;
 }
 $("modos").addEventListener("click", (e) => {
   const m = e.target.closest("[data-modo]");
@@ -95,7 +95,7 @@ $("modos").addEventListener("click", (e) => {
 
 function montarControles() {
   const tira = $("abas");
-  tira.innerHTML = ABAS.filter((a) => a.id !== "turnos").map((a) => `<button data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
+  tira.innerHTML = ABAS.filter((a) => a.id !== "turnos").map((a) => `<button class="el-aba" data-aba="${a.id}" aria-current="${a.id === estado.aba}">${a.nome}</button>`).join("");
   tira.hidden = estado.aba === "turnos"; // no modo "Comparar" a navegação é a da própria tela
   montarModos();
   const ativa = tira.querySelector('[aria-current="true"]'); // a aba escolhida fica no centro da tira, que não volta ao começo a cada toque
@@ -1221,11 +1221,13 @@ function mostrarStatus() {
   el.classList.toggle("erro", !!memo.erro);
   if (encerradas.has(chaveRota()) && memo.ultima) { // apuração encerrada: sem atualização automática
     el.classList.remove("erro");
-    el.innerHTML = `Apuração encerrada · atualizado às ${hora(memo.ultima)} · <button type="button" class="link" data-reabrir>atualizar agora</button>`;
+    el.title = `Apuração encerrada · atualizado às ${hora(memo.ultima)}`;
+    el.innerHTML = `Encerrada · <button type="button" class="link" data-reabrir>atualizar agora</button>`;
     return;
   }
+  el.title = memo.erro ? `Falha na última tentativa: ${memo.erro}` : "";
   el.textContent = memo.ultima
-    ? `Atualizado às ${hora(memo.ultima)} · próxima em ${seg}s${memo.erro ? " · falha na última tentativa: " + memo.erro : ""}`
+    ? `${hora(memo.ultima)} · próxima em ${seg} s${memo.erro ? " · falha" : ""}`
     : memo.erro || "Carregando…";
 }
 
@@ -1240,15 +1242,18 @@ function montarBase() {
   const semTudo = aba === "geo" || aba === "nulos" || aba === "turnos"; // mapas de abstenção e nulos não dependem de turno, base nem sub judice
   const semBase = semTudo || aba === "cenarios";
   const sj = aba === "cenarios" || b === "validos";
-  $("basebar").hidden = semTudo;
-  if (semTudo) { $("basebar").innerHTML = ""; return; }
-  $("basebar").innerHTML = `${semBase ? "" : `<div class="seg mini" role="group" aria-label="Base dos percentuais">
-      <button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Totais</button></div>`}
-    ${sj ? `<button type="button" class="chave-sj" data-sj aria-pressed="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><i aria-hidden="true"></i>Sem sub judice</button>` : ""}
-    ${sj && estado.semSJ ? `<p class="muted base-nota">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
-    ${!semBase && b === "totais" ? `<p class="muted base-nota">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}`;
+  const caixa = $("calculo"), aberto = caixa.querySelector("details")?.open ?? false; // o painel não fecha sozinho quando a tela se refaz
+  caixa.hidden = semTudo || (semBase && !sj);
+  if (caixa.hidden) { caixa.innerHTML = ""; return; }
+  const chave = `<button type="button" class="el-chave" role="switch" data-sj aria-checked="${estado.semSJ}" title="Recalcula o resultado desconsiderando os votos de candidatos com registro sub judice"><span class="el-chave__trilho"></span>Sem sub judice<span class="el-chave__estado">${estado.semSJ ? "Ligado" : "Desligado"}</span></button>`;
+  caixa.innerHTML = `<details class="el-painel"${aberto ? " open" : ""}><summary>Como calcular</summary><div class="el-painel__corpo">
+    ${semBase ? "" : `<div class="el-seg" role="group" aria-label="Base dos percentuais"><button type="button" data-base="validos" aria-pressed="${b === "validos"}" title="Percentuais sobre os votos válidos">Votos válidos</button><button type="button" data-base="totais" aria-pressed="${b === "totais"}" title="Percentuais sobre todos os eleitores aptos">Votos totais</button></div>`}
+    ${!semBase && b === "totais" ? `<p class="el-apoio">Percentuais sobre todos os eleitores aptos das seções apuradas. Brancos, nulos e abstenções entram como “candidatos”; <b>Não voto</b> é a soma dos três.</p>` : ""}
+    ${sj ? chave : ""}
+    ${sj && estado.semSJ ? `<p class="el-apoio">Cenário: os votos de candidatos “anulado sub judice” saem da conta. Percentuais, eleitos, 2º turno e cadeiras são recalculados — não é o resultado oficial do TSE, que ainda os inclui.</p>` : ""}
+  </div></details>`;
 }
-$("basebar").addEventListener("click", (e) => {
+$("calculo").addEventListener("click", (e) => {
   const tn = e.target.closest("[data-turno]");
   if (tn) { // o turno muda os arquivos do TSE: recarrega a página com ?turno=, mantendo o endereço atual
     if (Number(tn.dataset.turno) === (TURNO2 ? 2 : 1)) return;
