@@ -10,3 +10,6 @@ Orçamento de altura (rodada 6), a regra que vale para todas as telas: a navega�
 
 
 Rodada 9: no desktop use `el-pagina` (máx. 1064px) e `el-pagina--duas`: coluna central de 720px e coluna lateral de 320px para o resumo e o escopo. Não repita o título no topo quando o menu lateral já o mostra (`el-topo__titulo--mobile`, escondido a partir de 1024px). Se a rota existir só num turno (ex.: Senado no 2º turno), mostre um `Aviso` explicando e ofereça voltar ao 1º turno, em vez de uma tela vazia.
+
+
+Rodada 13: a coluna lateral de 320px (`el-lateral`) é presa abaixo das barras fixas, mas só pode prender se couber na tela. Ela tem `max-height` igual à altura da janela menos as barras fixas e rola por dentro, então nunca fica cortada esperando o fim da página. Coloque nela só o resumo (Placar com o Brasil); listas longas, como o placar por região, vão na coluna principal.
