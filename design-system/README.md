@@ -80,3 +80,6 @@ Lido do repositório rphaleixo/eleicao (commit 61d490b): as variáveis de cor do
 
 
 Rodada 9b (novos componentes): BlocosEstados (mapa em blocos, visão padrão dos estados), Carrossel (espiada à direita e indicador), AjusteMapa (controles raros recolhidos). Tokens novos: foto-p (48px) e foto-g (96px), proporção 3:4. Placar chapado.
+
+
+Regra de base dos percentuais (vale para todo o sistema): votos válidos são os votos dados a candidatos e legendas. Brancos, nulos e abstenções ficam de fora do denominador. Os percentuais por candidato sobre votos válidos somam 100%. "Não voto" é a soma de abstenções, brancos e nulos; aparece só como barra à parte ou na base "Eleitores aptos" (comparecimento), nunca dentro do cálculo de votos válidos. O seletor de base tem dois valores: Votos válidos e Eleitores aptos. Se a fonte do TSE trouxer um campo de votos válidos que já inclua brancos, não use: recalcule somando candidatos e legendas.

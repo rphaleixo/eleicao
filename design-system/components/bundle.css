@@ -636,3 +636,36 @@
 .el-bloco { aspect-ratio: auto; height: 54px; }
 .el-blocos { grid-auto-rows: 54px; }
 .el-blocos + .el-apoio { margin-top: var(--esp-12); }
+
+/* ===== Rodada 10: premissas fixas e duelo ===== */
+.el-premissas { position: sticky; top: var(--alt-fixa, 92px); z-index: 20; background: var(--fundo); border-bottom: 2px solid var(--texto); }
+.el-premissas__barra { width: 100%; min-height: 44px; display: flex; align-items: stretch; border: 0; background: none; color: var(--texto); font: 600 13px/16px var(--font-text); text-align: left; cursor: pointer; padding: 0; }
+.el-premissas__lista { flex: 1; min-width: 0; display: flex; overflow-x: auto; scrollbar-width: none; }
+.el-premissas__lista > span { flex: none; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--esp-12); border-left: 1px solid var(--linha); }
+.el-premissas__lista > span:first-child { border-left: 0; padding-left: 0; }
+.el-premissas__lista small { font: 600 10px/12px var(--font-text); letter-spacing: .06em; text-transform: uppercase; color: var(--texto-suave); }
+.el-premissas__ajustar { flex: none; display: flex; align-items: center; gap: var(--esp-6); padding: 0 var(--esp-12); border-left: 2px solid var(--texto); font: 700 13px/16px var(--font-text); color: var(--acento); }
+.el-premissas__painel { position: absolute; left: 0; right: 0; top: 100%; max-height: 70vh; overflow: auto; padding: var(--esp-12); background: var(--cartao); border: 1px solid var(--linha); border-top: 0; box-shadow: 0 12px 24px rgba(0,0,0,.25); display: grid; gap: var(--esp-12); }
+.el-premissas__painel[hidden] { display: none; }
+.el-premissas__painel .el-campos { grid-template-columns: 1fr 1fr; }
+.el-premissas__fim { display: flex; justify-content: flex-end; }
+
+.el-duelo { border: 1px solid var(--linha); border-top: 3px solid var(--texto); background: var(--cartao); }
+.el-duelo__topo { display: flex; justify-content: space-between; align-items: baseline; gap: var(--esp-8); flex-wrap: wrap; padding: var(--esp-8) var(--esp-12) 0; }
+.el-duelo__topo h3 { margin: 0; font: 400 24px/26px var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
+.el-duelo__topo span { font: 600 12px/16px var(--font-num); color: var(--texto-suave); }
+.el-duelo__vantagem { display: flex; align-items: center; gap: var(--esp-12); margin: var(--esp-8) var(--esp-12); padding: var(--esp-8) var(--esp-12); border-left: 5px solid var(--cor, var(--acento)); background: color-mix(in srgb, var(--cor, var(--acento)) 12%, var(--cartao)); }
+.el-duelo__vantagem > b { flex: none; font: 400 32px/32px var(--font-display); font-variant-numeric: tabular-nums; }
+.el-duelo__vantagem p { margin: 0; font: 600 13px/18px var(--font-text); }
+.el-duelo__vantagem small { display: block; color: var(--texto-suave); font: 600 12px/16px var(--font-num); }
+.el-duelo__tabela { display: grid; }
+.el-duelo__linha { display: grid; grid-template-columns: minmax(0, 1fr) 64px 64px 84px; align-items: center; gap: var(--esp-6); min-height: 44px; padding: 0 var(--esp-12); border-top: 1px solid var(--linha); font: 600 14px/18px var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.el-duelo__linha--cab { min-height: 28px; border-top: 2px solid var(--texto); font: 600 11px/14px var(--font-text); letter-spacing: .06em; text-transform: uppercase; color: var(--texto-suave); }
+.el-duelo__linha > :first-child { text-align: left; font-family: var(--font-text); font-weight: 700; display: flex; align-items: center; gap: var(--esp-8); min-width: 0; }
+.el-duelo__linha > :first-child::before { content: ""; width: 10px; height: 10px; flex: none; background: var(--cor, var(--sem-cor)); }
+.el-duelo__linha--cab > :first-child::before { display: none; }
+.el-duelo__linha--lider { box-shadow: inset 4px 0 0 var(--cor, var(--acento)); background: color-mix(in srgb, var(--cor, var(--acento)) 8%, var(--cartao)); }
+.el-duelo__linha--lider > :nth-child(2), .el-duelo__linha--lider > :nth-child(3) { font-weight: 700; }
+.el-duelo__votos { display: none; font: 600 12px/16px var(--font-num); color: var(--texto-suave); }
+@media (min-width: 600px) { .el-duelo__linha { grid-template-columns: minmax(0, 1fr) 96px 96px 96px; } .el-duelo__votos { display: inline; } }
+.el-duelo__sem { color: var(--texto-suave); font-weight: 600; }

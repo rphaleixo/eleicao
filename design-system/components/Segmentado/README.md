@@ -12,3 +12,6 @@ Linguagem de redação (rodada 4): o controle é uma régua. Cada opção é um 
 
 
 Rodada 9: o seletor de turno é a variante `el-seg--turno`: 44px de altura, rótulo ao lado do marcador, largura máxima de 480px (não estica na tela larga).
+
+
+Base dos percentuais: as duas opções são Votos válidos e Eleitores aptos. Regra de base dos percentuais (vale para todo o sistema): votos válidos são os votos dados a candidatos e legendas. Brancos, nulos e abstenções ficam de fora do denominador. Os percentuais por candidato sobre votos válidos somam 100%. "Não voto" é a soma de abstenções, brancos e nulos; aparece só como barra à parte ou na base "Eleitores aptos" (comparecimento), nunca dentro do cálculo de votos válidos. O seletor de base tem dois valores: Votos válidos e Eleitores aptos. Se a fonte do TSE trouxer um campo de votos válidos que já inclua brancos, não use: recalcule somando candidatos e legendas.
