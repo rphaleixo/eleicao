@@ -1064,7 +1064,7 @@ function telaGeo(v) {
     <section class="card"><div class="titulo-cadeiras"><h2>Ranking dos municípios</h2><span class="muted">${fmt(c.municipios)} com dado</span></div>${tabelaGeo(c.itens, { visao: g.visao, pagina: g.pag, selecionado: g.sel })}</section>`;
 }
 
-/** Aba "E se…": recalcula a Câmara no cenário escolhido (guarda o último cálculo enquanto os dados não mudam). */
+/** Aba "Cenários": recalcula a Câmara no cenário escolhido (guarda o último cálculo enquanto os dados não mudam). */
 let memoCenario = { chave: null, valor: null };
 function telaCenarios(v) {
   const id = CENARIOS[estado.cenario] ? estado.cenario : "psol-pt";

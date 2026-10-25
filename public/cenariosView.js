@@ -1,4 +1,4 @@
-// Tela da aba "E se…": escolha do cenário, antes e depois da bancada, onde muda e quem entra e sai.
+// Tela da aba "Cenários": escolha do cenário, antes e depois da bancada, onde muda e quem entra e sai.
 import { UFS } from "./config.js";
 import { corPartido } from "./cores.js";
 import { fmt, pct } from "./formato.js";
@@ -23,7 +23,7 @@ function tabelaBancada(cmp, comSenado) {
  */
 export function telaCenario(id, r) {
   const c = CENARIOS[id] ?? CENARIOS["psol-pt"];
-  const topo = `<section class="card"><h2>E se…</h2><p class="muted">Cenários hipotéticos sobre a bancada, calculados com os votos do 1º turno. Servem para pensar o “e se”: não são resultados oficiais.</p>${seletorCenarios(id)}</section>`;
+  const topo = `<section class="card"><h2>Cenários</h2><p class="muted">Cenários hipotéticos sobre a bancada, calculados com os votos do 1º turno. Servem para pensar o “e se”: não são resultados oficiais.</p>${seletorCenarios(id)}</section>`;
   if (!r) return `${topo}<section class="card"><p class="muted">Carregando os 27 estados…</p></section>`;
   const { cmp, mudancas, candidatos, comSenado } = r;
   const grupo = c.uniao ? cmp.linhas.find((l) => l.rotulo === c.uniao.rotulo) : null;

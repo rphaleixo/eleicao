@@ -4,7 +4,7 @@ import { num } from "./tse.js";
 export const METRICAS = [["abstencao", "Abstenção"], ["brancos", "Brancos"], ["nulos", "Nulos"]];
 export const VISOES = [["taxa", "Taxa (%)"], ["pessoas", "Pessoas"], ["acima", "Acima da média"]];
 export const MINIMOS = [[0, "Todos os municípios"], [10_000, "10 mil eleitores ou mais"], [50_000, "50 mil ou mais"], [100_000, "100 mil ou mais"], [500_000, "500 mil ou mais"]];
-export const CARGOS_GEO = [["presidente", "Presidente"], ["governador", "Governador"], ["senador", "Senador"], ["dep-federal", "Dep. Federal"], ["dep-estadual", "Dep. Estadual"]];
+export const CARGOS_GEO = [["presidente", "Presidente"], ["governador", "Governador"], ["senador", "Senador"], ["dep-federal", "Deputado Federal"], ["dep-estadual", "Deputado Estadual"]];
 
 /** Arquivo de andamento de um estado (-ab) -> Map(código TSE do município -> { aptos, comparecimento, abstencao, pctSecoes }). */
 export function lerAbUf(json) {
