@@ -18,13 +18,42 @@ export function emendar(pts, ate = 0, fim = FIM_VOTACAO) {
   for (const p of pts) if (p.t >= fim) p.t -= s;
   return { de, s, fim, ate: ate > de ? Math.max(de, ate - s) : ate };
 }
+/** Zoom do eixo vertical: só visual e só na memória (o gráfico sempre abre em "Eixo completo"). */
+const zoomes = new Set();
+export const zerarZoom = () => zoomes.clear();
+export const alternarZoom = (chave, ligado) => { if (ligado) zoomes.add(chave); else zoomes.delete(chave); };
+/** Eixo ampliado: do menor valor menos 5 p.p. ao maior mais 5 p.p., em múltiplos de 5, entre 0% e 100% (no mínimo 10 p.p. de altura). */
+export function eixoAmpliado(valores) {
+  const v = valores.filter(Number.isFinite);
+  if (!v.length) return { lo: 0, hi: 100 };
+  let lo = Math.max(0, Math.floor((Math.min(...v) - 5) / 5) * 5), hi = Math.min(100, Math.ceil((Math.max(...v) + 5) / 5) * 5);
+  if (hi - lo < 10) { if (hi < 100) hi = Math.min(100, lo + 10); else lo = Math.max(0, hi - 10); }
+  return { lo, hi };
+}
+/** Valores das linhas de grade: de 5 em 5 p.p., ou de 10 em 10 quando não cabem (menos de 24px entre uma e outra). */
+export function gradeDoEixo(lo, hi, alturaUtil) {
+  const passo = alturaUtil / ((hi - lo) / 5) >= 24 ? 5 : 10, g = [];
+  for (let v = Math.ceil(lo / passo) * passo; v <= hi + 1e-9; v += passo) g.push(v);
+  return g;
+}
+const controleZoom = (chave, ligado) => `<div class="el-visao g-zoom" role="group" aria-label="Eixo vertical do gráfico"><button type="button" data-zoom-grafico="${esc(chave)}" data-zoom="completo" aria-pressed="${!ligado}">Eixo completo</button><button type="button" data-zoom-grafico="${esc(chave)}" data-zoom="ampliar" aria-pressed="${ligado}">Ampliar</button></div>`;
+const notaEixo = (lo, hi) => `<p class="g-eixo-nota">Eixo ampliado: ${lo}% a ${hi}%</p>`;
+/** Rótulos de hora do eixo: 5 quando cabem, 3 num gráfico estreito; nenhum dentro do trecho removido pela emenda. */
+function ticksHora(t0, t1, x, kz, largura, m, yTexto) {
+  const n = largura - m.e - m.d < 260 ? 3 : 5;
+  return Array.from({ length: n }, (_, i) => {
+    const t = t0 + ((t1 - t0) * i) / (n - 1);
+    if (kz && Math.abs(x(t) - x(kz.de)) < 34) return "";
+    return `<text class="g-txt" x="${x(t)}" y="${yTexto}" text-anchor="${i === 0 ? "start" : i === n - 1 ? "end" : "middle"}">${hhmm(realDe(kz, t))}</text>`;
+  }).join("");
+}
 const realDe = (kz, t) => (kz && t > kz.de ? t + kz.s : t);
 const horaCheia = (ms) => { const [h, m] = hhmm(ms).split(":"); return m === "00" ? `${Number(h)}h` : `${Number(h)}h${m}`; };
 /** Marca da emenda: corte no eixo e a legenda do trecho removido. */
-function corteSvg(kz, x, m, altura) {
+function corteSvg(kz, x, m, altura, largura) {
   if (!kz) return "";
-  const cx = x(kz.de), yb = altura - m.b;
-  return `<g class="g-corte" aria-hidden="true"><line x1="${cx}" x2="${cx}" y1="${m.c}" y2="${yb}"/><path d="M${cx - 6},${yb + 4} l6,-8 M${cx},${yb + 4} l6,-8"/><text x="${cx + 6}" y="${m.c + 12}">sem apuração até as ${horaCheia(kz.fim)}</text></g>`;
+  const cx = x(kz.de), yb = altura - m.b, esquerda = cx < largura / 2;
+  return `<g class="g-corte" aria-hidden="true"><line x1="${cx}" x2="${cx}" y1="${m.c}" y2="${yb}"/><path d="M${cx - 6},${yb + 4} l6,-8 M${cx},${yb + 4} l6,-8"/><text x="${esquerda ? cx + 8 : cx - 8}" y="${altura - 5}" text-anchor="${esquerda ? "start" : "end"}">sem apuração até as ${horaCheia(kz.fim)}</text></g>`;
 }
 const hhmm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
@@ -41,23 +70,24 @@ export function linhaEvolucao(pontos, valor, { largura = 640, altura = 190, rotu
   }
   const m = { e: 56, d: 12, c: 10, b: 24 };
   const kz = emendar(pts, ate), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, kz?.ate ?? ate, t0 + 60000);
+  const ext = kz ? 18 : 0; // com a emenda, uma linha a mais embaixo para a legenda do corte
+  altura += ext; m.b += ext;
+  const ampliado = zoomes.has(rotulo), { lo, hi } = ampliado ? eixoAmpliado(pts.map((p) => p.v)) : { lo: 0, hi: 100 };
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
-  const y = (v) => m.c + (1 - v / 100) * (altura - m.c - m.b);
+  const y = (v) => m.c + (1 - (v - lo) / (hi - lo)) * (altura - m.c - m.b);
   // degrau: o valor se mantém até a próxima foto
   let d = `M${x(pts[0].t).toFixed(1)},${y(pts[0].v).toFixed(1)}`;
   for (let i = 1; i < pts.length; i++) d += ` L${x(pts[i].t).toFixed(1)},${y(pts[i - 1].v).toFixed(1)} L${x(pts[i].t).toFixed(1)},${y(pts[i].v).toFixed(1)}`;
-  const area = `${d} L${x(pts[pts.length - 1].t).toFixed(1)},${y(0)} L${x(t0).toFixed(1)},${y(0)} Z`;
-  const grade = [0, 25, 50, 75, 100]
+  const area = `${d} L${x(pts[pts.length - 1].t).toFixed(1)},${y(lo)} L${x(t0).toFixed(1)},${y(lo)} Z`;
+  const grade = (ampliado ? gradeDoEixo(lo, hi, altura - m.c - m.b) : [0, 25, 50, 75, 100])
     .map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`)
     .join("");
-  const ticks = [0, 1, 2, 3, 4]
-    .map((i) => { const t = t0 + ((t1 - t0) * i) / 4; if (kz && Math.abs(x(t) - x(kz.de)) < 34) return ""; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(realDe(kz, t))}</text>`; })
-    .join("");
+  const ticks = ticksHora(t0, t1, x, kz, largura, m, altura - 6 - ext);
   const ult = pts[pts.length - 1];
-  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [{ n: "Seções apuradas", v: pts.map((p) => p.v), y: [0, 100] }]);
-  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.v)} das seções apuradas">
+  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [{ n: "Seções apuradas", v: pts.map((p) => p.v), y: [lo, hi] }]);
+  return `${controleZoom(rotulo, ampliado)}${ampliado ? notaEixo(lo, hi) : ""}<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.v)} das seções apuradas">
     ${grade}${ticks}<path class="g-area" d="${area}"/><path class="g-linha" d="${d}"/>
-    <circle class="g-ponto" cx="${x(ult.t)}" cy="${y(ult.v)}" r="4"/>${corteSvg(kz, x, m, altura)}</svg><div class="g-info" hidden></div>`;
+    <circle class="g-ponto" cx="${x(ult.t)}" cy="${y(ult.v)}" r="4"/>${corteSvg(kz, x, m, altura, largura)}</svg><div class="g-info" hidden></div>`;
 }
 
 /** Mini gráfico para listas. */
@@ -89,25 +119,30 @@ export function areaPresenca(pontos, chave, eleitorado, { largura = 640, altura 
   if (pts.length < 2) return `<p class="muted vazio-grafico">O gráfico começa quando a apuração iniciar. O histórico é registrado a cada minuto.</p>`;
   const m = { e: 56, d: 12, c: 10, b: 24 };
   const kz = emendar(pts, ate), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, kz?.ate ?? ate, t0 + 60000);
+  const ext = kz ? 18 : 0; // com a emenda, uma linha a mais embaixo para a legenda do corte
+  altura += ext; m.b += ext;
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
-  const y = (v) => m.c + (1 - Math.min(100, v) / 100) * (altura - m.c - m.b);
+  const comUrnas = pts.some((p) => p.u != null);
+  if (comUrnas) { let ant = 0; for (const p of pts) { if (p.u == null) p.u = ant; ant = p.u; } } // lacunas: mantém o último valor
+  const ampliado = zoomes.has(rotulo), { lo, hi } = ampliado ? eixoAmpliado(pts.flatMap((p) => [p.c, p.c + p.a, ...(comUrnas ? [p.u] : [])])) : { lo: 0, hi: 100 };
+  const y = (v) => m.c + (1 - (Math.min(hi, v) - lo) / (hi - lo)) * (altura - m.c - m.b);
   const degrau = (valor) => {
     let d = `${x(pts[0].t).toFixed(1)},${y(valor(pts[0])).toFixed(1)}`;
     for (let i = 1; i < pts.length; i++) d += ` ${x(pts[i].t).toFixed(1)},${y(valor(pts[i - 1])).toFixed(1)} ${x(pts[i].t).toFixed(1)},${y(valor(pts[i])).toFixed(1)}`;
     return d;
   };
   const topo = degrau((p) => p.c + p.a), meio = degrau((p) => p.c);
-  const base = (t) => `${x(t).toFixed(1)},${y(0)}`;
+  const base = (t) => `${x(t).toFixed(1)},${y(lo)}`;
   const ult = pts[pts.length - 1], fim = base(ult.t), ini = base(t0);
-  const grade = [0, 25, 50, 75, 100].map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`).join("");
-  const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; if (kz && Math.abs(x(t) - x(kz.de)) < 34) return ""; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(realDe(kz, t))}</text>`; }).join("");
-  const comUrnas = pts.some((p) => p.u != null);
-  if (comUrnas) { let ant = 0; for (const p of pts) { if (p.u == null) p.u = ant; ant = p.u; } } // lacunas: mantém o último valor
+  const grade = (ampliado ? gradeDoEixo(lo, hi, altura - m.c - m.b) : [0, 25, 50, 75, 100]).map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`).join("");
+  const ticks = ticksHora(t0, t1, x, kz, largura, m, altura - 6 - ext);
   const linhaUrnas = comUrnas ? `<polyline class="g-urnas" points="${degrau((p) => p.u)}"/>` : "";
-  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [{ n: "Presentes", v: pts.map((p) => p.c), y: [0, 100] }, { n: "Ausentes", v: pts.map((p) => p.a), y: [0, 100] }, ...(comUrnas ? [{ n: "Urnas apuradas", cor: "#7cc4ff", v: pts.map((p) => p.u), y: [0, 100] }] : [])]);
-  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.c)} presentes e ${pct(ult.a)} ausentes do eleitorado">
-    ${grade}${ticks}<polygon class="g-aus" points="${topo} ${fim} ${ini}"/><polygon class="g-pres" points="${meio} ${fim} ${ini}"/>
-    <polyline class="g-borda" points="${topo}"/>${linhaUrnas}${corteSvg(kz, x, m, altura)}</svg><div class="g-info" hidden></div>`;
+  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [{ n: "Presentes", v: pts.map((p) => p.c), y: [lo, hi] }, { n: "Ausentes", v: pts.map((p) => p.a), y: [lo, hi] }, ...(comUrnas ? [{ n: "Urnas apuradas", cor: "#7cc4ff", v: pts.map((p) => p.u), y: [lo, hi] }] : [])]);
+  const recorte = `rec-${Math.abs([...rotulo].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7))}`; // o zoom corta o que passa do quadro do gráfico
+  return `${controleZoom(rotulo, ampliado)}${ampliado ? notaEixo(lo, hi) : ""}<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="${rotulo}: ${pct(ult.c)} presentes e ${pct(ult.a)} ausentes do eleitorado">
+    <clipPath id="${recorte}"><rect x="${m.e}" y="${m.c}" width="${largura - m.e - m.d}" height="${altura - m.c - m.b}"/></clipPath>
+    ${grade}${ticks}<g clip-path="url(#${recorte})"><polygon class="g-aus" points="${topo} ${fim} ${ini}"/><polygon class="g-pres" points="${meio} ${fim} ${ini}"/>
+    <polyline class="g-borda" points="${topo}"/>${linhaUrnas}</g>${corteSvg(kz, x, m, altura, largura)}</svg><div class="g-info" hidden></div>`;
 }
 
 const TITULOS = new Set(["DR.", "DRA.", "PROF.", "CEL.", "CORONEL", "PROFESSOR", "PROFESSORA", "DELEGADO", "DELEGADA", "CAPITÃO", "SARGENTO", "PASTOR", "PASTORA", "JUIZ", "JUÍZA", "ESCRITOR", "TENENTE", "MAJOR", "GENERAL", "DOUTOR", "DOUTORA"]);
@@ -162,12 +197,17 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
   const m = { e: 56, d: 12, c: 34, b: 24 }; // a faixa de cima abriga a etiqueta da diferença
   altura += 24;
   const kz = emendar(pts, ate), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, kz?.ate ?? ate, t0 + 60000);
+  const ext = kz ? 18 : 0; // com a emenda, uma linha a mais embaixo para a legenda do corte
+  altura += ext; m.b += ext;
+  const chaveZoom = `resultado:${locais.join(",")}`, ampliado = zoomes.has(chaveZoom);
+  const { lo, hi } = ampliado ? eixoAmpliado(pts.flatMap((p) => [...ids.map((id) => pc(p.r, id)), ...(totais ? [pcNv(p.r)] : [])])) : { lo: 0, hi: topo };
   const x = (t) => m.e + ((t - t0) / (t1 - t0)) * (largura - m.e - m.d);
-  const y = (v) => m.c + (1 - v / topo) * (altura - m.c - m.b);
+  const y = (v) => m.c + (1 - (v - lo) / (hi - lo)) * (altura - m.c - m.b);
   const passo = topo <= 20 ? 5 : 10, linhasGrade = [];
-  for (let g = 0; g <= topo; g += passo) linhasGrade.push(g);
+  if (ampliado) linhasGrade.push(...gradeDoEixo(lo, hi, altura - m.c - m.b));
+  else for (let g = 0; g <= topo; g += passo) linhasGrade.push(g);
   const grade = linhasGrade.map((g) => `<line class="g-grade" x1="${m.e}" x2="${largura - m.d}" y1="${y(g)}" y2="${y(g)}"/><text class="g-txt" x="${m.e - 6}" y="${y(g) + 4}" text-anchor="end">${pct(g)}</text>`).join("");
-  const ticks = [0, 1, 2, 3, 4].map((i) => { const t = t0 + ((t1 - t0) * i) / 4; if (kz && Math.abs(x(t) - x(kz.de)) < 34) return ""; return `<text class="g-txt" x="${x(t)}" y="${altura - 6}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${hhmm(realDe(kz, t))}</text>`; }).join("");
+  const ticks = ticksHora(t0, t1, x, kz, largura, m, altura - 6 - ext);
   const nome = (id) => rp.cands?.[id]?.n || id, partido = (id) => rp.cands?.[id]?.p || "";
   const linhas = ids.map((id) => {
     const d = pts.map((p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(1)},${y(pc(p.r, id)).toFixed(1)}`).join(" ");
@@ -177,8 +217,8 @@ export function linhasResultado(rp, local, cor, { largura = 640, altura = 220, m
   const legenda = ids.map((id) => `<span><i class="pt" style="background:${cor(partido(id))}"></i>${nome(id)} <b>${pct(pc(ult, id))}</b></span>`).join("")
     + (totais ? `<span><i class="pt pt-nv"></i>Não voto <b>${pct(pcNv(ult))}</b></span>` : "");
   const rot = pts.map((p) => textoDiferenca(p.r, nome, den(p.r)));
-  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [...ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [0, topo] })), ...(totais ? [{ n: "Não voto", cor: "#8a94a3", v: pts.map((p) => pcNv(p.r)), y: [0, topo] }] : [])], { rot });
+  const dg = dadosG(largura, altura, m, t0, t1, kz, pts.map((p) => p.t), [...ids.map((id) => ({ n: nome(id), cor: cor(partido(id)), v: pts.map((p) => pc(p.r, id)), y: [lo, hi] })), ...(totais ? [{ n: "Não voto", cor: "#8a94a3", v: pts.map((p) => pcNv(p.r)), y: [lo, hi] }] : [])], { rot });
   const ultRot = rot[rot.length - 1];
   const etiqueta = ultRot ? `<g class="g-dif"><rect x="${m.e}" y="5" width="${Math.min(largura - m.e - m.d, ultRot.length * 6.9 + 20)}" height="22" rx="11"/><text x="${m.e + 9}" y="20">${esc(ultRot)}</text></g>` : "";
-  return `<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}${linhaNv}${corteSvg(kz, x, m, altura)}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
+  return `${controleZoom(chaveZoom, ampliado)}${ampliado ? notaEixo(lo, hi) : ""}<svg class="grafico interativo" viewBox="0 0 ${largura} ${altura}" data-g="${dg}" role="img" aria-label="Evolução do resultado dos candidatos${ultRot ? `. ${esc(ultRot)}` : ""}">${etiqueta}${grade}${ticks}${linhas}${linhaNv}${corteSvg(kz, x, m, altura, largura)}</svg><div class="g-info" hidden></div><div class="legenda-cand">${legenda}</div>`;
 }

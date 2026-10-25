@@ -21,6 +21,8 @@ export const REGIOES = {
   sudeste: { sigla: "SE", nome: "Sudeste", ufs: ["ES", "MG", "RJ", "SP"] },
   sul: { sigla: "S", nome: "Sul", ufs: ["PR", "RS", "SC"] },
 };
+/** Ordem da lista de estados e de regiões na Apuração: % apurado, a menos que a pessoa tenha escolhido outra. */
+export const ordemUfs = (e) => (e.ordemEscolhida ? e.ordem : "pct");
 export const nomeEstado = (uf) => (uf === "ZZ" ? "Exterior" : UFS[uf] ?? uf);
 const TEXTO_SITUACAO = { n: "Aguardando dados", p: "Em apuração", f: "Finalizada" };
 
@@ -56,7 +58,11 @@ export function textoAptos(a, { forte = true } = {}) {
 const selo = (a) => `<span class="selo ${a === "p" || a === "f" ? a : ""}">${TEXTO_SITUACAO[a] ?? TEXTO_SITUACAO.n}</span>`;
 
 // ---------- componentes reaproveitáveis ----------
-const largura = () => Math.max(300, Math.min(640, (typeof document === "undefined" ? 400 : document.documentElement.clientWidth) - 64));
+/** Largura real do gráfico em pixels (viewBox = largura na tela, para o texto ficar em 11px de verdade): 288 na coluna lateral de 320px do desktop, senão a do cartão. */
+const largura = () => {
+  const w = typeof document === "undefined" ? 400 : document.documentElement.clientWidth;
+  return w >= 1024 ? 288 : Math.max(300, Math.min(640, w - 64));
+};
 
 function anel(valor) {
   const r = 46, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, valor));
@@ -150,7 +156,7 @@ export const POSICAO_MAPA = { RR: [1, 4], AP: [1, 6], AM: [2, 3], PA: [2, 5], MA
 
 export function blocosEstados(v, estado, mapa = false) {
   const ac = v.f, ufs = ufsVisiveis(estado.regiao).filter((u) => !mapa || POSICAO_MAPA[u]);
-  if (!mapa && estado.ordem === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
+  if (!mapa && ordemUfs(estado) === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
   const bloco = (uf) => {
     const u = ac.ufs[uf.toLowerCase()], a = doEstado(u), nome = nomeEstado(uf);
     const aguardando = !a || !(a.st > 0 || u?.andamento === "p" || u?.andamento === "f");
@@ -212,7 +218,7 @@ export function painelEstado(v, uf) {
 
 function listaOrdenada(v, estado) {
   const ac = v.f, ufs = ufsVisiveis(estado.regiao);
-  if (estado.ordem === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
+  if (ordemUfs(estado) === "pct") ufs.sort((x, y) => (doEstado(ac.ufs[y.toLowerCase()])?.pct ?? 0) - (doEstado(ac.ufs[x.toLowerCase()])?.pct ?? 0));
   return ufs.map((uf) => { const aberto = estado.uf === uf; return linhaEstado(uf, ac.ufs[uf.toLowerCase()], aberto, aberto ? painelEstado(v, uf) : ""); }).join("");
 }
 
@@ -256,31 +262,22 @@ const DETALHE_REGIAO = { norte: "7 estados", nordeste: "9 estados", centroeste: 
 export function linhasRegioes(v, estado) {
   const ac = v.f;
   const itens = [...Object.entries(REGIOES).map(([k, r]) => ({ k, sigla: r.sigla, nome: r.nome, a: agregar(r.ufs.map((u) => ac.ufs[u.toLowerCase()])) })), { k: "exterior", sigla: "EX", nome: "Exterior", a: ac.ufs.zz ? doEstado(ac.ufs.zz) : null }];
-  itens.sort((x, y) => (estado.ordem === "pct" ? (y.a?.pct ?? 0) - (x.a?.pct ?? 0) : 0) || x.nome.localeCompare(y.nome, "pt-BR"));
+  itens.sort((x, y) => (ordemUfs(estado) === "pct" ? (y.a?.pct ?? 0) - (x.a?.pct ?? 0) : 0) || x.nome.localeCompare(y.nome, "pt-BR"));
   return itens.map(({ k, sigla, nome, a }) => {
     const aguardando = !a || !(a.st > 0);
     return `<li><button type="button" class="el-uf el-uf--regiao${aguardando ? " el-uf--aguardando" : ""}" data-regiao="${k}" aria-label="${esc(nome)}: ${aguardando ? "aguardando" : `${pct(a.pct)} apurado`}, ver os estados"><span class="el-uf__sigla">${sigla}</span>
-      <span><span class="el-uf__nome">${esc(nome)}</span><span class="el-uf__det">${DETALHE_REGIAO[k]}</span>${aguardando ? "" : `<span class="el-uf__barra"><i style="width:${Math.min(100, a.pct)}%"></i></span>`}</span>
+      <span><span class="el-uf__nome">${esc(nome)}</span><span class="el-uf__det">${DETALHE_REGIAO[k]}${aguardando ? "" : ` · ${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}`}</span>${aguardando ? "" : `<span class="el-uf__barra"><i style="width:${Math.min(100, a.pct)}%"></i></span>`}</span>
       <span class="el-uf__pct">${aguardando ? "Aguardando" : `${pct(a.pct)}<small>apurado</small>`}</span><span class="el-uf__seta" aria-hidden="true">›</span></button></li>`;
   }).join("");
-}
-function listaRegioes(v, estado, p) {
-  const ac = v.f, r = REGIOES[estado.regiao];
-  const itens = r
-    ? r.ufs.map((u) => ({ nome: UFS[u], a: doEstado(ac.ufs[u.toLowerCase()]) }))
-    : [...Object.values(REGIOES).map((g) => ({ nome: g.nome, a: agregar(g.ufs.map((u) => ac.ufs[u.toLowerCase()])) })), ...(ac.ufs.zz ? [{ nome: "Exterior", a: doEstado(ac.ufs.zz) }] : [])];
-  itens.sort((x, y) => (y.a?.pct ?? 0) - (x.a?.pct ?? 0));
-  const barras = itens.map(({ nome, a }) => `<li><span class="br-nome">${esc(nome)}</span><span class="br-trilho"><i style="width:${Math.min(100, a?.pct ?? 0)}%"></i></span><b>${pct(a?.pct ?? 0)}</b><small>${a ? `${fmt(a.st)} de ${fmt(a.ts)} seções · ${textoAptos(a, { forte: false })}` : "–"}</small></li>`).join("");
-  return `<section class="card">${painelLista("apuracao-regioes", `% da apuração por ${r ? "estado" : "região"}`, `${itens.length} ${r ? "estados" : "locais"} · ${esc(p.titulo)} ${pct(p.a.pct)}`, `<ul class="barras-regiao">${barras}</ul>`)}</section>`;
 }
 
 export function telaMarcha(v, estado, comNav = true) {
   const regioes = estado.agrupUfs === "regioes", p = escopoDoPainel(v, estado.regiao);
   const hero = heroApuracao({ titulo: p.titulo, subtitulo: p.subtitulo, a: p.a, andamento: p.andamento, quando: p.quando, extra: p.extra, hist: v.h, chave: p.chave });
-  return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas(null, v.disp2) : ""}${hero}${listaRegioes(v, estado, p)}
+  return `${comNav ? navegacaoRegional(v.f, { regiao: estado.regiao, uf: estado.uf }) : ""}${TURNO2 && estado.uf === "BR" && !estado.regiao ? blocoDisputas(null, v.disp2) : ""}${hero}
     <p class="muted nota-fonte">Acompanhamento do TSE, no horário de Brasília. Os resultados por cargo (aba Presidente) são publicados em arquivos separados e podem estar alguns minutos atrás deste acompanhamento.</p>
     <section class="card estados"><div class="el-estados__cab"><h2>${estado.regiao ? esc(p.titulo) : "Estados"}</h2>
-      <div class="el-estados__ctl">${estado.visaoUfs === "mapa" && !regioes ? "" : `<div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${estado.ordem !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${estado.ordem === "pct"}">% apurado</button></div>`}
+      <div class="el-estados__ctl">${estado.visaoUfs === "mapa" && !regioes ? "" : `<div class="seg mini" role="group" aria-label="Ordenar"><button type="button" data-ordem="az" aria-pressed="${ordemUfs(estado) !== "pct"}">A–Z</button><button type="button" data-ordem="pct" aria-pressed="${ordemUfs(estado) === "pct"}">% apurado</button></div>`}
       <div class="el-visao" role="group" aria-label="Agrupar por"><button type="button" data-agrup-ufs="estados" aria-pressed="${!regioes}">Estados</button><button type="button" data-agrup-ufs="regioes" aria-pressed="${regioes}">Regiões</button></div>
       ${regioes ? "" : `<div class="el-visao" role="group" aria-label="Visão dos estados"><button type="button" data-visao-ufs="blocos" aria-pressed="${estado.visaoUfs !== "lista" && estado.visaoUfs !== "mapa"}">Blocos</button><button type="button" data-visao-ufs="mapa" aria-pressed="${estado.visaoUfs === "mapa"}">Mapa</button><button type="button" data-visao-ufs="lista" aria-pressed="${estado.visaoUfs === "lista"}">Lista</button></div>`}</div></div>
       ${regioes ? `<ul class="lista-estados el-ufs">${linhasRegioes(v, estado)}</ul>` : estado.visaoUfs === "lista" ? `<ul class="lista-estados el-ufs el-ufs--duas">${listaOrdenada(v, estado)}</ul>` : blocosEstados(v, estado, estado.visaoUfs === "mapa")}

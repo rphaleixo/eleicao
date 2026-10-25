@@ -49,7 +49,7 @@ import {
 import { distribuirEstado, consolidarNacional } from "./proporcional.js";
 import { corPartido, ajustarContrasteChips } from "./cores.js";
 import { ladoFixo } from "./finalistas.js";
-import { linhaEvolucao, linhasResultado, temTotais } from "./graficos.js";
+import { linhaEvolucao, linhasResultado, temTotais, zerarZoom, alternarZoom } from "./graficos.js";
 import { atualizarFaixa } from "./eventos.js";
 import { iniciarGraficos, reaplicarGraficos } from "./graficoInterativo.js";
 
@@ -1564,6 +1564,8 @@ $("conteudo").addEventListener("click", (e) => {
   if (it) { abrirFicha(it.dataset.sq, apuracaoDe(it.dataset.sq)); return; }
   const vm = e.target.closest("[data-vermais]");
   if (vm) { maisItens(vm.dataset.vermais, Number(vm.dataset.passo) || 10, vm.dataset.vermais === "pres-cmp" ? 5 : 10); render(true); return; }
+  const zm = e.target.closest("[data-zoom-grafico]");
+  if (zm) { alternarZoom(zm.dataset.zoomGrafico, zm.dataset.zoom === "ampliar"); render(true); return; }
   const ag = e.target.closest("[data-agrup-ufs]");
   if (ag) { estado.agrupUfs = ag.dataset.agrupUfs; render(true); return; }
   const vu = e.target.closest("[data-visao-ufs]");
@@ -1665,7 +1667,7 @@ $("conteudo").addEventListener("click", (e) => {
   if (tr && (estado.aba === "governadores" || estado.aba === "senadores")) { navegar({ aba: "estados", uf: tr.dataset.uf, cargo: estado.aba === "governadores" ? "governador" : "senador", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (tr && estado.aba === "presidente") { navegar({ uf: tr.dataset.uf, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
-addEventListener("hashchange", () => { lerHash(); montarControles(); montarBase(); atualizar(); });
+addEventListener("hashchange", () => { zerarZoom(); lerHash(); montarControles(); montarBase(); atualizar(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) atualizar(); });
 
 const hashInicial = location.hash;

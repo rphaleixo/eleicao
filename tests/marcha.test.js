@@ -42,7 +42,7 @@ test("tela do Brasil: painel único e lista de estados, sem seletor de eleição
   const h = telaMarcha(v, est({}));
   for (const t of ["Brasil", "Norte", "Acre", "Tocantins", "Exterior", 'data-uf="ZZ"', "anel", "Presentes", "Ausentes", "A apurar"]) assert.ok(h.includes(t), t);
   assert.ok(!h.includes("data-serie"));
-  assert.equal((h.match(/class="card/g) || []).length, 4); // painel (Placar), apuração por região, estados e definições
+  assert.equal((h.match(/class="card/g) || []).length, 3); // painel (Placar), estados e definições (a lista Regiões ficou dentro do cartão Estados)
   assert.ok(!h.includes("expandido"));
   const sul = telaMarcha(v, est({ regiao: "sul" }));
   assert.ok(sul.includes("Santa Catarina") && !sul.includes("Acre") && !sul.includes('data-uf="ZZ"'));
@@ -109,10 +109,11 @@ test("o Placar fica só com o resumo do Brasil; a lista por região vai para a c
   const h = telaMarcha(v, est({ visaoUfs: "lista" }));
   const hero = h.slice(h.indexOf('class="card hero"'), h.indexOf("</section>", h.indexOf('class="card hero"')));
   assert.ok(hero.includes("anel") && !hero.includes("barras-regiao") && !hero.includes('data-painel='));
-  assert.ok(h.includes('data-painel-lista="apuracao-regioes"') && !/data-painel-lista="apuracao-regioes"[^>]* open/.test(h) && h.includes("barras-regiao"));
-  for (const t of ["% da apuração por região", "Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul", "Exterior", "50,00%"]) assert.ok(h.includes(t), t);
+  assert.ok(!h.includes("apuracao-regioes") && !h.includes("barras-regiao")); // o painel foi para a lista Regiões
+  const reg = telaMarcha(v, est({ agrupUfs: "regioes" }));
+  for (const t of ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul", "Exterior", "50,00%"]) assert.ok(reg.includes(t), t);
   const sul = telaMarcha(v, est({ regiao: "sul" }));
-  assert.ok(sul.includes("% da apuração por estado") && sul.includes("Santa Catarina"));
+  assert.ok(sul.includes("Santa Catarina"));
 });
 
 test("blocos de estados: percentual sempre com duas casas, sem arredondar para inteiro", () => {
@@ -129,8 +130,8 @@ test("a Marcha mostra os eleitores aptos junto das seções (painel, barras por 
   const geral = telaMarcha(v, est({ visaoUfs: "lista" }));
   assert.ok(geral.includes("eleitores aptos") && geral.includes("de 270 seções"));
   assert.match(geral, /de 10 seções · ([\d.]+ votos apurados \| )?([\d.]+ ausentes \| )?100 eleitores aptos/); // linha de um estado
-  const reg = telaMarcha(v, est({ painel: "regioes" }));
-  assert.ok(reg.includes("seções · ") && reg.includes("eleitores aptos"));
+  const reg = telaMarcha(v, est({ agrupUfs: "regioes" }));
+  assert.ok(/\d de \d+ seções · /.test(reg) && reg.includes("eleitores aptos")); // a lista Regiões traz seções e aptos
 });
 
 test("estados em blocos (visão padrão): sigla, % apurado e o estado aberto com o resumo abaixo da grade", () => {
@@ -154,4 +155,13 @@ test("agrupamento Regiões: seis linhas el-uf--regiao, % somando seções (não 
   assert.ok(h.includes('data-agrup-ufs="regioes" aria-pressed="true"') && !h.includes("data-visao-ufs") && h.includes('data-regiao="sul"'));
   const lista = telaMarcha(v, est({ visaoUfs: "lista" }));
   assert.ok(lista.includes("el-ufs--duas") && lista.includes("el-uf--compacta") && lista.includes('data-agrup-ufs="estados" aria-pressed="true"'));
+});
+
+test("ordem padrão na Apuração: % apurado, igual nos dois agrupamentos, com o botão certo pressionado", () => {
+  for (const agrupUfs of ["estados", "regioes"]) {
+    const h = telaMarcha(v, est({ agrupUfs, visaoUfs: "lista" }));
+    assert.ok(h.includes('data-ordem="pct" aria-pressed="true"') && h.includes('data-ordem="az" aria-pressed="false"'), agrupUfs);
+    const az = telaMarcha(v, est({ agrupUfs, visaoUfs: "lista", ordem: "az", ordemEscolhida: true }));
+    assert.ok(az.includes('data-ordem="az" aria-pressed="true"'), agrupUfs);
+  }
 });

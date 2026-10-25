@@ -65,3 +65,20 @@ test("resultado: etiqueta com a diferença entre os dois primeiros, em p.p. e vo
   const svg = linhasResultado(rp, "br", () => "#000", { inicio: T0 * 1000, ate: (T0 + 300) * 1000 });
   assert.ok(svg.includes('class="g-dif"') && svg.includes("FLAVIO +10,00 p.p. · 100 votos"));
 });
+
+test("zoom do eixo: menor valor − 5 e maior + 5 p.p., em múltiplos de 5, entre 0% e 100%", async () => {
+  const { eixoAmpliado, gradeDoEixo, linhaEvolucao, alternarZoom, zerarZoom } = await import("../public/graficos.js");
+  assert.deepEqual(eixoAmpliado([42.3, 50, 57.7]), { lo: 35, hi: 65 });
+  assert.deepEqual(eixoAmpliado([0.3, 4]), { lo: 0, hi: 10 });
+  assert.deepEqual(eixoAmpliado([97, 99.5]), { lo: 90, hi: 100 });
+  assert.deepEqual(gradeDoEixo(35, 65, 156), [35, 40, 45, 50, 55, 60, 65]);
+  assert.deepEqual(gradeDoEixo(0, 100, 156), [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]); // não cabe de 5 em 5
+  const pts = [10, 11, 12].map((v, i) => ({ t: 1792940000 + i * 60, e: { br: v } }));
+  const sem = linhaEvolucao(pts, (p) => p.e.br, { rotulo: "teste-zoom" });
+  assert.ok(sem.includes('data-zoom="completo" aria-pressed="true"') && !sem.includes("Eixo ampliado"));
+  alternarZoom("teste-zoom", true);
+  const com = linhaEvolucao(pts, (p) => p.e.br, { rotulo: "teste-zoom" });
+  assert.ok(com.includes("Eixo ampliado: 5% a 20%") && com.includes('data-zoom="ampliar" aria-pressed="true"'));
+  zerarZoom();
+  assert.ok(!linhaEvolucao(pts, (p) => p.e.br, { rotulo: "teste-zoom" }).includes("Eixo ampliado"));
+});

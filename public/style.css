@@ -405,11 +405,6 @@ dialog#seletor-estado h3 { margin: 14px 0 6px; }
 
 /* painel alternável e barras por região */
 .painel-seg { margin-bottom: 14px; } .painel-seg button { min-height: 36px; padding: 6px; font-size: .9rem; }
-.barras-regiao { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-.barras-regiao li { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "nome pct" "trilho trilho" "det det"; gap: 4px 10px; align-items: baseline; }
-.br-nome { grid-area: nome; font-weight: 600; } .barras-regiao b { grid-area: pct; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
-.br-trilho { grid-area: trilho; display: block; height: 14px; border-radius: 2px; background: rgba(255, 255, 255, .18); overflow: hidden; } .br-trilho i { display: block; height: 100%; background: var(--ao-vivo); border-radius: 2px; transition: width .5s; }
-.barras-regiao small { grid-area: det; color: rgba(255, 255, 255, .72); font-size: .76rem; }
 
 /* bancada do Senado */
 .visao-senado { margin-top: 14px; }
@@ -1053,3 +1048,13 @@ select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
 /* emenda do eixo do gráfico de evolução (votação prorrogada) */
 .g-corte line { stroke: var(--texto-suave); stroke-width: 1; stroke-dasharray: 3 3; } .g-corte path { stroke: var(--texto); stroke-width: 1.5; fill: none; } .g-corte text { fill: var(--texto-suave); font: 600 11px var(--font-text); }
 .el-cargo li.sit-eleito, .el-cargo li.sit-segundo { padding-left: var(--esp-6); }
+
+/* zoom do eixo do gráfico: botões de 44px e a nota do intervalo */
+.g-zoom { margin: 0 0 var(--esp-8); } .g-zoom button { min-height: 44px; }
+.g-eixo-nota { margin: 0 0 var(--esp-6); font: 600 12px/16px var(--font-text); color: var(--texto-suave); }
+.hero .g-eixo-nota { color: rgba(255, 255, 255, .8); }
+.hero .g-zoom { --cartao: transparent; } .hero .g-zoom button { color: #fff; border-color: rgba(255, 255, 255, .5); } .hero .g-zoom button[aria-pressed="true"] { background: #fff; color: var(--destaque-b, #12254a); }
+/* rótulos do eixo: um contorno na cor do cartão, para o cursor e as linhas nunca taparem o texto */
+.card .g-txt { paint-order: stroke; stroke: var(--cartao); stroke-width: 3px; stroke-linejoin: round; }
+.g-corte text { paint-order: stroke; stroke: var(--cartao); stroke-width: 3px; } .hero .g-corte text { stroke: none; }
+.card.hero .g-txt { stroke: none; }
