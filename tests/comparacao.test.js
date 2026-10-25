@@ -126,3 +126,42 @@ test("Comparar turnos com região: o 'Onde' mostra o nome da região e o seletor
   const h = controlesComparacao(c, { municipios: [] });
   assert.ok(h.includes("Nordeste") && h.includes('<option value="r:nordeste" selected>') && !h.includes("data-ct-mun"));
 });
+
+test("Não voto em três partes: a soma de abstenções, brancos e nulos é a linha Não voto, em votos e em %", async () => {
+  const { parteNaoVoto, quadroComparacao, PARTES_NAO_VOTO } = await import("../public/comparacaoView.js");
+  const { naoVoto, percentual } = await import("../public/comparacao.js");
+  const l1 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 400, flavio: 300, outros: 20, validos: 720, pct: 100 };
+  const l2 = { aptos: 900, comparecimento: 780, abstencao: 120, brancos: 25, nulos: 35, lula: 380, flavio: 340, outros: 0, validos: 720, pct: 60 };
+  for (const l of [l1, l2]) {
+    const partes = PARTES_NAO_VOTO.map(([k]) => parteNaoVoto(l, k));
+    assert.equal(partes.reduce((t, x) => t + x.v, 0), naoVoto(l));
+    assert.ok(Math.abs(partes.reduce((t, x) => t + x.p, 0) - percentual(l, "naovoto", "aptos")) < 1e-9);
+  }
+  const h = quadroComparacao(l1, l2, { base: "aptos", ondeNome: "Brasil", status2: "" });
+  assert.ok(h.includes('class="el-detalhe-btn"') && h.includes('aria-expanded="false"') && (h.match(/class="el-duelo__linha el-subtotal"[^>]* hidden/g) || []).length === 3); // fechado por padrão
+  for (const n of ["Abstenções", "Brancos", "Nulos"]) assert.ok(h.includes(n));
+  assert.ok(/el-subtotal__marca--abstencao/.test(h) && /el-subtotal__marca--brancos/.test(h) && /el-subtotal__marca--nulos/.test(h));
+  assert.ok(quadroComparacao(l1, l2, { base: "aptos", ondeNome: "Brasil", status2: "", nvAberto: true }).includes('aria-expanded="true"'));
+  const v = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "" });
+  assert.ok(!v.includes("el-subtotal") && !v.includes("el-detalhe-btn") && !v.includes("Não voto")); // base Votos válidos: nada muda
+});
+
+test("Não voto em três partes: sem a separação no 2º turno a coluna mostra — (nunca zero)", async () => {
+  const { parteNaoVoto, quadroComparacao } = await import("../public/comparacaoView.js");
+  const l1 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 400, flavio: 300, outros: 20, validos: 720, pct: 100 };
+  const sem = { aptos: 900, comparecimento: 0, abstencao: 0, brancos: 0, nulos: 0, lula: 380, flavio: 340, outros: 0, validos: 720, pct: 60 };
+  assert.equal(parteNaoVoto(sem, "nulos"), null);
+  assert.equal(parteNaoVoto(null, "nulos"), null);
+  const h = quadroComparacao(l1, sem, { base: "aptos", ondeNome: "Brasil", status2: "" });
+  const subs = h.slice(h.indexOf("el-subtotal"));
+  assert.ok(subs.includes("el-duelo__sem") && !/0,00%/.test(subs.slice(subs.indexOf("Nulos"))));
+});
+
+test("legenda do 'Não voto' na barra de composição abre as três partes", async () => {
+  const { barrasComposicao } = await import("../public/comparacaoView.js");
+  const l = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 400, flavio: 300, outros: 20, validos: 720, pct: 100 };
+  assert.ok(!barrasComposicao(l, l, "aptos").includes("cmp-leg-parte") && barrasComposicao(l, l, "aptos").includes("data-ct-nv"));
+  const aberta = barrasComposicao(l, l, "aptos", { nvAberto: true });
+  assert.equal((aberta.match(/cmp-leg-parte/g) || []).length, 3);
+  assert.ok(!barrasComposicao(l, l, "validos", { nvAberto: true }).includes("data-ct-nv"));
+});

@@ -39,12 +39,34 @@ const ptBr = (n) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2
 const COR_LADO = { lula: "var(--lado-a)", flavio: "var(--lado-b)", outros: "var(--ausencia)", naovoto: "var(--sem-cor)" };
 const NOME_CURTO = { lula: "Lula", flavio: "Flávio Bolsonaro" };
 
+
+/** O "Não voto" em três partes (só na base Eleitores aptos): o mesmo cálculo da linha, com o mesmo denominador (aptos das seções apuradas). */
+export const PARTES_NAO_VOTO = [["abstencao", "Abstenções"], ["brancos", "Brancos"], ["nulos", "Nulos"]];
+const aptosDe = (l) => (l && l.aptos > 0 ? l.aptos : 0);
+/** Uma parte do não voto em um turno: votos e %; null quando o turno não tem dados ou não traz a separação (nunca zero no lugar de "sem dado"). */
+export function parteNaoVoto(l, chave) {
+  if (!aptosDe(l)) return null;
+  const separado = PARTES_NAO_VOTO.some(([k]) => (l[k] || 0) > 0);
+  if (!separado) return null;
+  return { v: l[chave] || 0, p: ((l[chave] || 0) / l.aptos) * 100 };
+}
+const botaoDetalheNaoVoto = (aberto) => `<button type="button" class="el-detalhe-btn" data-ct-nv aria-expanded="${aberto}" aria-controls="ct-nv-detalhe" aria-label="Detalhar o não voto em abstenções, brancos e nulos">detalhar</button>`;
+function sublinhasNaoVoto(l1, l2, aberto) {
+  const votos = (v) => `<span class="el-duelo__votos"><br>${v == null ? "" : fmt(v)}</span>`;
+  const celula = (x) => (x == null ? `<span class="el-duelo__sem">—</span>${votos(null)}` : `${pct(x.p)}${votos(x.v)}`);
+  return PARTES_NAO_VOTO.map(([k, nome], i) => {
+    const a = parteNaoVoto(l1, k), b = parteNaoVoto(l2, k), dp = a && b ? b.p - a.p : null;
+    const delta = dp == null ? "—" : `<span class="${dp > 0 ? "el-delta--mais" : dp < 0 ? "el-delta--menos" : ""}">${dp > 0 ? "▲" : dp < 0 ? "▼" : "•"} ${sinal(dp, ptBr)}</span>`;
+    return `<div class="el-duelo__linha el-subtotal"${i === 0 ? ' id="ct-nv-detalhe"' : ""}${aberto ? "" : " hidden"} style="--cor:var(--sem-cor)"><span><i class="el-subtotal__marca el-subtotal__marca--${k}" aria-hidden="true"></i>${nome}</span><span>${celula(a)}</span><span>${celula(b)}</span><span>${delta}</span></div>`;
+  }).join("");
+}
+
 /**
  * Bloco Duelo (design system): faixa de vantagem no alto e uma linha de 44px por candidato com 1º turno, 2º turno e variação em pontos.
  * Todos os % de candidatos são sobre votos válidos (só candidatos); a base "Eleitores aptos" mostra o não voto como linha à parte.
  * Sem dados no 2º turno, a faixa descreve o 1º turno e as colunas do 2º mostram traço.
  */
-export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
+export function quadroComparacao(l1, l2, { base, ondeNome, status2, nvAberto = false }) {
   const tem2 = !!l2 && l2.aptos > 0 && l2.pct > 0 && (l2.lula + l2.flavio + l2.outros) > 0;
   const linhas = compararLinhas(l1, tem2 ? l2 : null, base).filter((r) => r.chave !== "naovoto" || base === "aptos");
   const p = (l, k) => percentual(l, k, base);
@@ -70,7 +92,7 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
     const eLider = r.chave === lider && !inicial;
     const delta = r.dp == null ? "—" : `<span class="${r.dp > 0 ? "el-delta--mais" : r.dp < 0 ? "el-delta--menos" : ""}">${r.dp > 0 ? "▲" : r.dp < 0 ? "▼" : "•"} ${sinal(r.dp, ptBr)}</span>`;
     const c2 = r.semNoTurno2 ? `<span class="el-duelo__sem">—</span>${votos(null)}` : celula(tem2 ? r.p2 : null, tem2 ? r.v2 : null);
-    return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span></span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>`;
+    return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span>${r.chave === "naovoto" ? botaoDetalheNaoVoto(nvAberto) : ""}</span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>${r.chave === "naovoto" ? sublinhasNaoVoto(l1, tem2 ? l2 : null, nvAberto) : ""}`;
   }).join("");
   const baseTxt = base === "validos" ? "Percentuais dos candidatos sobre os votos válidos (só candidatos)." : "Percentuais sobre os eleitores aptos das seções apuradas; o não voto soma abstenções, brancos e nulos.";
   return `<section class="el-duelo"><header class="el-duelo__topo"><h3>${esc(ondeNome)}</h3><span>1º turno ${l1 ? pct(l1.pct) : "—"} · 2º turno ${tem2 ? `${pct(l2.pct)} apurado` : "ainda sem dados"}</span></header>${vantagem}
@@ -82,14 +104,14 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2 }) {
  * Duas barras empilhadas (1º e 2º turno). Base "aptos": candidatos e não voto sobre os eleitores aptos (soma 100% com o não voto).
  * Base "validos": só Lula, Flávio e outros sobre os votos válidos (soma 100%); nenhum elemento mostra não voto.
  */
-export function barrasComposicao(l1, l2, base = "aptos") {
+export function barrasComposicao(l1, l2, base = "aptos", { nvAberto = false } = {}) {
   const linhas = linhasDaBase(base), den = (l) => (base === "aptos" ? l.aptos : l.lula + l.flavio + l.outros);
   const barra = (l, nome) => {
     if (!l || !den(l)) return `<div class="cmp-linha"><span class="cmp-turno">${nome}</span><div class="cmp-barra vazia"><span class="muted">sem dados ainda</span></div></div>`;
     const seg = linhas.map(([k]) => ({ k, v: votosDe(l, k) })).filter((s) => s.v > 0), total = den(l);
     return `<div class="cmp-linha"><span class="cmp-turno">${nome}</span><div class="cmp-barra" role="img" aria-label="${esc(nome)}: ${seg.map((s) => `${linhas.find(([k]) => k === s.k)[1]} ${pct((s.v / total) * 100)}`).join(", ")}">${seg.map((s) => `<i style="width:${(s.v / total) * 100}%;background:${corLinha(s.k)}" title="${esc(linhas.find(([k]) => k === s.k)[1])}: ${pct((s.v / total) * 100)}"></i>`).join("")}</div></div>`;
   };
-  return `<div class="cmp-barras">${barra(l1, "1º turno")}${barra(l2, "2º turno")}<ul class="geo-legenda">${linhas.map(([k, n]) => `<li><i class="gm-leg" style="background:${corLinha(k)}"></i>${esc(n)}</li>`).join("")}</ul></div>`;
+  return `<div class="cmp-barras">${barra(l1, "1º turno")}${barra(l2, "2º turno")}<ul class="geo-legenda">${linhas.map(([k, n]) => (k === "naovoto" ? `<li class="cmp-leg-nv"><i class="gm-leg" style="background:${corLinha(k)}"></i><button type="button" class="el-detalhe-btn" data-ct-nv aria-expanded="${nvAberto}" aria-label="Detalhar o não voto em abstenções, brancos e nulos">${esc(n)}</button></li>${nvAberto ? PARTES_NAO_VOTO.map(([p, nome]) => `<li class="cmp-leg-parte"><i class="el-subtotal__marca el-subtotal__marca--${p}" aria-hidden="true"></i>${nome}</li>`).join("") : ""}` : `<li><i class="gm-leg" style="background:${corLinha(k)}"></i>${esc(n)}</li>`)).join("")}</ul></div>`;
 }
 
 /** O mapa dos municípios, pintado pela linha e pela medida escolhidas. */

@@ -1044,7 +1044,7 @@ function telaTurnos(v) {
   const status2 = !(l2 && l2.pct > 0) ? "Aguardando o início da divulgação do TSE: os números do 2º turno aparecem aqui sozinhos." : l2 && l2.pct < 100 ? `2º turno em apuração (${pct(l2.pct)} das seções): os números mudam a cada minuto.` : "";
   const semT2 = !t2 || !t2.size; // enquanto o 2º turno não tem dados por município, o mapa mostra o 1º turno
   const c = semT2 && ct0.medida !== "p1" ? { ...ct0, medida: "p1" } : ct0;
-  const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2 });
+  const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2, nvAberto: !!estado.ct.nvAberto });
   let mapa = "";
   if (uf === "ZZ") { // exterior: sem mapa de municípios; lista por país
     const e = v.ext, oficial = e?.e2f ?? (vivoExtT2.size ? vivoExtT2 : null);
@@ -1074,7 +1074,7 @@ function telaTurnos(v) {
   }
   const abrirExt = uf === "BR" && !reg ? `<button type="button" class="el-botao" data-ct-abrir="ZZ/">Ver o exterior por país</button>` : "";
   return `${controlesComparacao({ ...ct0, uf, mun, regiao: v.regiao }, { municipios })}
-    <section class="card">${quadro}${barrasComposicao(l1, l2, c.base)}${abrirExt}</section>${mapa}`;
+    <section class="card">${quadro}${barrasComposicao(l1, l2, c.base, { nvAberto: !!estado.ct.nvAberto })}${abrirExt}</section>${mapa}`;
 }
 const seg2 = (attr, atual, opcoes) => `<div class="seg mini" role="group">${opcoes.map(([k, n]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === atual}">${n}</button>`).join("")}</div>`;
 
@@ -1633,6 +1633,7 @@ $("conteudo").addEventListener("click", (e) => {
   }
   if (e.target.closest("[data-geo-premissas]")) { estado.geo.premissas = !estado.geo.premissas; render(true); return; }
   if (e.target.closest("[data-nl-premissas]")) { estado.nl.premissas = !estado.nl.premissas; render(true); return; }
+  if (e.target.closest("[data-ct-nv]")) { estado.ct.nvAberto = !estado.ct.nvAberto; render(true); return; } // abre ou fecha as três partes do não voto (só na memória)
   if (e.target.closest("[data-ct-premissas]")) { estado.ct.premissas = !estado.ct.premissas; render(true); return; }
   const ct = e.target.closest("[data-ct-linha], [data-ct-medida], [data-ct-base], [data-ct-ibge], [data-ct-dir], [data-ct-abrir]");
   if (ct) {
@@ -1701,7 +1702,7 @@ $("conteudo").addEventListener("click", (e) => {
   if (tr && (estado.aba === "governadores" || estado.aba === "senadores")) { navegar({ aba: "estados", uf: tr.dataset.uf, cargo: estado.aba === "governadores" ? "governador" : "senador", mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (tr && estado.aba === "presidente") { navegar({ uf: tr.dataset.uf, mun: "" }); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
-addEventListener("hashchange", () => { zerarZoom(); lerHash(); montarControles(); montarBase(); atualizar(); });
+addEventListener("hashchange", () => { zerarZoom(); estado.ct.nvAberto = false; lerHash(); montarControles(); montarBase(); atualizar(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) atualizar(); });
 
 const hashInicial = location.hash;

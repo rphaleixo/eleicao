@@ -1061,3 +1061,11 @@ select, .f-sel select, .el-campo select { min-height: 44px; height: 44px; }
 
 /* linha da região: a descrição ocupa uma linha inteira abaixo (sob o nome, a barra e o percentual), sem quebrar */
 .el-uf--regiao .el-uf__det--linha { grid-column: 2 / -1; white-space: nowrap; overflow: hidden; text-overflow: clip; margin-top: calc(var(--esp-4) * -1); }
+
+/* não voto em três partes: marcas com padrão próprio (não só a cor) e sem o quadrado duplo da linha de dados */
+.el-subtotal > :first-child::before { display: none; }
+.el-subtotal__marca--abstencao { background: var(--sem-cor); }
+.el-subtotal__marca--brancos { background: repeating-linear-gradient(45deg, var(--texto-suave) 0 2px, var(--cartao) 2px 4px); outline: 1px solid var(--texto-suave); outline-offset: -1px; }
+.el-subtotal__marca--nulos { background: radial-gradient(circle, var(--texto) 1.4px, transparent 1.6px) 0 0 / 4px 4px, var(--cartao); outline: 1px solid var(--texto-suave); outline-offset: -1px; }
+.cmp-leg-nv .el-detalhe-btn { margin-left: 0; padding-left: 0; font-weight: 400; } .cmp-leg-parte { padding-left: var(--esp-16); color: var(--texto-suave); }
+.el-duelo__nome + .el-detalhe-btn { font-weight: 600; font-size: 12px; color: var(--acento); margin-left: var(--esp-4); }
