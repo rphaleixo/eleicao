@@ -10,3 +10,6 @@ O consumidor fornece: votos e percentuais de cada lado, de outros candidatos e d
 - Em município, mostre também "quem liderou" como selo ao lado do nome.
 
 Receita da tela "Comparar turnos" do app (rodada 8). A tela completa se monta com peças do sistema, nesta ordem: seletor de turno em destaque (Comparar); `FiltroRegiao` em escopo recolhido para escolher o lugar (Brasil, estado, município); as duas barras de composição; uma linha por lado com 1º turno, 2º turno, variação em pontos percentuais e variação em votos (a linha "sem candidato" mostra o texto em vez de barra); o mapa por município (`MapaMunicipio` com a escala divergente quando a medida é variação, e a escala sequencial quando é percentual); e, para o exterior, uma `Tabela` por país com ordenação e a coluna de cidades. Os controles do mapa (percentual sobre aptos ou válidos, quem, o que mostrar) ficam num `Painel` "Ajustar mapa", fechado por padrão, com um `Segmentado` por linha; não ficam à vista, para o mapa e o quadro aparecerem sem rolar. A variação em votos aparece sob a variação em pontos, com o sinal e a seta (▲ ▼).
+
+
+Rodada 9: os controles do mapa vão no painel `AjusteMapa` e a nota "votos no 1º turno" não pode deixar palavra órfã (`white-space: nowrap` na variação).

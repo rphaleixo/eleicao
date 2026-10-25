@@ -79,3 +79,7 @@ As telas Geografia, Nulos e Comparar turnos são montadas com as peças existent
 ## 6. Pontos que ainda dependem do Aleixo
 
 As telas completas de referência (início, estado, ficha do candidato) não foram montadas no design system; os componentes e a `Moldura` existem, mas a composição das telas é decidida na etapa 5, com a aprovação dele. As medidas da `Moldura` (menu de 240px, conteúdo de até 720px, coluna lateral de 320px, orçamento de 140px) são propostas e podem ser ajustadas quando se vir a tela real. A ordem das áreas no menu e as 4 áreas principais da barra inferior também são sugestões.
+
+
+## Rodada 9b (achados do site publicado)
+Recopiar `design-system/components/bundle.css` para `public/ds/bundle.css` e regenerar `tokens.css` (tokens novos foto-p e foto-g). Itens: selo com SVG centrado; BlocosEstados como visão padrão da lista de estados (botão Lista alterna para LinhaEstado compacta, duas colunas a partir de 480px); estado sem dados mostra "Aguardando"; governo decidido no 1º turno mostra "Eleito no 1º turno"; Podio igual para Presidente e Governador, fotos 3:4 de um único tamanho, posição escondida quando há zero votos; Carrossel com espiada só à direita e "1 de 5"; AjusteMapa para os controles do mapa; Placar chapado; seletor de turno 44px com máximo de 480px; desktop com 720px + 320px e sem título repetido no topo; filete mais suave no escuro.

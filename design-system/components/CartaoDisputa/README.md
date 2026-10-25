@@ -9,3 +9,5 @@ O consumidor fornece: cargo, território, situação, de 2 a 5 `LinhaCandidato` 
 - O topo carrega o nome do território em `titulo-display`; o selo fica à direita, sempre com ícone e palavra.
 - Cinco candidatos no máximo; o resto vira "e mais N" no rodapé.
 - A grade usa `repeat(auto-fill, minmax(260px, 1fr))`: uma coluna no celular, três no computador.
+
+Rodada 9: governo decidido no 1º turno aparece como "Eleito no 1º turno" (selo Eleito), sem cartão de 2º turno. O filete superior é menos pesado no tema escuro.

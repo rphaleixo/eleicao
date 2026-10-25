@@ -9,3 +9,6 @@ O consumidor fornece: os rótulos, a opção ativa (`aria-pressed`) e o texto se
 - A base escolhida vale em todas as abas e aparece escrita no rodapé de cada quadro de percentuais.
 
 Linguagem de redação (rodada 4): o controle é uma régua. Cada opção é um marcador quadrado sobre um filete de 2px; o ativo vem preenchido, com um trecho de 5px em `acento` correndo até a próxima opção, e o rótulo em `texto`. Nada de trilho cinza com pílula branca. Cabe 2 a 4 opções por linha; se o rótulo passar de duas palavras, encurte.
+
+
+Rodada 9: o seletor de turno é a variante `el-seg--turno`: 44px de altura, rótulo ao lado do marcador, largura máxima de 480px (não estica na tela larga).

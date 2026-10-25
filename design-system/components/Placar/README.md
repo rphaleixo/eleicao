@@ -11,3 +11,5 @@ O consumidor fornece: cargo e turno (kicker), nome e percentual de cada lado, vo
 - Sempre mostre urnas apuradas e a hora da atualização no rodapé; sem isso o placar não é um resultado, é um palpite.
 - Quando a disputa é definida, troque a barra pela frase "Fulana eleita" e o selo Eleito.
 - Não anime o percentual a cada atualização; troque o valor e destaque só a vantagem.
+
+Rodada 9: o Placar agora é chapado (cor sólida de `destaque-a`, sem gradiente e sem sombra), alinhado à linguagem de redação.
