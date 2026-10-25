@@ -57,4 +57,4 @@ Precisam do Node 18 ou mais novo e não instalam nada.
 - Nulos por número digitado: só o RJ. No presidente fica 387 nulos (0,13%) abaixo do total do TSE; governador e senador batem.
 - Seção não é sempre uma urna: seções agregadas votam na urna de outra seção.
 - Zonas eleitorais não têm contorno oficial.
-- 2º turno por município ao vivo: o navegador busca um arquivo por município a partir de 20% do país apurado. Quando a apuração terminar, gerar `presidente-t2-municipios.json` para a tela abrir na hora.
+- 2º turno por município ao vivo: desde a largada, o site lê o andamento dos 27 estados e busca só os municípios que já têm seções apuradas (um arquivo por município, 6 por vez). Municípios parciais aparecem no mapa com o % apurado. Quando a apuração terminar, gerar `presidente-t2-municipios.json` para a tela abrir na hora.

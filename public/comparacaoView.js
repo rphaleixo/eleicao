@@ -56,7 +56,7 @@ export function mapaComparacao(malha, itens, { medida, classe, selecionado, uf, 
   const caminhos = [...malha.caminhos].map(([ibge, d]) => {
     const i = porIbge.get(ibge), v = i?.valor;
     const c = nosUf && !nosUf.has(ibge) ? "co" : v == null ? "cx" : `c${classe(v)}`;
-    const dica = i ? `${i.nome} · ${v == null ? "sem dado dos dois turnos" : medida === "lider" ? CATEGORIAS_LIDER[v] : medida === "votos" ? sinal(v) : medida === "pp" ? pp(v) : pct(v)}` : "";
+    const dica = i ? `${i.nome} · ${v == null ? "sem dado dos dois turnos" : medida === "lider" ? CATEGORIAS_LIDER[v] : medida === "votos" ? sinal(v) : medida === "pp" ? pp(v) : pct(v)}${v != null && i.l2 && i.l2.pct < 100 ? ` · 2º turno ${pct(i.l2.pct)} apurado` : ""}` : "";
     return `<path class="gm ${c}${ibge === selecionado ? " sel" : ""}" data-ct-ibge="${ibge}" d="${d}"${dica ? ` aria-label="${esc(dica)}"` : ""}>${dica ? `<title>${esc(dica)}</title>` : ""}</path>`;
   }).join("");
   const vb = municipioIbge ? viewBoxDoEstado(malha, [municipioIbge]) : nosUf ? viewBoxDoEstado(malha, municipiosDaUf.map((m) => m.ibge).filter(Boolean)) : malha.viewBox;

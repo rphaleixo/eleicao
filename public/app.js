@@ -207,28 +207,34 @@ function arquivoMunicipios(turno) {
 }
 const vivoT2 = new Map(), progT2 = { feitos: 0, total: 0, emVoo: false };
 /**
- * 2º turno ao vivo: um arquivo por município (6 por vez). Em cada rodada só busca quem ainda não tem arquivo ou não chegou a 100% das seções.
- * Só começa com 20% do país apurado e para a rodada se vários municípios seguidos ainda não tiverem arquivo (o TSE bloqueia quem gera muitos 404).
+ * 2º turno ao vivo, desde a largada: o andamento de cada estado (27 arquivos pequenos) diz quais municípios já têm seções apuradas;
+ * só esses são pedidos (um arquivo por município, 6 por vez), então não há pedidos de arquivos que ainda não existem (o TSE bloqueia quem gera muitos 404).
+ * Em cada rodada busca quem ainda não foi lido ou cujo % de seções apuradas mudou desde a última leitura.
  */
 async function atualizarMunicipiosT2(pctBrasil) {
-  if (progT2.emVoo || pctBrasil < 20) return;
+  if (progT2.emVoo || !(pctBrasil > 0)) return;
   progT2.emVoo = true;
-  const agora = Date.now(), fila = [];
-  for (const [uf, lista] of Object.entries(estado.municipios)) {
-    if (uf === "ZZ") continue;
-    for (const m of lista) { const v = vivoT2.get(m.cod); if (!v || (v.pct < 100 && agora - v.t > 90_000)) fila.push({ uf, m }); }
-  }
-  progT2.total = fila.length; progT2.feitos = 0;
-  let seguidosSemArquivo = 0, ultimo = 0;
-  await Promise.all(Array.from({ length: 6 }, async () => {
-    while (fila.length && seguidosSemArquivo < 12) {
-      const { uf, m } = fila.shift();
-      try { const d = await obter("presidente", uf, m.cod, 2); vivoT2.set(m.cod, { ...linhaDeResultado(d), uf, ibge: m.ibge, cod: m.cod, t: Date.now() }); seguidosSemArquivo = 0; } catch { seguidosSemArquivo++; }
-      progT2.feitos++;
-      if (Date.now() - ultimo > 1500 && estado.aba === "turnos") { ultimo = Date.now(); render(); }
+  try {
+    const ufs = Object.keys(UFS).filter((u) => u !== "ZZ");
+    const rs = await Promise.allSettled(ufs.map((u) => buscarJson(urlAndamentoUf(u, 2))));
+    const comDados = new Map(); // cód. do município -> % de seções apuradas agora
+    rs.forEach((r) => { if (r.status === "fulfilled") for (const [cod, a] of lerAbUf(r.value)) if (a.secoesApuradas > 0) comDados.set(cod, a.pctUrnas); });
+    const fila = [];
+    for (const [uf, lista] of Object.entries(estado.municipios)) {
+      if (uf === "ZZ") continue;
+      for (const m of lista) { const agora = comDados.get(m.cod); if (agora == null) continue; const v = vivoT2.get(m.cod); if (!v || v.pct < agora - 0.001) fila.push({ uf, m }); }
     }
-  }));
-  progT2.emVoo = false;
+    progT2.total = fila.length; progT2.feitos = 0;
+    let ultimo = 0;
+    await Promise.all(Array.from({ length: 6 }, async () => {
+      while (fila.length) {
+        const { uf, m } = fila.shift();
+        try { const d = await obter("presidente", uf, m.cod, 2); vivoT2.set(m.cod, { ...linhaDeResultado(d), uf, ibge: m.ibge, cod: m.cod, t: Date.now() }); } catch { /* o arquivo pode ainda não ter chegado ao servidor: tenta na próxima rodada */ }
+        progT2.feitos++;
+        if (Date.now() - ultimo > 1500 && estado.aba === "turnos") { ultimo = Date.now(); render(); }
+      }
+    }));
+  } finally { progT2.emVoo = false; }
 }
 
 const dadosNulos = new Map();
@@ -920,7 +926,7 @@ function telaTurnos(v) {
     const ext = c.medida === "lider" ? "" : `<section class="card"><div class="titulo-cadeiras"><h2>${c.medida === "pp" || c.medida === "votos" ? "Maiores variações" : "Maiores e menores valores"}</h2>${seg2("data-ct-dir", c.dir, c.medida === "pp" || c.medida === "votos" ? [["alta", "Altas"], ["queda", "Quedas"]] : [["alta", "Maiores"], ["queda", "Menores"]])}</div><p class="muted">Municípios com ${c.dir === "alta" ? "maior" : "menor"} valor de ${esc(linhaNome)} (${esc(medidaNome.toLowerCase())}). Toque em uma linha para ver o município no mapa.</p>${tabelaExtremos(extremos(itens, c.dir), { medida: c.medida, dir: c.dir, linhaNome })}</section>`;
     mapa = `<section class="card"><h2>Mapa: ${esc(linhaNome)} · ${esc(medidaNome)}</h2>${prog}
       <div class="mapa-area mapa-area-geo">${mapaComparacao(v.malha, itens, { medida: c.medida, classe: cls.classe, selecionado: sel?.ibge ?? "", uf, municipiosDaUf: municipios, municipioIbge: mun ? municipios.find((m) => m.cod === mun)?.ibge : "" })}</div>
-      ${legendaComparacao(cls, c.medida, linhaNome, { semDado })}
+      ${legendaComparacao(cls, c.medida, linhaNome, { semDado })}${v.t2aberto && !v.a2?.final && t2?.size ? `<p class="muted nota">Os municípios entram no mapa assim que têm seções apuradas no 2º turno. Enquanto um município não chega a 100%, os números dele são parciais: o % já é uma boa pista, mas a variação em votos só é comparável no fim.</p>` : ""}
       ${fichaComparacao(sel, c.base, { ufNome: sel ? sel.uf : "" })}${sel && sel.uf && sel.cod !== mun ? `<button type="button" class="btn-mais" data-ct-abrir="${sel.uf}/${sel.cod}">Abrir só ${esc(sel.nome)}</button>` : ""}</section>${ext}`;
   }
   return `${controlesComparacao({ ...ct0, uf, mun }, { municipios })}

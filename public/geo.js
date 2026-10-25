@@ -12,7 +12,7 @@ export function lerAbUf(json) {
   for (const a of json?.abr ?? []) {
     if (a.tpabr !== "mun") continue;
     const e = a.e ?? {}, aptos = num(e.est) || num(e.te);
-    m.set(String(a.cdabr), { aptos, comparecimento: num(e.c), abstencao: num(e.a), pctSecoes: num(a.e?.pest ?? a.s?.pst) });
+    m.set(String(a.cdabr), { aptos, comparecimento: num(e.c), abstencao: num(e.a), pctSecoes: num(a.e?.pest ?? a.s?.pst), secoesApuradas: num(a.s?.st), pctUrnas: num(a.s?.pst) });
   }
   return m;
 }

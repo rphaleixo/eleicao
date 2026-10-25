@@ -14,7 +14,7 @@ const urna = (uf, cod) => ({ "1": { eleitorado: { apuradas: 100, abstencao: 50, 
 test("lê a abstenção dos municípios de um estado, ignorando o total do estado", () => {
   const m = lerAbUf(ab);
   assert.equal(m.size, 2);
-  assert.deepEqual(m.get("2"), { aptos: 100000, comparecimento: 99000, abstencao: 1000, pctSecoes: 100 });
+  assert.deepEqual(m.get("2"), { aptos: 100000, comparecimento: 99000, abstencao: 1000, pctSecoes: 100, secoesApuradas: 0, pctUrnas: 0 });
 });
 
 test("50% de abstenção em 100 eleitores pesa menos que 1% em 100 mil", () => {
