@@ -751,3 +751,20 @@ dialog.el-gaveta { margin: 0; padding: 0; border: 0; color: var(--texto); }
 .el-duplo__barra { margin: var(--esp-4) var(--esp-12) var(--esp-12); }
 .el-duplo__barra .el-composicao { height: 14px; }
 .el-duplo__barra .el-composicao__rotulo50 { margin-top: 6px; }
+
+/* ===== Rodada 16: linha de estado em botão e visão por regiões ===== */
+button.el-uf { appearance: none; -webkit-appearance: none; width: 100%; margin: 0; background: none; border-width: 0; border-top: 1px solid var(--linha); border-radius: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; box-sizing: border-box; }
+.el-ufs > li { min-width: 0; }
+.el-uf > span:nth-child(2) { min-width: 0; }
+.el-uf__nome { min-width: 0; overflow-wrap: anywhere; }
+.el-uf__pct { min-width: 64px; }
+.el-uf:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
+@media (min-width: 480px) { .el-ufs--duas > li:nth-child(-n+2) .el-uf { border-top: 0; } }
+.el-uf--regiao { grid-template-columns: 48px 1fr auto 14px; min-height: 64px; }
+.el-uf--regiao .el-uf__sigla { width: 48px; height: 40px; font-size: 16px; }
+.el-uf--regiao .el-uf__det { display: block; }
+.el-estados__cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--esp-8) var(--esp-12); margin-bottom: var(--esp-8); }
+.el-estados__cab .el-rotulo { margin: 0; }
+.el-estados__ctl { display: flex; flex-wrap: wrap; gap: var(--esp-8); }
+button.el-uf { border-style: solid; border-color: var(--linha); border-width: 1px 0 0; }
+.el-ufs > li:first-child .el-uf { border-top-width: 0; }
