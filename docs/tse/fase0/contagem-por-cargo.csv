@@ -1,6 +1,6 @@
 ano,cargo,turno,linhas_votacao_nominal_munzona,grupo_do_plano
-1989,?,T?,3932,nao_classificado(1989/1990 TXT)
-1990,?,T?,19210,nao_classificado(1989/1990 TXT)
+1989,(nao classificado: TXT sem cabecalho),?,672,nao_classificado(1989/1990 TXT)
+1990,(nao classificado: TXT sem cabecalho),?,15976,nao_classificado(1989/1990 TXT)
 1994,Deputado Estadual,T1,598260,fase2b_proporcional
 1994,Deputado Federal,T1,384940,fase2b_proporcional
 1994,Governador,T1,29053,fase2_majoritario

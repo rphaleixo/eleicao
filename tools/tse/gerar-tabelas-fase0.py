@@ -21,11 +21,15 @@ def dados(v):
 with open(f"{OUT}/inventario.csv", "w", newline="") as f:
     w = csv.writer(f)
     w.writerow(["ano", "tipo", "arquivo", "url", "bytes_zip", "sha256", "last_modified", "baixado", "linhas_de_dados", "codificacao", "separador", "n_colunas"])
+    # 1989 e 1990 (TXT sem cabeçalho, CRLF): registros recontados com splitlines (o perfil subconta por tirar um "cabeçalho" que não existe)
+    RECONTADOS = {"votacao_candidato_uf_1989.zip": 672, "votacao_candidato_uf_1990.zip": 15976}
+    vistos = set()
     for x in sorted(tam + tam20, key=lambda x: (x["tipo"], x["ano"], x["arquivo"])):
-        if x["tipo"] == "cadastro" and x["ano"] == 2020 and x in tam: continue
+        if x["arquivo"] in vistos: continue  # o inventário de 2020 repetia os arquivos de 2020
+        vistos.add(x["arquivo"])
         p = perfil.get(x["arquivo"])
         if p:
-            ds = dados(p); n = sum(m["linhas"] for m in ds)
+            ds = dados(p); n = RECONTADOS.get(x["arquivo"], sum(m["linhas"] for m in ds))
             w.writerow([x["ano"], x["tipo"], x["arquivo"], x["url"], x["bytes"], p["sha256"], x["last_modified"], "sim", n,
                         "/".join(sorted({m["codificacao"] for m in ds})), "/".join(sorted({m["separador"] for m in ds})),
                         "/".join(str(c) for c in sorted({len(m["colunas"]) for m in ds}))])
@@ -55,6 +59,8 @@ json.dump({"observacao": "1989 e 1990 (TXT) nao tem cabecalho; layout posicional
 with open(f"{OUT}/contagem-por-cargo.csv", "w", newline="") as f:
     w = csv.writer(f); w.writerow(["ano", "cargo", "turno", "linhas_votacao_nominal_munzona", "grupo_do_plano"])
     for ano, d in sorted(cargos["contagem"].items()):
+        if ano in ("1989", "1990"):  # contagem por cargo não feita (TXT sem cabeçalho); total recontado
+            w.writerow([ano, "(nao classificado: TXT sem cabecalho)", "?", 672 if ano == "1989" else 15976, "nao_classificado(1989/1990 TXT)"]); continue
         for k, n in d.items():
             c, t = k.split("|")
             g = "fase2_majoritario" if c in ("Presidente", "Governador", "Senador", "Prefeito") else ("fase2b_proporcional" if c in ("Deputado Federal", "Deputado Estadual", "Deputado Distrital", "Vereador") else "nao_classificado(1989/1990 TXT)")

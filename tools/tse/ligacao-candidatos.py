@@ -82,7 +82,7 @@ metodo = collections.defaultdict(collections.Counter)
 sem_chave = []
 for l in todas:
     pid, m = pessoa(l); metodo[l[0]][m] += 1
-    if pid: pessoas[pid].append(l)
+    if pid: pessoas[pid].append(l + (m,))  # índice 9 = como a pessoa foi achada (cpf, titulo->cpf, titulo)
     else: sem_chave.append(l)
 
 # sugestão (nome + nascimento) para quem ficou sem chave
@@ -94,7 +94,13 @@ sug = collections.Counter()
 for l in sem_chave:
     if l[4] and l[5] and idx.get((l[5], l[4])): sug[l[0]] += 1
 
-nasc_conf = sum(1 for ls in pessoas.values() if len({l[4] for l in ls if l[4] and len(l[4]) >= 8}) > 1)
+em_conflito = [ls for ls in pessoas.values() if len({l[4] for l in ls if l[4] and len(l[4]) >= 8}) > 1]
+nasc_conf = len(em_conflito)
+# de onde vem cada conflito (para explicar diferenças entre este número e o de conflitos-nascimento.py, que só usa candidaturas com CPF 1998-2022/2026)
+nasc_origem = {"total": nasc_conf,
+               "com_candidatura_ligada_so_por_titulo_via_cpf": sum(1 for ls in em_conflito if any(l[9] == "titulo->cpf" for l in ls)),
+               "com_candidatura_de_2024": sum(1 for ls in em_conflito if any(l[0] == 2024 for l in ls)),
+               "so_candidaturas_com_cpf_proprio_e_sem_2024": sum(1 for ls in em_conflito if all(l[9] == "cpf" and l[0] != 2024 for l in ls))}
 por_nome = collections.defaultdict(set)
 for pid, ls in pessoas.items():
     for l in ls:
@@ -112,6 +118,7 @@ rel = {"anos": rel_anos,
        "metodo_por_ano": {a: dict(c) for a, c in metodo.items()},
        "sugestao_nome_nascimento_por_ano": dict(sug),
        "pessoas_ligadas": len(pessoas), "candidaturas_total": len(todas), "candidaturas_sem_chave": len(sem_chave),
+       "conflitos_origem_nascimento": nasc_origem,
        "conflitos": {"mesmo_cpf_nascimentos_diferentes": nasc_conf, "titulos_com_cpfs_diferentes": conf_tit,
                      "nomes_completos_homonimos_entre_pessoas": homonimos, "pessoas_com_nome_diferente_entre_anos": mudou_nome},
        "trajetorias": {"pessoas_em_mais_de_um_ano": len(com_mais), "distribuicao_anos_distintos": dict(sorted(dist_anos.items())),
