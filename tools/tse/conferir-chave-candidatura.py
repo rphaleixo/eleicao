@@ -15,14 +15,14 @@ def linhas(nome_zip):
             yield from csv.DictReader(io.TextIOWrapper(f, encoding="latin-1", newline=""), delimiter=";")
 
 def chaves(x):
-    sq, ue, cg, tn = (x.get("SQ_CANDIDATO") or "").strip(), (x.get("SG_UE") or "").strip(), (x.get("CD_CARGO") or "").strip(), (x.get("NR_TURNO") or "1").strip()
-    return {"sq": (sq,), "sq_ue": (sq, ue), "sq_ue_cargo": (sq, ue, cg), "sq_ue_cargo_turno": (sq, ue, cg, tn)}
+    sq, ue, cg, tn, uf = (x.get("SQ_CANDIDATO") or "").strip(), (x.get("SG_UE") or "").strip(), (x.get("CD_CARGO") or "").strip(), (x.get("NR_TURNO") or "1").strip(), (x.get("SG_UF") or "").strip()
+    return {"sq": (sq,), "sq_ue_cargo_turno": (sq, ue, cg, tn), "sq_uf_cargo_turno": (sq, uf, cg, tn), "sq_cargo_turno": (sq, cg, tn)}
 
 with open(saida, "w", newline="") as f:
     w = csv.writer(f)
     w.writerow(["ano", "linhas_cadastro", "chave", "valores_distintos_no_cadastro", "unica_no_cadastro", "linhas_votacao", "chaves_distintas_votacao", "chaves_da_votacao_fora_do_cadastro"])
     for ano in map(int, sys.argv[3:]):
-        cad = {k: set() for k in ("sq", "sq_ue", "sq_ue_cargo", "sq_ue_cargo_turno")}; n = 0
+        cad = {k: set() for k in chaves({})}; n = 0
         for x in linhas(f"consulta_cand_{ano}.zip"):
             n += 1
             for k, v in chaves(x).items(): cad[k].add(v)
