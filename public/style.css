@@ -1100,3 +1100,7 @@ dialog.el-cheia .el-cheia__corpo { overflow: auto; }
 .el-duelo__linha--vantagem .el-pod__vantagem { margin: 0; padding: 0; background: none; border: 0; font-size: 12px; } .el-duelo__linha--vantagem .el-pod__vantagem b { font-size: 13px; line-height: 17px; white-space: nowrap; } .el-duelo__linha--vantagem .el-pod__vantagem small { display: block; white-space: nowrap; font: 600 11px/15px var(--font-num); }
 .el-duelo__linha--vantagem { grid-template-columns: minmax(0, 1fr) 80px 80px 28px; text-align: right; } .el-duelo__linha--vantagem > :first-child { text-align: left; } .el-duelo__linha--vantagem .el-pod__vantagem b, .el-duelo__linha--vantagem .el-pod__vantagem small { letter-spacing: -.02em; }
 @media (min-width: 600px) { .el-duelo__linha--vantagem { grid-template-columns: minmax(0, 1fr) 96px 96px 96px; } }
+
+/* coluna Variação em duas linhas (votos e p.p.): mais larga no celular, sem rolagem horizontal; a segunda linha é menor */
+.el-duelo__variacao b { display: block; font: 700 12px/16px var(--font-num); white-space: nowrap; letter-spacing: -.02em; } .el-duelo__variacao small { display: block; font: 600 11px/14px var(--font-num); white-space: nowrap; }
+@media (max-width: 599px) { .el-duelo__linha { grid-template-columns: minmax(0, 1fr) 56px 56px 92px; } .el-duelo__linha--vantagem { grid-template-columns: minmax(0, 1fr) 80px 80px 92px; } }

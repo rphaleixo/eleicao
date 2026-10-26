@@ -50,6 +50,20 @@ const COR_LADO = { lula: "var(--lado-a)", flavio: "var(--lado-b)", outros: "var(
 const NOME_CURTO = { lula: "Lula", flavio: "Flávio Bolsonaro" };
 
 
+/** Variação entre os turnos em duas linhas: em cima os votos (2º menos 1º, com triângulo e sinal), embaixo os p.p. com a unidade. Sem os dois turnos, traço. */
+export function celulaVariacao(dv, dp) {
+  if (dp == null) return "—";
+  const classe = (n) => (n > 0 ? "el-delta--mais" : n < 0 ? "el-delta--menos" : ""), seta = (n) => (n > 0 ? "▲" : n < 0 ? "▼" : "•");
+  const pp = `${sinal(dp, ptBr)} p.p.`;
+  return dv == null ? `<span class="${classe(dp)}">${seta(dp)} ${pp}</span>` : `<span class="el-duelo__variacao ${classe(dp)}"><b>${seta(dv)} ${sinal(dv)}</b><small>${pp}</small></span>`;
+}
+/** Variação da vantagem de Lula sobre Flávio: vantagem do 2º turno menos a do 1º, em votos e p.p. Sem uma das duas vantagens, traço. */
+export function celulaVariacaoVantagem(v1, v2) {
+  if (!v1 || !v2) return "—";
+  const dv = v2.votos - v1.votos, dp = Math.round((v2.pp - v1.pp) * 100) / 100;
+  return celulaVariacao(dv, dp);
+}
+
 /** A célula da vantagem de Lula sobre Flávio em um turno: votos e p.p. com sinal e triângulo (a leitura não depende de cor); "Empate" abaixo de 0,01 p.p.; traço sem os dois. */
 export function celulaVantagem(lula, flavio) {
   const v = vantagem(lula, flavio);
@@ -63,7 +77,9 @@ function linhaVantagem(linhas, tem2) {
   if (!lu || !fl) return "";
   const t1 = celulaVantagem({ votos: lu.v1, pct: lu.p1 }, { votos: fl.v1, pct: fl.p1 });
   const t2 = tem2 ? celulaVantagem({ votos: lu.v2, pct: lu.p2 }, { votos: fl.v2, pct: fl.p2 }) : celulaVantagem(null, null);
-  return `<div class="el-duelo__linha el-duelo__linha--vantagem" role="row" style="--cor:var(--lado-a)"><span>Vantagem de Lula sobre Flávio Bolsonaro</span><span class="el-pod__vantagem">${t1}</span><span class="el-pod__vantagem">${t2}</span><span>—</span></div>`;
+  const va = (turno) => (lu[`v${turno}`] == null || fl[`v${turno}`] == null || lu[`p${turno}`] == null || fl[`p${turno}`] == null ? null : vantagem({ votos: lu[`v${turno}`], pct: lu[`p${turno}`] }, { votos: fl[`v${turno}`], pct: fl[`p${turno}`] }));
+  const var_ = tem2 ? celulaVariacaoVantagem(va(1), va(2)) : "—";
+  return `<div class="el-duelo__linha el-duelo__linha--vantagem" role="row" style="--cor:var(--lado-a)"><span>Vantagem de Lula sobre Flávio Bolsonaro</span><span class="el-pod__vantagem">${t1}</span><span class="el-pod__vantagem">${t2}</span><span>${var_}</span></div>`;
 }
 
 /** O "Não voto" em três partes (só na base Eleitores aptos): o mesmo cálculo da linha, com o mesmo denominador (aptos das seções apuradas). */
@@ -116,7 +132,7 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2, nvAberto = f
   const celula = (pc, v) => (pc == null ? `<span class="el-duelo__sem">—</span>${votos(null)}` : `${pct(pc)}${votos(v)}`);
   const corpo = linhas.map((r) => {
     const eLider = r.chave === lider && !inicial;
-    const delta = r.dp == null ? "—" : `<span class="${r.dp > 0 ? "el-delta--mais" : r.dp < 0 ? "el-delta--menos" : ""}">${r.dp > 0 ? "▲" : r.dp < 0 ? "▼" : "•"} ${sinal(r.dp, ptBr)}</span>`;
+    const delta = r.dp == null ? "—" : celulaVariacao(r.dv, r.dp);
     const c2 = r.semNoTurno2 ? `<span class="el-duelo__sem">—</span>${votos(null)}` : celula(tem2 ? r.p2 : null, tem2 ? r.v2 : null);
     return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span>${r.chave === "naovoto" ? botaoDetalheNaoVoto(nvAberto) : ""}</span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>${r.chave === "naovoto" ? sublinhasNaoVoto(l1, tem2 ? l2 : null, nvAberto) : ""}${r.chave === "flavio" ? linhaVantagem(linhas, tem2) : ""}`;
   }).join("");

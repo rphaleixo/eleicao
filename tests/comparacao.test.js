@@ -195,3 +195,20 @@ test("Comparar: linha de vantagem de Lula sobre Flávio entre o 2º finalista e 
   assert.ok(celulaVantagem({ votos: 10, pct: 50.004 }, { votos: 9, pct: 50 }).includes("Empate"));
   assert.equal(celulaVantagem(null, { votos: 1, pct: 1 }), `<span class="el-duelo__sem">—</span>`);
 });
+
+test("coluna Variação em duas linhas: votos (2º menos 1º) e p.p. com unidade; a vantagem de Lula varia entre os turnos", async () => {
+  const { quadroComparacao, celulaVariacao, celulaVariacaoVantagem } = await import("../public/comparacaoView.js");
+  const l1 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 300, flavio: 400, outros: 20, validos: 720, pct: 100 };
+  const l2 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 420, flavio: 300, outros: 5, validos: 725, pct: 60 };
+  const h = quadroComparacao(l1, l2, { base: "aptos", ondeNome: "Brasil", status2: "" });
+  assert.ok(h.includes("<b>▲ +120</b><small>+12,00 p.p.</small>")); // Lula
+  assert.ok(h.includes("<b>▼ −100</b><small>−10,00 p.p.</small>")); // Flávio
+  assert.ok(h.includes("<b>▲ +220</b><small>+22,00 p.p.</small>")); // vantagem: (+120) − (−100) votos; (+12,00) − (−10,00) p.p.
+  assert.ok(h.includes("<b>▼ −15</b>")); // Outros: 5 − 20 votos
+  assert.equal(celulaVariacao(null, null), "—");
+  assert.equal(celulaVariacaoVantagem(null, { votos: 1, pp: 1 }), "—");
+  const semT2 = quadroComparacao(l1, null, { base: "aptos", ondeNome: "Brasil", status2: "" });
+  assert.ok(!semT2.includes("el-duelo__variacao"));
+  // os p.p. seguem o cálculo do app (dp), não a subtração dos arredondados
+  assert.ok(celulaVariacao(1000, 6.6049).includes("+6,60 p.p."));
+});
