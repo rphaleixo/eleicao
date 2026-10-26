@@ -180,3 +180,18 @@ test("busca de cidade no Comparar: campo de 44px antes do seletor, até 5 result
   assert.ok(h.indexOf("Buscar uma cidade") < h.indexOf("data-ct-uf") && h.includes('data-ct-busca value="nit"') && h.includes('role="listbox"'));
   assert.ok(h.includes("Niterói · RJ")); // a faixa de premissas: ONDE Cidade · UF
 });
+
+test("Comparar: linha de vantagem de Lula sobre Flávio entre o 2º finalista e Outros, na base da tela", async () => {
+  const { quadroComparacao, celulaVantagem } = await import("../public/comparacaoView.js");
+  const l1 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 300, flavio: 400, outros: 20, validos: 720, pct: 100 };
+  const l2 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 420, flavio: 300, outros: 0, validos: 720, pct: 60 };
+  const aptos = quadroComparacao(l1, l2, { base: "aptos", ondeNome: "Brasil", status2: "" });
+  assert.ok(aptos.indexOf("Flávio Bolsonaro") < aptos.indexOf("Vantagem de Lula sobre Flávio Bolsonaro") && aptos.indexOf("Vantagem de Lula") < aptos.indexOf("Outros candidatos"));
+  assert.ok(aptos.includes("▼ −100") && aptos.includes("▼ −10,00 p.p.") && aptos.includes("▲ +120") && aptos.includes("▲ +12,00 p.p.")); // aptos: 30% − 40% e 42% − 30%
+  const validos = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "" });
+  assert.ok(validos.includes("▼ −100") && validos.includes("▼ −13,89 p.p.") && validos.includes("▲ +120") && validos.includes("▲ +16,66 p.p.")); // válidos: 300/720 − 400/720 e 58,33 − 41,67 (a diferença dos percentuais mostrados)
+  const semT2 = quadroComparacao(l1, null, { base: "aptos", ondeNome: "Brasil", status2: "" });
+  assert.ok(semT2.includes("▼ −100") && /el-pod__vantagem"><span class="el-duelo__sem">—<\/span><\/span>/.test(semT2)); // 2º turno sem apuração: traço
+  assert.ok(celulaVantagem({ votos: 10, pct: 50.004 }, { votos: 9, pct: 50 }).includes("Empate"));
+  assert.equal(celulaVantagem(null, { votos: 1, pct: 1 }), `<span class="el-duelo__sem">—</span>`);
+});

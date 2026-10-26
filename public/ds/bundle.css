@@ -836,3 +836,8 @@ dialog.el-cheia[open] { display: grid; grid-template-rows: auto 1fr auto; }
 .el-cheia__corpo { padding: var(--esp-8) var(--esp-12); min-height: 0; }
 .el-cheia__corpo .el-evolucao__grafico { height: 100%; }
 .el-cheia__rodape { padding: var(--esp-8) var(--esp-12) calc(var(--esp-8) + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--linha); background: var(--cartao); }
+
+/* ===== Rodada 23: vantagem no pódio ===== */
+.el-pod__vantagem { display: block; margin-top: var(--esp-8); padding: var(--esp-6) var(--esp-8); background: var(--trilho); border-left: 4px solid var(--cor, var(--sem-cor)); font: 600 12px/16px var(--font-text); text-align: left; }
+.el-pod__vantagem b { display: block; font: 700 14px/18px var(--font-num); font-variant-numeric: tabular-nums; }
+.el-pod__vantagem--atras { border-left-style: dashed; color: var(--texto-suave); }

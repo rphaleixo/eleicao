@@ -8,6 +8,7 @@ import { faixaPremissas } from "./ajuste.js";
 import { avisoDadosIniciais, REGIOES } from "./marcha.js";
 import { opcoesDeLugar, valorRegiao } from "./lugares.js";
 import { LIMITE } from "./busca.js";
+import { vantagem, txtVotos, txtPP } from "./vantagem.js";
 import { LINHAS, linhasDaBase, MEDIDAS, CATEGORIAS_LIDER, naoVoto, votosDe, compararLinhas, percentual, valorDeOrdem } from "./comparacao.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -48,6 +49,22 @@ const ptBr = (n) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2
 const COR_LADO = { lula: "var(--lado-a)", flavio: "var(--lado-b)", outros: "var(--ausencia)", naovoto: "var(--sem-cor)" };
 const NOME_CURTO = { lula: "Lula", flavio: "Flávio Bolsonaro" };
 
+
+/** A célula da vantagem de Lula sobre Flávio em um turno: votos e p.p. com sinal e triângulo (a leitura não depende de cor); "Empate" abaixo de 0,01 p.p.; traço sem os dois. */
+export function celulaVantagem(lula, flavio) {
+  const v = vantagem(lula, flavio);
+  if (!v) return `<span class="el-duelo__sem">—</span>`;
+  if (v.empate) return `<b>• Empate</b><small>${fmt(Math.abs(v.votos))} votos de diferença</small>`;
+  const seta = v.pp > 0 ? "▲" : "▼";
+  return `<b>${seta} ${txtVotos(v.votos)}</b><small>${seta} ${txtPP(v.pp)}</small>`;
+}
+function linhaVantagem(linhas, tem2) {
+  const lu = linhas.find((r) => r.chave === "lula"), fl = linhas.find((r) => r.chave === "flavio");
+  if (!lu || !fl) return "";
+  const t1 = celulaVantagem({ votos: lu.v1, pct: lu.p1 }, { votos: fl.v1, pct: fl.p1 });
+  const t2 = tem2 ? celulaVantagem({ votos: lu.v2, pct: lu.p2 }, { votos: fl.v2, pct: fl.p2 }) : celulaVantagem(null, null);
+  return `<div class="el-duelo__linha el-duelo__linha--vantagem" role="row" style="--cor:var(--lado-a)"><span>Vantagem de Lula sobre Flávio Bolsonaro</span><span class="el-pod__vantagem">${t1}</span><span class="el-pod__vantagem">${t2}</span><span>—</span></div>`;
+}
 
 /** O "Não voto" em três partes (só na base Eleitores aptos): o mesmo cálculo da linha, com o mesmo denominador (aptos das seções apuradas). */
 export const PARTES_NAO_VOTO = [["abstencao", "Abstenções"], ["brancos", "Brancos"], ["nulos", "Nulos"]];
@@ -101,7 +118,7 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2, nvAberto = f
     const eLider = r.chave === lider && !inicial;
     const delta = r.dp == null ? "—" : `<span class="${r.dp > 0 ? "el-delta--mais" : r.dp < 0 ? "el-delta--menos" : ""}">${r.dp > 0 ? "▲" : r.dp < 0 ? "▼" : "•"} ${sinal(r.dp, ptBr)}</span>`;
     const c2 = r.semNoTurno2 ? `<span class="el-duelo__sem">—</span>${votos(null)}` : celula(tem2 ? r.p2 : null, tem2 ? r.v2 : null);
-    return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span>${r.chave === "naovoto" ? botaoDetalheNaoVoto(nvAberto) : ""}</span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>${r.chave === "naovoto" ? sublinhasNaoVoto(l1, tem2 ? l2 : null, nvAberto) : ""}`;
+    return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span>${r.chave === "naovoto" ? botaoDetalheNaoVoto(nvAberto) : ""}</span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>${r.chave === "naovoto" ? sublinhasNaoVoto(l1, tem2 ? l2 : null, nvAberto) : ""}${r.chave === "flavio" ? linhaVantagem(linhas, tem2) : ""}`;
   }).join("");
   const baseTxt = base === "validos" ? "Percentuais dos candidatos sobre os votos válidos (só candidatos)." : "Percentuais sobre os eleitores aptos das seções apuradas; o não voto soma abstenções, brancos e nulos.";
   return `<section class="el-duelo"><header class="el-duelo__topo"><h3>${esc(ondeNome)}</h3><span>1º turno ${l1 ? pct(l1.pct) : "—"} · 2º turno ${tem2 ? `${pct(l2.pct)} apurado` : "ainda sem dados"}</span></header>${vantagem}
