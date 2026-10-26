@@ -1098,3 +1098,5 @@ dialog.el-cheia .el-cheia__corpo { overflow: auto; }
 .el-duelo__linha--vantagem { background: var(--trilho); min-height: 56px; padding-top: var(--esp-6); padding-bottom: var(--esp-6); }
 .el-duelo__linha--vantagem > :first-child { font-size: 12px; line-height: 15px; } .el-duelo__linha--vantagem > :first-child::before { display: none; }
 .el-duelo__linha--vantagem .el-pod__vantagem { margin: 0; padding: 0; background: none; border: 0; font-size: 12px; } .el-duelo__linha--vantagem .el-pod__vantagem b { font-size: 13px; line-height: 17px; white-space: nowrap; } .el-duelo__linha--vantagem .el-pod__vantagem small { display: block; white-space: nowrap; font: 600 11px/15px var(--font-num); }
+.el-duelo__linha--vantagem { grid-template-columns: minmax(0, 1fr) 80px 80px 28px; text-align: right; } .el-duelo__linha--vantagem > :first-child { text-align: left; } .el-duelo__linha--vantagem .el-pod__vantagem b, .el-duelo__linha--vantagem .el-pod__vantagem small { letter-spacing: -.02em; }
+@media (min-width: 600px) { .el-duelo__linha--vantagem { grid-template-columns: minmax(0, 1fr) 96px 96px 96px; } }
