@@ -49,7 +49,7 @@ def ler_ano(ano):
         out.append((ano, g("sq"), cpf, tit, g("nasc") if g("nasc") not in SEM else "", norm(g("nome")), g("partido"), g("cargo"), g("uf")))
     return out, mapa
 
-anos = [int(a) for a in sys.argv[3:]]
+anos = [int(a) for a in sys.argv[3:] if a.isdigit()]
 todas, rel_anos = [], {}
 for ano in anos:
     try: linhas, mapa = ler_ano(ano)
@@ -68,9 +68,12 @@ for _, _, cpf, tit, *_ in todas:
     if cpf and tit: tit_cpfs[tit].add(cpf)
 conf_tit = sum(1 for v in tit_cpfs.values() if len(v) > 1)
 
+SO_CPF = "--so-cpf" in sys.argv  # prova de reconciliação: ignora o título (só candidaturas com CPF próprio)
+
 def pessoa(l):
     _, _, cpf, tit, *_ = l
     if cpf: return "c" + cpf, "cpf"
+    if SO_CPF: return None, "sem_chave"
     if tit:
         c = tit_cpfs.get(tit)
         if c and len(c) == 1: return "c" + next(iter(c)), "titulo->cpf"
