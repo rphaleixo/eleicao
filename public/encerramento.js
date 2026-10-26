@@ -9,7 +9,7 @@ export const acFinal = (ac) => { const b = ac?.ufs?.br; return !!b && (b.andamen
 export function telaCompleta(v, rota, spCompletos = () => true) {
   const lista = (l) => Array.isArray(l) && l.length > 0 && l.every((x) => fim(x.d));
   switch (v?.tipo) {
-    case "andamento": return acFinal(v.f) && acFinal(v.e) && (rota.uf === "BR" || spCompletos(["det-" + rota.uf]));
+    case "andamento": return acFinal(v.f) && acFinal(v.e) && (rota.uf === "BR" || spCompletos(["det-" + rota.uf])) && (!v.exigeDisputas2 || spCompletos(["disputas2"])); // no 2º turno, os cartões das disputas só estão certos depois que o resultado do 2º turno chegou
     case "presidente": return acFinal(v.ac) && fim(v.d) && lista(v.lista) && spCompletos(["pan-presidente"]);
     case "cargo-por-estado": return acFinal(v.e) && lista(v.lista) && spCompletos(["pan-" + v.cargo]);
     case "nacional-prop": return acFinal(v.ac) && Array.isArray(v.estados) && v.estados.every((x) => fim(x.d)) && spCompletos(["nacional"]);

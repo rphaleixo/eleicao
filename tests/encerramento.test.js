@@ -14,6 +14,11 @@ test("acompanhamento final: 'f' do TSE ou todas as seções apuradas", () => {
 test("só para de buscar quando tudo da tela é final e o segundo plano chegou", () => {
   assert.equal(telaCompleta({ tipo: "andamento", f: final, e: final }, { uf: "BR" }), true);
   assert.equal(telaCompleta({ tipo: "andamento", f: final, e: parcial }, { uf: "BR" }), false);
+  // 2º turno: a Apuração só é "encerrada" depois que o resultado das disputas do 2º turno chegou (senão os cartões ficam presos nos números do 1º turno)
+  const v2 = { tipo: "andamento", f: final, e: final, exigeDisputas2: true };
+  assert.equal(telaCompleta(v2, { uf: "BR" }, () => false), false);
+  assert.equal(telaCompleta(v2, { uf: "BR" }, (ks) => ks.includes("disputas2")), true);
+  assert.equal(telaCompleta({ ...v2, exigeDisputas2: false }, { uf: "BR" }, () => false), true);
   assert.equal(telaCompleta({ tipo: "andamento", f: final, e: final }, { uf: "RJ" }, () => false), false); // resumo do estado ainda não chegou
   const lista = [{ uf: "SP", d: dFim }, { uf: "RJ", d: dFim }];
   assert.equal(telaCompleta({ tipo: "cargo-por-estado", cargo: "governador", e: final, lista }, {}), true);

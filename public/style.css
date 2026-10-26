@@ -1147,3 +1147,5 @@ dialog.el-cheia .el-cheia__corpo { overflow: auto; }
 /* linhas de votação (eleitorado apto, comparecimento…): em celular muito estreito a coluna do número cede e o rótulo ganha espaço */
 @media (max-width: 339px) { .vt-linha { grid-template-columns: minmax(0, 1fr) auto 64px; gap: 6px; } .vt-rot { overflow-wrap: anywhere; } }
 .el-duelo__linha--cab > span { white-space: nowrap; }
+/* cartão "Eleitorado" na faixa de 1024 a 1279px, em que ele fica numa coluna estreita: o rótulo ocupa a linha de cima e os números vão para baixo */
+@media (min-width: 1024px) and (max-width: 1279px) { .vt-linha { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0; } .vt-linha > .vt-rot { grid-column: 1 / -1; } .vt-linha > :nth-child(n+2) { padding-bottom: 2px; } }

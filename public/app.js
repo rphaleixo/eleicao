@@ -409,7 +409,7 @@ async function carregarView(rota) {
       await Promise.allSettled(DISPUTAS_SEGUNDO_TURNO.map(async (d) => m.set(`${d.cargo}/${d.uf}`, await obter(d.cargo, d.uf === "BR" ? "BR" : d.uf))));
       return m;
     }) : null;
-    return { tipo: "andamento", f, e, h, detalhe, eventos, disp2 };
+    return { tipo: "andamento", f, e, h, detalhe, eventos, disp2, exigeDisputas2: TURNO2 };
   }
   if (aba === "estados") {
     const { cargo } = rota;
