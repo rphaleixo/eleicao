@@ -1,0 +1,75 @@
+{
+ "regra": "CPF (11 digitos) > titulo > sugestao nome+nascimento (nao liga). Mascarados (-1,-3,-4,#NE) contam como nao preenchidos.",
+ "pessoas_com_chave": 2062204,
+ "candidaturas_total_1994_2026": 3703303,
+ "candidaturas_sem_chave": 336043,
+ "conflitos_brutos": {
+  "mesmo_cpf_nascimentos_diferentes": 38681,
+  "titulos_com_cpfs_diferentes": 4919,
+  "nomes_completos_homonimos_entre_pessoas": 90936,
+  "pessoas_com_nome_diferente_entre_anos": 66601
+ },
+ "trajetorias": {
+  "pessoas_em_mais_de_um_ano": 682809,
+  "distribuicao_anos_distintos": {
+   "1": 1379395,
+   "2": 373137,
+   "3": 153143,
+   "4": 76943,
+   "5": 40450,
+   "6": 22171,
+   "7": 12464,
+   "8": 2384,
+   "9": 1090,
+   "10": 557,
+   "11": 274,
+   "12": 114,
+   "13": 54,
+   "14": 22,
+   "15": 6
+  },
+  "mudaram_de_partido": 517386,
+  "mais_longas_anonimas": [
+   {
+    "anos_distintos": 15,
+    "cargos_distintos": 5,
+    "partidos_distintos": 1
+   },
+   {
+    "anos_distintos": 15,
+    "cargos_distintos": 4,
+    "partidos_distintos": 1
+   },
+   {
+    "anos_distintos": 15,
+    "cargos_distintos": 3,
+    "partidos_distintos": 8
+   },
+   {
+    "anos_distintos": 15,
+    "cargos_distintos": 6,
+    "partidos_distintos": 11
+   },
+   {
+    "anos_distintos": 15,
+    "cargos_distintos": 3,
+    "partidos_distintos": 4
+   },
+   {
+    "anos_distintos": 15,
+    "cargos_distintos": 2,
+    "partidos_distintos": 4
+   },
+   {
+    "anos_distintos": 14,
+    "cargos_distintos": 3,
+    "partidos_distintos": 5
+   },
+   {
+    "anos_distintos": 14,
+    "cargos_distintos": 3,
+    "partidos_distintos": 8
+   }
+  ]
+ }
+}
