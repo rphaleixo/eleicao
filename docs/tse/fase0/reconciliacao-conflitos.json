@@ -1,0 +1,17 @@
+{
+ "pergunta": "Por que 38.681 e 36.162 CPFs com nascimentos diferentes?",
+ "ligacao_completa_inclui_titulo_e_2024": {
+  "total": 38681,
+  "com_candidatura_ligada_so_por_titulo_via_cpf": 9958,
+  "com_candidatura_de_2024": 9785,
+  "so_candidaturas_com_cpf_proprio_e_sem_2024": 28700
+ },
+ "ligacao_so_cpf_proprio_sem_2024": {
+  "total": 36173,
+  "com_candidatura_ligada_so_por_titulo_via_cpf": 0,
+  "com_candidatura_de_2024": 0,
+  "so_candidaturas_com_cpf_proprio_e_sem_2024": 36173
+ },
+ "conflitos_nascimento_py_cpf_proprio_sem_2024": 36162,
+ "explicacao": "38.681 - 36.173 = 2.508 conflitos aparecem so quando se somam candidaturas ligadas pelo titulo (e/ou de 2024). Os 11 restantes (36.173 x 36.162) vem de datas mal formatadas, que um script compara como texto e o outro descarta."
+}

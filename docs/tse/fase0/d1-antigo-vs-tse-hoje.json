@@ -1,0 +1,139 @@
+{
+ "candidatura": {
+  "no_banco_antigo": 20989,
+  "no_tse_hoje": 20989,
+  "em_ambos": 20989,
+  "so_no_banco_antigo": 0,
+  "so_no_tse_hoje": 0,
+  "campos_comparados_nos_em_ambos": {
+   "numero": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "nome_urna": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "partido": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "cargo": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "uf": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "ue": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "situacao": {
+    "iguais": 0,
+    "diferentes": 20989
+   },
+   "sq_coligacao": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "tp_agremiacao": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "nm_coligacao": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "julgamento": {
+    "iguais": 20709,
+    "diferentes": 280
+   },
+   "situacao_urna": {
+    "iguais": 0,
+    "diferentes": 20989
+   },
+   "destinacao_votos": {
+    "iguais": 18992,
+    "diferentes": 1997
+   },
+   "idade_posse": {
+    "iguais": 20988,
+    "diferentes": 1
+   },
+   "reeleicao": {
+    "iguais": 3,
+    "diferentes": 20986
+   },
+   "sq_substituido": {
+    "iguais": 285,
+    "diferentes": 20704
+   },
+   "p_nome": {
+    "iguais": 20982,
+    "diferentes": 7
+   },
+   "ano_nascimento": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "genero": {
+    "iguais": 20989,
+    "diferentes": 0
+   },
+   "cor_raca": {
+    "iguais": 20972,
+    "diferentes": 17
+   },
+   "grau_instrucao": {
+    "iguais": 20971,
+    "diferentes": 18
+   },
+   "ocupacao": {
+    "iguais": 20967,
+    "diferentes": 22
+   },
+   "uf_nascimento": {
+    "iguais": 20989,
+    "diferentes": 0
+   }
+  }
+ },
+ "pessoa": {
+  "pessoas_no_banco_antigo": 20878,
+  "pessoas_distintas_por_cpf_no_tse_hoje": 20878,
+  "pessoa_id_com_mais_de_um_cpf": 0,
+  "cpf_com_mais_de_um_pessoa_id": 0,
+  "candidaturas_sem_cpf_no_tse_hoje": 3
+ },
+ "bem": {
+  "linhas_banco_antigo": 77294,
+  "linhas_tse_hoje": 77446,
+  "chaves_em_ambos": 77294,
+  "so_antigo": 0,
+  "so_tse": 152,
+  "soma_valor_antigo": 32048732450.5,
+  "soma_valor_tse_hoje": 32084410518.54
+ },
+ "historico": {
+  "linhas_banco_antigo": 44771,
+  "linhas_tse_hoje_sem_a_propria_2026": 44771,
+  "em_ambos": 44771,
+  "so_antigo": 0,
+  "so_tse": 0
+ },
+ "agremiacao": {
+  "linhas_banco_antigo": 4266,
+  "linhas_tse_hoje": 4266,
+  "em_ambos": 4266,
+  "so_antigo": 0,
+  "so_tse": 0
+ },
+ "vaga": {
+  "linhas_banco_antigo": 191,
+  "linhas_tse_hoje": 191,
+  "iguais": 191,
+  "diferentes_ou_ausentes": 0
+ }
+}
