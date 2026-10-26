@@ -79,7 +79,7 @@ function linhaVantagem(linhas, tem2) {
   const t2 = tem2 ? celulaVantagem({ votos: lu.v2, pct: lu.p2 }, { votos: fl.v2, pct: fl.p2 }) : celulaVantagem(null, null);
   const va = (turno) => (lu[`v${turno}`] == null || fl[`v${turno}`] == null || lu[`p${turno}`] == null || fl[`p${turno}`] == null ? null : vantagem({ votos: lu[`v${turno}`], pct: lu[`p${turno}`] }, { votos: fl[`v${turno}`], pct: fl[`p${turno}`] }));
   const var_ = tem2 ? celulaVariacaoVantagem(va(1), va(2)) : "—";
-  return `<div class="el-duelo__linha el-duelo__linha--vantagem" role="row" style="--cor:var(--lado-a)"><span>Vantagem de Lula sobre Flávio Bolsonaro</span><span class="el-pod__vantagem">${t1}</span><span class="el-pod__vantagem">${t2}</span><span>${var_}</span></div>`;
+  return `<div class="el-duelo__linha el-duelo__linha--vantagem" role="row" style="--cor:var(--lado-a)"><span>Vantagem de Lula sobre Flávio Bolsonaro</span><span class="el-pod__vantagem"><small class="el-duelo__cap">1º turno</small>${t1}</span><span class="el-pod__vantagem"><small class="el-duelo__cap">2º turno</small>${t2}</span><span><small class="el-duelo__cap">Variação</small>${var_}</span></div>`;
 }
 
 /** O "Não voto" em três partes (só na base Eleitores aptos): o mesmo cálculo da linha, com o mesmo denominador (aptos das seções apuradas). */
