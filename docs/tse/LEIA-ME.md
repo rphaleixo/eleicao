@@ -7,5 +7,6 @@ Tudo aqui foi gerado na sessão que construiu o site de apuração e planejou o 
 - `../../tools/tse/qualidade-candidatos.py`: mede cobertura de CPF, título e nascimento por ano e quantas pessoas se repetem entre eleições (somente leitura; baixa os cadastros do CDN para um cache). Exemplo: `python3 tools/tse/qualidade-candidatos.py 2018 2022 2026`. Reproduz os números do plano (CPFs em comum 2022 x 2026 = 6.393).
 - `../historico-plano.md`: o plano completo (Parte A: o que o site já faz; Parte B: o banco histórico).
 - `../prompt-nova-sessao.md`: o prompt para abrir a sessão nova.
+- `../conversa-integra.md`: a conversa inteira (texto das mensagens do usuário e do Claude, de 04/10 a 26/10/2026, sem chamadas de ferramentas e sem e-mails). Deve ser lida na íntegra.
 
 Observação do portal do TSE: o `urllib` do Python sem User-Agent às vezes recebe 403; os scripts já mandam um User-Agent de navegador.
