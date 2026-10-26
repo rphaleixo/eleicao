@@ -1,0 +1,43 @@
+{
+ "correcao_sq_candidato": "SQ_CANDIDATO sozinho NAO identifica a candidatura em 2000, 2002, 2004, 2006 e 2008 (e repete em 2012): e um sequencial por unidade eleitoral. A conferencia anterior (sq-candidato.csv) so mede se o CODIGO existe no cadastro, nao prova unicidade.",
+ "chave_natural_proposta": "ano + turno(ou fusao dos turnos) + cargo + unidade eleitoral do cadastro (SG_UE) + SQ_CANDIDATO",
+ "unica_no_cadastro": "sim em todos os anos, exceto 2004 (402.135 chaves para 402.157 linhas: 22 repetidas, vao para lista de excecoes)",
+ "regra_para_ligar_votacao_ao_cadastro": "eleicao municipal: SG_UE do municipio. Eleicao geral: unidade = UF (cargos estaduais e federais) ou 'BR' para Presidente. Em 2002 e 2010 a votacao traz SG_UE do municipio, entao a regra BR/UF e obrigatoria.",
+ "teste_regra_BR_UF_anos_gerais_chaves_fora_do_cadastro": {
+  "1994": 0,
+  "1998": 1,
+  "2002": 33,
+  "2006": 5,
+  "2010": 3
+ },
+ "teste_SG_UE_anos_municipais_chaves_fora_do_cadastro": {
+  "1996": 0,
+  "2000": 68,
+  "2004": 130,
+  "2008": 1458,
+  "2012": 4,
+  "2016": 0,
+  "2020": 20,
+  "2024": 0
+ },
+ "teste_SG_UE_anos_gerais_14_a_26_chaves_fora_do_cadastro": {
+  "2014": 14,
+  "2018": 0,
+  "2022": 0,
+  "2026": 0
+ },
+ "linhas_a_gravar_fase1": {
+  "pessoa": 2398247,
+  "pessoa_com_chave": 2062204,
+  "pessoa_provisoria_sem_chave": 336043,
+  "pessoa_nome": 5347910,
+  "pessoa_partido": 3203131,
+  "candidatura_linhas_nos_csv": 3703303,
+  "candidatura_chaves_distintas_ano_sq_turno": 2563915,
+  "partidos_distintos_numero_sigla": 66,
+  "unidades_eleitorais_distintas_uf_ue": 5598,
+  "cargos_distintos": 15,
+  "anos": 17
+ },
+ "linhas_bens_2006_a_2026": 5152583
+}
