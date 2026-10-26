@@ -1067,6 +1067,13 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("[data-cheia-fechar]")) $("cheia").close(); // o foco volta ao botão "Tela cheia"; Esc também fecha
 });
 
+/** "Eleito" só vale no recorte Brasil e quando o TSE já marcou o vencedor do 2º turno de Presidente; em estado, região ou cidade quem está à frente continua "lidera". */
+function eleitoDoBrasil(v, reg, mun) {
+  if (v.uf !== "BR" || reg || mun || !v.d2) return null;
+  const c = v.d2.candidatos?.find((x) => x.sit === "eleito" || x.eleito);
+  return c ? { 13: "lula", 22: "flavio" }[c.numero] ?? null : null;
+}
+
 /** Aba Comparar turnos: Lula, Flávio Bolsonaro, outros e não voto no 1º e no 2º turno, por país, estado ou município, em quadro e mapa. */
 function telaTurnos(v) {
   const ct0 = estado.ct, { uf, mun } = estado;
@@ -1085,7 +1092,7 @@ function telaTurnos(v) {
   const status2 = !(l2 && l2.pct > 0) ? (mun ? "Aguardando o 2º turno nesta cidade." : "Aguardando o início da divulgação do TSE: os números do 2º turno aparecem aqui sozinhos.") : l2 && l2.pct < 100 ? `2º turno em apuração (${pct(l2.pct)} das seções): os números mudam a cada minuto.` : "";
   const semT2 = !t2 || !t2.size; // enquanto o 2º turno não tem dados por município, o mapa mostra o 1º turno
   const c = semT2 && ct0.medida !== "p1" ? { ...ct0, medida: "p1" } : ct0;
-  const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2, nvAberto: !!estado.ct.nvAberto });
+  const quadro = quadroComparacao(l1, l2, { base: c.base, ondeNome, status2, nvAberto: !!estado.ct.nvAberto, eleito: eleitoDoBrasil(v, reg, mun) });
   let mapa = "";
   if (uf === "ZZ") { // exterior: sem mapa de municípios; lista por país
     const e = v.ext, oficial = e?.e2f ?? (vivoExtT2.size ? vivoExtT2 : null);

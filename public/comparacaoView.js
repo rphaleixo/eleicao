@@ -108,7 +108,7 @@ function sublinhasNaoVoto(l1, l2, aberto) {
  * Todos os % de candidatos são sobre votos válidos (só candidatos); a base "Eleitores aptos" mostra o não voto como linha à parte.
  * Sem dados no 2º turno, a faixa descreve o 1º turno e as colunas do 2º mostram traço.
  */
-export function quadroComparacao(l1, l2, { base, ondeNome, status2, nvAberto = false }) {
+export function quadroComparacao(l1, l2, { base, ondeNome, status2, nvAberto = false, eleito = null }) {
   const tem2 = !!l2 && l2.aptos > 0 && l2.pct > 0 && (l2.lula + l2.flavio + l2.outros) > 0;
   const linhas = compararLinhas(l1, tem2 ? l2 : null, base).filter((r) => r.chave !== "naovoto" || base === "aptos");
   const p = (l, k) => percentual(l, k, base);
@@ -126,7 +126,9 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2, nvAberto = f
       : "2º turno ainda sem dados apurados";
     vantagem = inicial
       ? `${avisoDadosIniciais(l2.pct)}<div class="el-duelo__vantagem el-duelo__vantagem--inicial"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> na frente por enquanto sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`
-      : `<div class="el-duelo__vantagem" style="--cor:${COR_LADO[lider]}"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> lidera${tem2 ? "" : " no 1º turno"} sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`;
+      : eleito && eleito === lider && tem2
+        ? `<div class="el-duelo__vantagem" style="--cor:${COR_LADO[lider]}"><b>+${ptBr(agora)} p.p.</b><p><strong>✓ ${NOME_CURTO[lider]} eleito</strong>, à frente de ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`
+        : `<div class="el-duelo__vantagem" style="--cor:${COR_LADO[lider]}"><b>+${ptBr(agora)} p.p.</b><p><strong>${NOME_CURTO[lider]}</strong> lidera${tem2 ? "" : " no 1º turno"} sobre ${NOME_CURTO[outro]}<small>${detalhe}</small></p></div>`;
   }
   const votos = (v) => `<span class="el-duelo__votos"><br>${v == null ? "" : fmt(v)}</span>`;
   const celula = (pc, v) => (pc == null ? `<span class="el-duelo__sem">—</span>${votos(null)}` : `${pct(pc)}${votos(v)}`);
@@ -134,7 +136,7 @@ export function quadroComparacao(l1, l2, { base, ondeNome, status2, nvAberto = f
     const eLider = r.chave === lider && !inicial;
     const delta = r.dp == null ? "—" : celulaVariacao(r.dv, r.dp);
     const c2 = r.semNoTurno2 ? `<span class="el-duelo__sem">—</span>${votos(null)}` : celula(tem2 ? r.p2 : null, tem2 ? r.v2 : null);
-    return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">lidera</small>` : ""}</span>${r.chave === "naovoto" ? botaoDetalheNaoVoto(nvAberto) : ""}</span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>${r.chave === "naovoto" ? sublinhasNaoVoto(l1, tem2 ? l2 : null, nvAberto) : ""}${r.chave === "flavio" ? linhaVantagem(linhas, tem2) : ""}`;
+    return `<div class="el-duelo__linha${eLider ? " el-duelo__linha--lider" : ""}" style="--cor:${COR_LADO[r.chave]}"><span><span class="el-duelo__nome">${esc(r.nome)}${eLider ? `<small class="el-duelo__lidera">${eleito === r.chave ? "✓ eleito" : "lidera"}</small>` : ""}</span>${r.chave === "naovoto" ? botaoDetalheNaoVoto(nvAberto) : ""}</span><span>${celula(r.p1, r.v1)}</span><span>${c2}</span><span>${r.semNoTurno2 ? "—" : delta}</span></div>${r.chave === "naovoto" ? sublinhasNaoVoto(l1, tem2 ? l2 : null, nvAberto) : ""}${r.chave === "flavio" ? linhaVantagem(linhas, tem2) : ""}`;
   }).join("");
   const baseTxt = base === "validos" ? "Percentuais dos candidatos sobre os votos válidos (só candidatos)." : "Percentuais sobre os eleitores aptos das seções apuradas; o não voto soma abstenções, brancos e nulos.";
   return `<section class="el-duelo"><header class="el-duelo__topo"><h3>${esc(ondeNome)}</h3><span>1º turno ${l1 ? pct(l1.pct) : "—"} · 2º turno ${tem2 ? `${pct(l2.pct)} apurado` : "ainda sem dados"}</span></header>${vantagem}

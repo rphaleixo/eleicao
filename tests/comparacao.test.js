@@ -212,3 +212,14 @@ test("coluna Variação em duas linhas: votos (2º menos 1º) e p.p. com unidade
   // os p.p. seguem o cálculo do app (dp), não a subtração dos arredondados
   assert.ok(celulaVariacao(1000, 6.6049).includes("+6,60 p.p."));
 });
+
+test("Comparar: 'eleito' no lugar de 'lidera' só quando o TSE já confirmou o vencedor do Brasil", async () => {
+  const { quadroComparacao } = await import("../public/comparacaoView.js");
+  const l1 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 300, flavio: 400, outros: 20, validos: 720, pct: 100 };
+  const l2 = { aptos: 1000, comparecimento: 800, abstencao: 200, brancos: 30, nulos: 50, lula: 420, flavio: 300, outros: 0, validos: 720, pct: 100 };
+  const sem = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "" });
+  assert.ok(sem.includes("lidera sobre Flávio") && sem.includes(">lidera<") && !sem.includes("eleito"));
+  const com = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "", eleito: "lula" });
+  assert.ok(com.includes("✓ Lula eleito") && com.includes("✓ eleito") && !com.includes("lidera sobre") && !com.includes(">lidera<"));
+  assert.ok(!quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "", eleito: "flavio" }).includes("✓ Flávio eleito")); // quem está na frente é Lula: sem contradição
+});
