@@ -20,17 +20,18 @@ def head(url):
             time.sleep(2 * (i + 1))
     return None, err
 
+if len(sys.argv) > 2: ANOS = [int(a) for a in sys.argv[2].split(",")]  # opcional: só alguns anos
 cat = json.load(open(CAT))["pacotes"]
 saida = []
 for ano in ANOS:
-    for pac in ("resultados-%d" % ano, "candidatos-%d" % ano):
+    for pac in ("resultados-%d" % ano, "candidatos-%d" % ano, "candidatos-%d-subtemas" % ano):  # 2020 usa o sufixo -subtemas
         p = cat.get(pac)
         if not p: continue
         for r in p["recursos"]:
             url = r["url"] or ""
             nome = url.split("/")[-1]
             tipo = None
-            if pac.startswith("candidatos-"):
+            if pac.startswith("candidatos-"):  # inclui candidatos-AAAA-subtemas
                 if re.match(r"consulta_cand_\d{4}\.zip", nome): tipo = "cadastro"
                 elif re.match(r"consulta_cand_complementar_\d{4}\.zip", nome): tipo = "cadastro_compl"
                 elif re.match(r"bem_candidato_\d{4}\.zip", nome): tipo = "bens"
