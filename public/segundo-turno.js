@@ -1,12 +1,15 @@
 // Disputas definidas para o 2º turno (25/10/2026), conforme o resultado do 1º turno em 04/10/2026.
 // Só estas eleições têm 2º turno: Presidente e o governo de seis estados. Não há 2º turno para Senado nem deputados.
 // Percentuais do 1º turno: votos no candidato ÷ votos válidos (soma dos votos em candidatos e legendas; brancos, nulos e abstenções ficam fora).
+// `aptos` (eleitores aptos das seções apuradas) e `naoVoto` (abstenções + brancos + nulos) servem à base Eleitores aptos; gerados por tools/disputas-aptos.mjs.
 export const DATA_SEGUNDO_TURNO = "2026-10-25";
 export const DISPUTAS_SEGUNDO_TURNO = [
   {
     "cargo": "presidente",
     "uf": "BR",
     "pctApurado": 100,
+    "aptos": 158745502,
+    "naoVoto": 39444291,
     "candidatos": [
       {
         "id": "280002551544",
@@ -30,6 +33,8 @@ export const DISPUTAS_SEGUNDO_TURNO = [
     "cargo": "governador",
     "uf": "AC",
     "pctApurado": 100,
+    "aptos": 613316,
+    "naoVoto": 173669,
     "candidatos": [
       {
         "id": "10002544107",
@@ -53,6 +58,8 @@ export const DISPUTAS_SEGUNDO_TURNO = [
     "cargo": "governador",
     "uf": "AM",
     "pctApurado": 100,
+    "aptos": 2796053,
+    "naoVoto": 724068,
     "candidatos": [
       {
         "id": "40002532272",
@@ -76,6 +83,8 @@ export const DISPUTAS_SEGUNDO_TURNO = [
     "cargo": "governador",
     "uf": "DF",
     "pctApurado": 100,
+    "aptos": 2243988,
+    "naoVoto": 590751,
     "candidatos": [
       {
         "id": "70002553055",
@@ -99,6 +108,8 @@ export const DISPUTAS_SEGUNDO_TURNO = [
     "cargo": "governador",
     "uf": "ES",
     "pctApurado": 100,
+    "aptos": 2987584,
+    "naoVoto": 875413,
     "candidatos": [
       {
         "id": "80002552682",
@@ -122,6 +133,8 @@ export const DISPUTAS_SEGUNDO_TURNO = [
     "cargo": "governador",
     "uf": "RN",
     "pctApurado": 100,
+    "aptos": 2656207,
+    "naoVoto": 669766,
     "candidatos": [
       {
         "id": "200002535255",
@@ -145,6 +158,8 @@ export const DISPUTAS_SEGUNDO_TURNO = [
     "cargo": "governador",
     "uf": "TO",
     "pctApurado": 100,
+    "aptos": 1180433,
+    "naoVoto": 331804,
     "candidatos": [
       {
         "id": "270002544599",

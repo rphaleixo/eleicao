@@ -4,6 +4,7 @@ import { UFS } from "./config.js";
 import { corPartido } from "./cores.js";
 import { pct } from "./formato.js";
 import { ladoFixo } from "./finalistas.js";
+import { getBase } from "./base.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dataBR = DATA_SEGUNDO_TURNO.split("-").reverse().join("/");
@@ -19,19 +20,29 @@ const iniciais = (nome) => { const p = String(nome ?? "").trim().split(/\s+/).fi
 /** O resultado do 2º turno de uma disputa, quando já há seções apuradas: { pct (seções), por número do candidato }. */
 export function resultado2(d2, d) {
   if (!d2 || !(d2.pctSecoes > 0)) return null;
-  const por = {};
-  for (const c of d.candidatos) { const x = d2.candidatos?.find((k) => String(k.numero) === String(c.numero)); if (x) por[c.numero] = x.pct; }
-  return Object.keys(por).length === d.candidatos.length ? { pctSecoes: d2.pctSecoes, por } : null;
+  const por = {}, porAptos = {};
+  const aptos = d2.eleitorado?.apuradas || (d2.comparecimento || 0) + (d2.abstencao || 0); // eleitores aptos das seções já apuradas
+  for (const c of d.candidatos) { const x = d2.candidatos?.find((k) => String(k.numero) === String(c.numero)); if (x) { por[c.numero] = x.pct; porAptos[c.numero] = aptos > 0 ? (x.votos / aptos) * 100 : null; } }
+  const naoVoto = aptos > 0 ? (((d2.abstencao || 0) + (d2.brancos || 0) + (d2.nulos || 0)) / aptos) * 100 : null;
+  return Object.keys(por).length === d.candidatos.length ? { pctSecoes: d2.pctSecoes, por, porAptos, naoVoto } : null;
 }
 
 function lado(d, c, valor) {
-  return `<div class="el-duplo__lado" style="--cor:${corPartido(c.partido)}"><img class="el-duplo__foto" loading="lazy" alt="" data-i="${esc(iniciais(c.nome))}" data-cor="${corPartido(c.partido)}" src="${foto(d, c)}" onerror="${ERRO_FOTO}"><span><span class="el-duplo__nome">${esc(c.nome)}</span><span class="el-chip" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span><span class="el-duplo__pct">${pct(valor)}</span></span></div>`;
+  return `<div class="el-duplo__lado" style="--cor:${corPartido(c.partido)}"><img class="el-duplo__foto" loading="lazy" alt="" data-i="${esc(iniciais(c.nome))}" data-cor="${corPartido(c.partido)}" src="${foto(d, c)}" onerror="${ERRO_FOTO}"><span><span class="el-duplo__nome">${esc(c.nome)}</span><span class="el-chip${String(c.partido).length > 8 ? " el-chip--longo" : ""}" style="--cor:${corPartido(c.partido)}">${esc(c.partido)}</span><span class="el-duplo__pct">${pct(valor)}</span></span></div>`;
 }
 
-/** Barra de dois lados (el-duplo__barra): os dois finalistas normalizados para somar 100% dos válidos, com a linha de 50% e o rótulo uma vez. */
-function barraDuplo(a, b, va, vb) {
+/**
+ * Barra da disputa (el-duplo__barra). Votos válidos: os dois finalistas normalizados para somar 100%, com a linha de 50% e o rótulo uma vez.
+ * Eleitores aptos: o não voto (abstenções, brancos e nulos) fica entre os dois candidatos, em trecho hachurado, e não há linha de 50% (a barra não é mais de dois lados).
+ */
+function barraDuplo(a, b, va, vb, nv = null) {
+  const cA = corPartido(a.partido), cB = corPartido(b.partido);
+  if (nv != null) {
+    const soma = va + nv + vb, w = (x) => (soma > 0 ? (x / soma) * 100 : 100 / 3);
+    return `<span class="el-duplo__barra"><span class="el-composicao" role="img" aria-label="${esc(a.nome)} ${pct(va)}, não voto ${pct(nv)}, ${esc(b.nome)} ${pct(vb)}, sobre os eleitores aptos"><i style="width:${w(va)}%;--cor:${cA}"></i><i class="nv" style="width:${w(nv)}%"></i><i style="width:${w(vb)}%;--cor:${cB}"></i></span><span class="el-duplo__nv-rotulo">Trecho hachurado: não voto ${pct(nv)}</span></span>`;
+  }
   const soma = (va || 0) + (vb || 0), pa = soma > 0 ? (va / soma) * 100 : 50, pb = soma > 0 ? 100 - pa : 50;
-  return `<span class="el-duplo__barra"><span class="el-composicao el-composicao--meta" role="img" aria-label="${esc(a.nome)} ${pct(va)}, ${esc(b.nome)} ${pct(vb)}, linha de 50%"><i style="width:${pa}%;--cor:${corPartido(a.partido)}"></i><i style="width:${pb}%;--cor:${corPartido(b.partido)}"></i></span><span class="el-composicao__rotulo50">50%</span></span>`;
+  return `<span class="el-duplo__barra"><span class="el-composicao el-composicao--meta" role="img" aria-label="${esc(a.nome)} ${pct(va)}, ${esc(b.nome)} ${pct(vb)}, linha de 50%"><i style="width:${pa}%;--cor:${cA}"></i><i style="width:${pb}%;--cor:${cB}"></i></span><span class="el-composicao__rotulo50">50%</span></span>`;
 }
 
 /**
@@ -40,13 +51,17 @@ function barraDuplo(a, b, va, vb) {
  */
 export function duplo(d, d2 = null) {
   const [a, b] = ladoFixo(d.candidatos), r2 = resultado2(d2, d);
+  const aptos = getBase() === "totais" && d.aptos > 0; // base Eleitores aptos: percentuais sobre os aptos e o não voto entre os candidatos
+  const p1 = (c) => (aptos ? (c.votos / d.aptos) * 100 : c.pct);
   const pe = r2
-    ? `1º turno: ${pct(a.pct)} × ${pct(b.pct)} · 2º turno: ${pct(r2.pctSecoes)} das seções · <u>Ver apuração ›</u>`
+    ? `1º turno: ${pct(p1(a))} × ${pct(p1(b))} · 2º turno: ${pct(r2.pctSecoes)} das seções · <u>Ver apuração ›</u>`
     : `Resultado do 1º turno · ${pct(d.pctApurado)} das seções · <u>Ver apuração ›</u>`;
-  const va = r2 ? r2.por[a.numero] : a.pct, vb = r2 ? r2.por[b.numero] : b.pct;
+  const va = aptos ? (r2 ? r2.porAptos[a.numero] : p1(a)) : r2 ? r2.por[a.numero] : a.pct;
+  const vb = aptos ? (r2 ? r2.porAptos[b.numero] : p1(b)) : r2 ? r2.por[b.numero] : b.pct;
+  const nv = aptos ? (r2 ? r2.naoVoto : (d.naoVoto / d.aptos) * 100) : null;
   return `<a class="el-duplo" href="${hrefDisputa(d)}" data-ver-completa><span class="el-duplo__topo"><span>${esc(tituloDisputa(d))}</span><span class="el-selo el-selo--segundo"><i aria-hidden="true"><span>2º</span></i>turno</span></span>
     <span class="el-duplo__corpo">${lado(d, a, va)}<span class="el-duplo__meio" aria-hidden="true"></span>${lado(d, b, vb)}</span>
-    ${barraDuplo(a, b, va, vb)}
+    ${barraDuplo(a, b, va, vb, nv)}
     <span class="el-duplo__pe">${pe}</span></a>`;
 }
 

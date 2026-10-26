@@ -191,7 +191,7 @@ test("Comparar: linha de vantagem de Lula sobre Flávio entre o 2º finalista e 
   const validos = quadroComparacao(l1, l2, { base: "validos", ondeNome: "Brasil", status2: "" });
   assert.ok(validos.includes("▼ −100") && validos.includes("▼ −13,89 p.p.") && validos.includes("▲ +120") && validos.includes("▲ +16,66 p.p.")); // válidos: 300/720 − 400/720 e 58,33 − 41,67 (a diferença dos percentuais mostrados)
   const semT2 = quadroComparacao(l1, null, { base: "aptos", ondeNome: "Brasil", status2: "" });
-  assert.ok(semT2.includes("▼ −100") && /el-pod__vantagem"><span class="el-duelo__sem">—<\/span><\/span>/.test(semT2)); // 2º turno sem apuração: traço
+  assert.ok(semT2.includes("▼ −100") && /el-pod__vantagem"><small class="el-duelo__cap">2º turno<\/small><span class="el-duelo__sem">—<\/span><\/span>/.test(semT2)); // 2º turno sem apuração: traço
   assert.ok(celulaVantagem({ votos: 10, pct: 50.004 }, { votos: 9, pct: 50 }).includes("Empate"));
   assert.equal(celulaVantagem(null, { votos: 1, pct: 1 }), `<span class="el-duelo__sem">—</span>`);
 });

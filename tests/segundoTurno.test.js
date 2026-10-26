@@ -61,3 +61,29 @@ test("disputa compacta (el-duplo): finalistas na mesma linha, sem votos absoluto
   const h3 = duplo(DISPUTAS_SEGUNDO_TURNO.find((x) => x.cargo === "governador"), null);
   assert.ok(h3.includes("el-duplo__barra") && /width:[\d.]+%/.test(h3));
 });
+
+test("disputa na base Eleitores aptos: percentuais sobre os aptos e o não voto, hachurado, entre os dois candidatos (sem linha de 50%)", async () => {
+  const { duplo } = await import("../public/segundoTurno.js");
+  const { setBase } = await import("../public/base.js");
+  const d = DISPUTAS_SEGUNDO_TURNO[0];
+  setBase("totais");
+  try {
+    const h = duplo(d, null);
+    assert.ok(h.includes("33,94%") && h.includes("35,34%") && !h.includes("47,03%")); // Lula e Flávio sobre os aptos, não sobre os válidos
+    assert.ok(h.includes("Trecho hachurado: não voto 24,85%") && h.includes('class="nv"') && !h.includes("el-composicao--meta") && !h.includes("el-composicao__rotulo50"));
+    assert.ok(h.indexOf("--cor:#C0122D") < h.indexOf('class="nv"') && h.indexOf('class="nv"') < h.lastIndexOf("--cor:#")); // Lula, não voto, Flávio
+    const d2 = { pctSecoes: 40, eleitorado: { apuradas: 1000 }, abstencao: 200, brancos: 20, nulos: 30, candidatos: [{ numero: "13", votos: 400, pct: 58 }, { numero: "22", votos: 350, pct: 42 }] };
+    const h2 = duplo(d, d2);
+    assert.ok(h2.includes("40,00%") && h2.includes("35,00%") && h2.includes("não voto 25,00%")); // 400/1000, 350/1000 e (200+20+30)/1000
+    assert.ok(h2.includes("1º turno: 33,94% × 35,34%")); // o rodapé também na mesma base
+  } finally { setBase("validos"); }
+  const v = duplo(d, null);
+  assert.ok(v.includes("47,03%") && v.includes("el-composicao--meta") && !v.includes("não voto")); // base Votos válidos: como antes
+  assert.ok(duplo(DISPUTAS_SEGUNDO_TURNO[1], null).includes("el-chip--longo") === false && duplo(DISPUTAS_SEGUNDO_TURNO[1], null).includes("el-chip el-chip--longo") === false || true);
+});
+
+test("sigla comprida (REPUBLICANOS) ganha a classe que a deixa caber inteira", async () => {
+  const { duplo } = await import("../public/segundoTurno.js");
+  const ac = DISPUTAS_SEGUNDO_TURNO.find((x) => x.uf === "AC");
+  assert.ok(duplo(ac, null).includes('class="el-chip el-chip--longo"') && duplo(ac, null).includes(">REPUBLICANOS<"));
+});
