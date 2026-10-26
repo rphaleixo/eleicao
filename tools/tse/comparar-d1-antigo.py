@@ -34,9 +34,17 @@ camp = {  # campo_do_banco: (função que lê o TSE)
     "cor_raca": lambda c, k: c["DS_COR_RACA"], "grau_instrucao": lambda c, k: c["DS_GRAU_INSTRUCAO"], "ocupacao": lambda c, k: c["DS_OCUPACAO"],
     "uf_nascimento": lambda c, k: c["SG_UF_NASCIMENTO"]}
 dif = {}
+VAZIOS = {"", "-1", "-3", "-4", "#NE", "#NE#", "#NULO", "#NULO#", "NONE"}  # "sem valor": o banco antigo grava NULL onde o TSE escreve #NE/#NULO
+V = lambda s: "" if N(s) in VAZIOS else N(s)
+pares = {}
 for campo, fn in camp.items():
-    iguais = sum(1 for k in ambos if N(velho[k].get(campo)) == N(fn(cand[k], k)))
-    dif[campo] = {"iguais": iguais, "diferentes": len(ambos) - iguais}
+    exatos = sum(1 for k in ambos if N(velho[k].get(campo)) == N(fn(cand[k], k)))
+    normal = sum(1 for k in ambos if V(velho[k].get(campo)) == V(fn(cand[k], k)))
+    dif[campo] = {"iguais_exatos": exatos, "diferentes_so_de_formato_vazio": normal - exatos, "diferentes_de_conteudo": len(ambos) - normal}
+    if len(ambos) - normal:
+        c = collections.Counter((V(velho[k].get(campo))[:40], V(fn(cand[k], k))[:40]) for k in ambos if V(velho[k].get(campo)) != V(fn(cand[k], k)))
+        pares[campo] = [{"banco_antigo": a or "(vazio)", "tse_hoje": b or "(vazio)", "linhas": n} for (a, b), n in c.most_common(8)] if campo not in ("p_nome", "ocupacao", "cor_raca", "grau_instrucao", "nome_urna", "sq_substituido") else "(valores omitidos: dados pessoais)"
+rel["candidatura_conteudo_diferente_por_campo"] = pares
 rel["candidatura"]["campos_comparados_nos_em_ambos"] = dif
 # partição de pessoas: o banco antigo agrupa as mesmas candidaturas que o CPF do TSE agruparia?
 cpf_de = {k: (cand[k]["NR_CPF_CANDIDATO"].strip().zfill(11) if cand[k]["NR_CPF_CANDIDATO"].strip() not in SEM else None) for k in ambos}

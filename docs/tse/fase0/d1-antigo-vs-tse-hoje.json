@@ -1,4 +1,19 @@
 {
+ "legenda": {
+  "iguais_exatos": "valor idêntico nos dois lados",
+  "diferentes_so_de_formato_vazio": "o banco antigo grava NULL onde o TSE escreve #NE ou #NULO (ausência de valor): MESMA informação, formato diferente",
+  "diferentes_de_conteudo": "informação realmente diferente (o TSE atualizou depois de 04/10)"
+ },
+ "conclusao_conteudo": {
+  "julgamento": 280,
+  "destinacao_votos": 108,
+  "idade_posse": 1,
+  "nome": 7,
+  "cor_raca": 17,
+  "grau_instrucao": 18,
+  "ocupacao": 22,
+  "bens_novos": 152
+ },
  "candidatura": {
   "no_banco_antigo": 20989,
   "no_tse_hoje": 20989,
@@ -7,98 +22,198 @@
   "so_no_tse_hoje": 0,
   "campos_comparados_nos_em_ambos": {
    "numero": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "nome_urna": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "partido": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "cargo": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "uf": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "ue": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "situacao": {
-    "iguais": 0,
-    "diferentes": 20989
+    "iguais_exatos": 0,
+    "diferentes_so_de_formato_vazio": 20989,
+    "diferentes_de_conteudo": 0
    },
    "sq_coligacao": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "tp_agremiacao": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "nm_coligacao": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "julgamento": {
-    "iguais": 20709,
-    "diferentes": 280
+    "iguais_exatos": 20709,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 280
    },
    "situacao_urna": {
-    "iguais": 0,
-    "diferentes": 20989
+    "iguais_exatos": 0,
+    "diferentes_so_de_formato_vazio": 20989,
+    "diferentes_de_conteudo": 0
    },
    "destinacao_votos": {
-    "iguais": 18992,
-    "diferentes": 1997
+    "iguais_exatos": 18992,
+    "diferentes_so_de_formato_vazio": 1889,
+    "diferentes_de_conteudo": 108
    },
    "idade_posse": {
-    "iguais": 20988,
-    "diferentes": 1
+    "iguais_exatos": 20988,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 1
    },
    "reeleicao": {
-    "iguais": 3,
-    "diferentes": 20986
+    "iguais_exatos": 3,
+    "diferentes_so_de_formato_vazio": 20986,
+    "diferentes_de_conteudo": 0
    },
    "sq_substituido": {
-    "iguais": 285,
-    "diferentes": 20704
+    "iguais_exatos": 285,
+    "diferentes_so_de_formato_vazio": 20704,
+    "diferentes_de_conteudo": 0
    },
    "p_nome": {
-    "iguais": 20982,
-    "diferentes": 7
+    "iguais_exatos": 20982,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 7
    },
    "ano_nascimento": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "genero": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    },
    "cor_raca": {
-    "iguais": 20972,
-    "diferentes": 17
+    "iguais_exatos": 20972,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 17
    },
    "grau_instrucao": {
-    "iguais": 20971,
-    "diferentes": 18
+    "iguais_exatos": 20971,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 18
    },
    "ocupacao": {
-    "iguais": 20967,
-    "diferentes": 22
+    "iguais_exatos": 20967,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 22
    },
    "uf_nascimento": {
-    "iguais": 20989,
-    "diferentes": 0
+    "iguais_exatos": 20989,
+    "diferentes_so_de_formato_vazio": 0,
+    "diferentes_de_conteudo": 0
    }
   }
+ },
+ "candidatura_conteudo_diferente_por_campo": {
+  "julgamento": [
+   {
+    "banco_antigo": "INDEFERIDO EM PRAZO RECURSAL OU COM RECU",
+    "tse_hoje": "INDEFERIDO",
+    "linhas": 223
+   },
+   {
+    "banco_antigo": "DEFERIDO EM PRAZO RECURSAL OU COM RECURS",
+    "tse_hoje": "DEFERIDO",
+    "linhas": 23
+   },
+   {
+    "banco_antigo": "DEFERIDO",
+    "tse_hoje": "RENUNCIA",
+    "linhas": 10
+   },
+   {
+    "banco_antigo": "INDEFERIDO EM PRAZO RECURSAL OU COM RECU",
+    "tse_hoje": "DEFERIDO",
+    "linhas": 6
+   },
+   {
+    "banco_antigo": "DEFERIDO",
+    "tse_hoje": "DEFERIDO EM PRAZO RECURSAL OU COM RECURS",
+    "linhas": 5
+   },
+   {
+    "banco_antigo": "DEFERIDO EM PRAZO RECURSAL OU COM RECURS",
+    "tse_hoje": "INDEFERIDO",
+    "linhas": 4
+   },
+   {
+    "banco_antigo": "PENDENTE DE JULGAMENTO",
+    "tse_hoje": "DEFERIDO",
+    "linhas": 4
+   },
+   {
+    "banco_antigo": "INDEFERIDO",
+    "tse_hoje": "INDEFERIDO EM PRAZO RECURSAL OU COM RECU",
+    "linhas": 2
+   }
+  ],
+  "destinacao_votos": [
+   {
+    "banco_antigo": "ANULADO SUB JUDICE",
+    "tse_hoje": "ANULADO",
+    "linhas": 96
+   },
+   {
+    "banco_antigo": "ANULADO SUB JUDICE",
+    "tse_hoje": "NULO TECNICO",
+    "linhas": 7
+   },
+   {
+    "banco_antigo": "VALIDO",
+    "tse_hoje": "NULO TECNICO",
+    "linhas": 4
+   },
+   {
+    "banco_antigo": "VALIDO",
+    "tse_hoje": "VALIDO (LEGENDA)",
+    "linhas": 1
+   }
+  ],
+  "idade_posse": [
+   {
+    "banco_antigo": "70",
+    "tse_hoje": "71",
+    "linhas": 1
+   }
+  ],
+  "p_nome": "(valores omitidos: dados pessoais)",
+  "cor_raca": "(valores omitidos: dados pessoais)",
+  "grau_instrucao": "(valores omitidos: dados pessoais)",
+  "ocupacao": "(valores omitidos: dados pessoais)"
  },
  "pessoa": {
   "pessoas_no_banco_antigo": 20878,

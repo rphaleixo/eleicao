@@ -12,7 +12,8 @@ SEM = {"", "-1", "-3", "-4", "#NULO#", "#NE#", "#NULO", "NULO", "0", "0000000000
 CAMPOS = {"sq": ["SQ_CANDIDATO", "SEQUENCIAL_CANDIDATO"], "cpf": ["NR_CPF_CANDIDATO", "CPF_CANDIDATO"],
           "tit": ["NR_TITULO_ELEITORAL_CANDIDATO", "NUM_TITULO_ELEITORAL_CANDIDATO", "TITULO_ELEITORAL_CANDIDATO"],
           "nasc": ["DT_NASCIMENTO", "DATA_NASCIMENTO"], "nome": ["NM_CANDIDATO", "NOME_CANDIDATO"],
-          "partido": ["SG_PARTIDO", "SIGLA_PARTIDO"], "cargo": ["DS_CARGO", "DESCRICAO_CARGO"], "uf": ["SG_UF", "SIGLA_UF", "SG_UE"]}
+          "partido": ["SG_PARTIDO", "SIGLA_PARTIDO"], "cargo": ["DS_CARGO", "DESCRICAO_CARGO"], "uf": ["SG_UF", "SIGLA_UF", "SG_UE"],
+          "urna": ["NM_URNA_CANDIDATO", "NOME_URNA_CANDIDATO"], "ue": ["SG_UE", "SIGLA_UE"], "nrp": ["NR_PARTIDO", "NUMERO_PARTIDO"], "turno": ["NR_TURNO", "NUM_TURNO"]}
 
 def norm(s):
     s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().upper()
@@ -46,7 +47,7 @@ def ler_ano(ano):
         g = lambda k: (x.get(mapa[k]) or "").strip() if mapa[k] else ""
         cpf = g("cpf"); cpf = None if cpf in SEM or not cpf.isdigit() else cpf.zfill(11)
         tit = g("tit"); tit = None if tit in SEM or not tit.isdigit() else tit.zfill(12)
-        out.append((ano, g("sq"), cpf, tit, g("nasc") if g("nasc") not in SEM else "", norm(g("nome")), g("partido"), g("cargo"), g("uf")))
+        out.append((ano, g("sq"), cpf, tit, g("nasc") if g("nasc") not in SEM else "", norm(g("nome")), g("partido"), g("cargo"), g("uf"), norm(g("urna")), g("ue"), g("nrp"), g("turno")))
     return out, mapa
 
 anos = [int(a) for a in sys.argv[3:] if a.isdigit()]
@@ -85,7 +86,7 @@ metodo = collections.defaultdict(collections.Counter)
 sem_chave = []
 for l in todas:
     pid, m = pessoa(l); metodo[l[0]][m] += 1
-    if pid: pessoas[pid].append(l + (m,))  # índice 9 = como a pessoa foi achada (cpf, titulo->cpf, titulo)
+    if pid: pessoas[pid].append(l + (m,))  # índice 13 = como a pessoa foi achada (cpf, titulo->cpf, titulo)
     else: sem_chave.append(l)
 
 # sugestão (nome + nascimento) para quem ficou sem chave
@@ -101,9 +102,9 @@ em_conflito = [ls for ls in pessoas.values() if len({l[4] for l in ls if l[4] an
 nasc_conf = len(em_conflito)
 # de onde vem cada conflito (para explicar diferenças entre este número e o de conflitos-nascimento.py, que só usa candidaturas com CPF 1998-2022/2026)
 nasc_origem = {"total": nasc_conf,
-               "com_candidatura_ligada_so_por_titulo_via_cpf": sum(1 for ls in em_conflito if any(l[9] == "titulo->cpf" for l in ls)),
+               "com_candidatura_ligada_so_por_titulo_via_cpf": sum(1 for ls in em_conflito if any(l[13] == "titulo->cpf" for l in ls)),
                "com_candidatura_de_2024": sum(1 for ls in em_conflito if any(l[0] == 2024 for l in ls)),
-               "so_candidaturas_com_cpf_proprio_e_sem_2024": sum(1 for ls in em_conflito if all(l[9] == "cpf" and l[0] != 2024 for l in ls))}
+               "so_candidaturas_com_cpf_proprio_e_sem_2024": sum(1 for ls in em_conflito if all(l[13] == "cpf" and l[0] != 2024 for l in ls))}
 por_nome = collections.defaultdict(set)
 for pid, ls in pessoas.items():
     for l in ls:
@@ -111,13 +112,25 @@ for pid, ls in pessoas.items():
 homonimos = sum(1 for v in por_nome.values() if len(v) > 1)
 mudou_nome = sum(1 for ls in pessoas.values() if len({l[5] for l in ls}) > 1)
 
+# linhas que a Fase 1 gravaria (pessoa, pessoa_nome, pessoa_partido, candidatura e dimensões); sem-chave = pessoa provisória
+nomes_n = sum(len({("N", l[5]) for l in ls} | {("U", l[9]) for l in ls if l[9]}) for ls in pessoas.values()) + sum(1 + (1 if l[9] else 0) for l in sem_chave)
+def corridas(ls):
+    seq = [l[6] for l in sorted(ls, key=lambda l: l[0]) if l[6]]
+    return sum(1 for i, p in enumerate(seq) if i == 0 or p != seq[i - 1])
+partido_n = sum(corridas(ls) for ls in pessoas.values()) + sum(1 for l in sem_chave if l[6])
+estim = {"pessoa": len(pessoas) + len(sem_chave), "pessoa_com_chave": len(pessoas), "pessoa_provisoria_sem_chave": len(sem_chave),
+         "pessoa_nome": nomes_n, "pessoa_partido": partido_n, "candidatura_linhas_nos_csv": len(todas),
+         "candidatura_chaves_distintas_ano_sq_turno": len({(l[0], l[1], l[12]) for l in todas}),
+         "partidos_distintos_numero_sigla": len({(l[11], l[6]) for l in todas}), "unidades_eleitorais_distintas_uf_ue": len({(l[8], l[10]) for l in todas}),
+         "cargos_distintos": len({l[7] for l in todas}), "anos": len({l[0] for l in todas})}
+
 dist_anos = collections.Counter(len({l[0] for l in ls}) for ls in pessoas.values())
 com_mais = [ls for ls in pessoas.values() if len({l[0] for l in ls}) > 1]
 mudou_partido = sum(1 for ls in com_mais if len({l[6] for l in ls}) > 1)
 topo = sorted(pessoas.values(), key=lambda ls: -len({l[0] for l in ls}))[:8]
 trajetorias = [{"nome": ls[0][5], "anos": sorted({l[0] for l in ls}), "cargos": sorted({l[7] for l in ls}), "partidos": sorted({l[6] for l in ls})} for ls in topo]
 
-rel = {"anos": rel_anos,
+rel = {"estimativa_fase1_linhas": estim, "anos": rel_anos,
        "metodo_por_ano": {a: dict(c) for a, c in metodo.items()},
        "sugestao_nome_nascimento_por_ano": dict(sug),
        "pessoas_ligadas": len(pessoas), "candidaturas_total": len(todas), "candidaturas_sem_chave": len(sem_chave),
